@@ -1,0 +1,29 @@
+cabal-version:      2.2
+name:               agent-core-liquid
+version:            0.1.0.0
+synopsis:           Liquid Haskell verification of pure agent-core modules
+description:        Opt-in refinement-type verification for selected pure
+                    agent-core modules. The verified sources are shared with
+                    agent-core through the @src@ symlink; their @{-@ \@-}@
+                    annotations are comments for the normal build. This
+                    package is built only through cabal.liquid.project, never
+                    by the default project build. See docs/liquid-haskell.md.
+license:            MIT
+license-file:       LICENSE
+author:             digitally induced GmbH
+maintainer:         marc@digitallyinduced.com
+build-type:         Simple
+
+library
+    hs-source-dirs:     src
+    exposed-modules:    Agent.TextBuffer
+    build-depends:      base
+                      , liquidhaskell == 0.9.14.1.1
+                      , text
+    -- -O0: with optimisation GHC splits the strict TextBuffer constructor
+    -- into worker/wrapper, which liquidhaskell-boot-0.9.14.1.1 cannot merge
+    -- (ucsd-progsys/liquidhaskell#2629). Verification does not need
+    -- optimised code.
+    ghc-options:        -O0 -fplugin=LiquidHaskell
+    default-language:   Haskell2010
+    default-extensions: BangPatterns

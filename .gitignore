@@ -8,6 +8,7 @@
 /eval-results/
 /.ghc.environment.*
 *.hi
+.liquid/
 *.o
 # Fetched from openai/codex by scripts/setup-cabal-build.sh; not vendored.
 packages/agent-openai/data/models.json

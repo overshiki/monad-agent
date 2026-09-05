@@ -1,0 +1,10 @@
+-- Liquid Haskell verification build. Not part of the default project:
+--
+--   cabal build --project-file=cabal.liquid.project all
+--
+-- liquidhaskell 0.9.14.1.1 supports exactly GHC 9.14.1, so the
+-- verification component pins that compiler regardless of the GHC used
+-- for the normal build. Requires a Z3 executable on PATH (>= 4.8.17).
+packages: packages/agent-core-liquid
+
+with-compiler: ghc-9.14.1
