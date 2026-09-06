@@ -30,11 +30,12 @@ Requirements:
 
 ## Layout
 
-- `packages/agent-core-liquid/` — the verification package. Its `src` is a
-  symlink to `packages/agent-core/src`, so it compiles the *same* sources as
-  the production library; it depends only on `base`, `text`, and
-  `liquidhaskell`, keeping the solver hermetic and fast.
-- `cabal.liquid.project` — builds only that package, with the pinned
+- `packages/agent-core-liquid/` / `packages/agent-tui-liquid/` — the
+  verification packages. Each one's `src` is a symlink to the corresponding
+  production `src`, so it compiles the *same* sources as the production
+  library; dependencies stay minimal (`base`, `text`, `liquidhaskell`, plus
+  `vty` for the TUI module), keeping the solver hermetic and fast.
+- `cabal.liquid.project` — builds only those packages, with the pinned
   compiler. Deliberately not referenced from `cabal.project`.
 
 ## What is verified and what is trusted
@@ -61,6 +62,38 @@ contract — is discharged by the SMT solver on every verification build.
   `compactTextBuffer` preserves the buffered length and never increases the
   chunk count; `textBufferNull` is equivalent to zero buffered length.
 
+### `Agent.TUI.TextWidth`
+
+- `charCellWidth` / `displayCharCellWidth` always return 0, 1, or 2 — the
+  width classification is total.
+- `graphemeCellWidth` is non-negative.
+- **Boundary invariant**: `graphemeBoundaries` is non-empty, starts at 0,
+  is non-negative, and never exceeds the text length. This is the property
+  every cursor and viewport computation relies on. The upper bound is a
+  structural induction (`boundaryOffsetsLe`, written as an equational
+  proof).
+- `clampGraphemeCursor` lands within the clamped request range;
+  `previousGraphemeBoundary` never moves the cursor right of the request;
+  `nextGraphemeBoundary` never moves it left of the request and never runs
+  past the end of the text.
+
+The upper bound of `nextGraphemeBoundary` additionally relies on the
+**partition axiom** (trusted, documented in the module): `graphemeClusters`
+preserves every character exactly once, so cluster lengths sum to the input
+length. The implementation partitions by construction; a full in-logic
+proof of the segmentation recursion is future work.
+
+Notes for this module:
+
+- Termination checking is disabled module-wide (`--no-termination`): the
+  segmentation recursion shrinks an implicit suffix the checker cannot see,
+  and the verified properties are partial-correctness contracts.
+- `graphemeBoundaries` and the cursor helpers are written as explicit
+  recursions (`boundaryOffsets`, `lastLe`, `firstGt`, `lastLt`) that are
+  provably equal to the `scanl`/`takeWhile`/`dropWhile` idioms they
+  replaced; `firstGt`'s `hi` parameter is a runtime-ignored ghost naming
+  the upper bound in its contract.
+
 The `size` contract is the property the streaming backpressure accounting
 relies on; previously it was maintained by convention only.
 
@@ -76,7 +109,9 @@ Notes:
   ([liquidhaskell#2629](https://github.com/ucsd-progsys/liquidhaskell/issues/2629)).
 - Verification was mutation-tested: dropping the chunk length from the
   `size` accumulation in `appendTextBuffer` makes the build fail with
-  `LIQUID: UNSAFE`, pointing at the construction site.
+  `LIQUID: UNSAFE`, pointing at the construction site; returning
+  `upperBound + 1` from `nextGraphemeBoundary`'s fallback makes the
+  TextWidth build fail at that line.
 
 ## Adding another module
 

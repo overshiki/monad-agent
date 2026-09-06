@@ -1,0 +1,34 @@
+cabal-version:      2.2
+name:               agent-tui-liquid
+version:            0.1.0.0
+synopsis:           Liquid Haskell verification of pure agent-tui modules
+description:        Opt-in refinement-type verification for selected pure
+                    agent-tui modules. The verified sources are shared with
+                    agent-tui through the @src@ symlink; their @{-@ \@-}@
+                    annotations are comments for the normal build. This
+                    package is built only through cabal.liquid.project, never
+                    by the default project build. See docs/liquid-haskell.md.
+license:            MIT
+license-file:       LICENSE
+author:             digitally induced GmbH
+maintainer:         marc@digitallyinduced.com
+build-type:         Simple
+
+library
+    hs-source-dirs:     src
+    exposed-modules:    Agent.TUI.TextWidth
+    build-depends:      base
+                      , liquidhaskell == 0.9.14.1.1
+                      , text
+                      , vty >= 6.4 && < 7
+    -- -O0: with optimisation GHC splits strict constructors into
+    -- worker/wrapper, which liquidhaskell-boot-0.9.14.1.1 cannot merge
+    -- (ucsd-progsys/liquidhaskell#2629). Verification does not need
+    -- optimised code.
+    ghc-options:        -O0 -fplugin=LiquidHaskell
+                        -fplugin-opt=LiquidHaskell:--interpreter
+    default-language:   Haskell2010
+    default-extensions: BangPatterns
+                      , LambdaCase
+                      , MultiWayIf
+                      , OverloadedStrings

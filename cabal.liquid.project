@@ -6,5 +6,6 @@
 -- verification component pins that compiler regardless of the GHC used
 -- for the normal build. Requires a Z3 executable on PATH (>= 4.8.17).
 packages: packages/agent-core-liquid
+          packages/agent-tui-liquid
 
 with-compiler: ghc-9.14.1
