@@ -7,5 +7,10 @@
 -- for the normal build. Requires a Z3 executable on PATH (>= 4.8.17).
 packages: packages/agent-core-liquid
           packages/agent-tui-liquid
+          packages/agent-cli-liquid
+
+-- agent-json is a local dependency of the agent-core modules that
+-- agent-cli-liquid compiles from source.
+packages: packages/agent-json
 
 with-compiler: ghc-9.14.1

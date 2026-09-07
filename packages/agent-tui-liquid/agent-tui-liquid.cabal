@@ -17,18 +17,24 @@ build-type:         Simple
 library
     hs-source-dirs:     src
     exposed-modules:    Agent.TUI.TextWidth
+                      , Agent.TUI.FencedCode
+                      , Agent.TUI.Model.Edit
     build-depends:      base
                       , liquidhaskell == 0.9.14.1.1
                       , text
                       , vty >= 6.4 && < 7
     -- -O0: with optimisation GHC splits strict constructors into
     -- worker/wrapper, which liquidhaskell-boot-0.9.14.1.1 cannot merge
-    -- (ucsd-progsys/liquidhaskell#2629). Verification does not need
-    -- optimised code.
-    ghc-options:        -O0 -fplugin=LiquidHaskell
+    -- (ucsd-progsys/liquidhaskell#2629). -fomit-interface-pragmas: the same
+    -- panic is triggered by UNPACKed constructors (e.g. SrcLoc) scraped
+    -- from base interface files. Verification does not need optimised code.
+    ghc-options:        -O0 -fomit-interface-pragmas -fplugin=LiquidHaskell
                         -fplugin-opt=LiquidHaskell:--interpreter
-    default-language:   Haskell2010
-    default-extensions: BangPatterns
-                      , LambdaCase
+                        -fplugin-opt=LiquidHaskell:--prune-unsorted
+    default-language:   GHC2021
+    default-extensions: LambdaCase
                       , MultiWayIf
                       , OverloadedStrings
+                      , OverloadedRecordDot
+                      , NoFieldSelectors
+                      , DuplicateRecordFields

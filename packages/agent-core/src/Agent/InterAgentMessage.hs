@@ -18,6 +18,35 @@ module Agent.InterAgentMessage
 import Data.Text (Text)
 import qualified Data.Text as Text
 
+-- Liquid Haskell verification (see docs/liquid-haskell.md).
+--
+-- The annotations below are comments for the normal build. The
+-- @agent-core-liquid@ package (cabal.liquid.project, GHC 9.14.1) compiles
+-- this same source with @-fplugin=LiquidHaskell@, which checks them.
+--
+-- The confidentiality contract: the log-safe 'show' of encrypted content is
+-- provably constant ('redacted'), so the payload cannot leak through it.
+-- No axioms are needed; the property is structural.
+
+{-@ LIQUID "--reflection" @-}
+{-@ LIQUID "--ple" @-}
+
+{-@ data InterAgentMessageContent
+      = PlainInterAgentContent Text
+      | EncryptedInterAgentContent Text
+@-}
+
+-- | The exact string emitted for encrypted content. Reflected so the
+-- contract can name it.
+{-@ reflect redacted @-}
+redacted :: String
+redacted = "EncryptedInterAgentContent <redacted>"
+
+{-@ reflect isEncryptedContent @-}
+isEncryptedContent :: InterAgentMessageContent -> Bool
+isEncryptedContent (EncryptedInterAgentContent _) = True
+isEncryptedContent _ = False
+
 data InterAgentMessageType
     = NewTaskMessage
     | QueuedMessage
@@ -29,12 +58,19 @@ data InterAgentMessageContent
     | EncryptedInterAgentContent !Text
     deriving (Eq)
 
+-- | Log-safe rendering of message content. For encrypted content the result
+-- is exactly 'redacted' — the payload cannot appear in it.
+{-@ showInterAgentMessageContent :: c:InterAgentMessageContent
+      -> {v:[Char] | isEncryptedContent c => v == redacted} @-}
+showInterAgentMessageContent :: InterAgentMessageContent -> String
+showInterAgentMessageContent = \case
+    PlainInterAgentContent text ->
+        "PlainInterAgentContent " <> show text
+    EncryptedInterAgentContent _ ->
+        redacted
+
 instance Show InterAgentMessageContent where
-    show = \case
-        PlainInterAgentContent text ->
-            "PlainInterAgentContent " <> show text
-        EncryptedInterAgentContent _ ->
-            "EncryptedInterAgentContent <redacted>"
+    show = showInterAgentMessageContent
 
 data InterAgentMessage = InterAgentMessage
     { messageAuthor :: !Text
@@ -44,11 +80,11 @@ data InterAgentMessage = InterAgentMessage
     } deriving (Eq)
 
 instance Show InterAgentMessage where
-    show message =
-        "InterAgentMessage { messageAuthor = " <> show message.messageAuthor
-            <> ", messageRecipient = " <> show message.messageRecipient
-            <> ", messageType = " <> show message.messageType
-            <> ", messageContent = " <> show message.messageContent
+    show (InterAgentMessage author recipient messageType content) =
+        "InterAgentMessage { messageAuthor = " <> show author
+            <> ", messageRecipient = " <> show recipient
+            <> ", messageType = " <> show messageType
+            <> ", messageContent = " <> show content
             <> " }"
 
 plainInterAgentContent :: Text -> InterAgentMessageContent
@@ -58,17 +94,17 @@ encryptedInterAgentContent :: Text -> InterAgentMessageContent
 encryptedInterAgentContent = EncryptedInterAgentContent
 
 renderInterAgentMessageHeader :: InterAgentMessage -> Text
-renderInterAgentMessageHeader message =
+renderInterAgentMessageHeader (InterAgentMessage author recipient messageType _) =
     Text.unlines $
-        [ "Message Type: " <> messageTypeText message.messageType
+        [ "Message Type: " <> messageTypeText messageType
         ]
         <> taskLine
-        <> [ "Sender: " <> message.messageAuthor
+        <> [ "Sender: " <> author
            , "Payload:"
            ]
   where
-    taskLine = case message.messageType of
-        NewTaskMessage -> ["Task name: " <> message.messageRecipient]
+    taskLine = case messageType of
+        NewTaskMessage -> ["Task name: " <> recipient]
         QueuedMessage -> []
         FollowUpMessage -> []
 
@@ -77,7 +113,7 @@ renderInterAgentMessage message =
     renderInterAgentMessageHeader message <> interAgentMessagePayload message
 
 interAgentMessagePayload :: InterAgentMessage -> Text
-interAgentMessagePayload message = case message.messageContent of
+interAgentMessagePayload (InterAgentMessage _ _ _ content) = case content of
     PlainInterAgentContent text -> text
     -- Non-OpenAI transports do not currently advertise encrypted
     -- collaboration fields. Preserve the token rather than dropping it if

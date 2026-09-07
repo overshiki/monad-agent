@@ -30,13 +30,15 @@ Requirements:
 
 ## Layout
 
-- `packages/agent-core-liquid/` / `packages/agent-tui-liquid/` — the
-  verification packages. Each one's `src` is a symlink to the corresponding
-  production `src`, so it compiles the *same* sources as the production
-  library; dependencies stay minimal (`base`, `text`, `liquidhaskell`, plus
-  `vty` for the TUI module), keeping the solver hermetic and fast.
-- `cabal.liquid.project` — builds only those packages, with the pinned
-  compiler. Deliberately not referenced from `cabal.project`.
+- `packages/agent-core-liquid/` / `packages/agent-tui-liquid/` /
+  `packages/agent-cli-liquid/` — the verification packages. Each one's
+  `src` is a symlink to the corresponding production `src` (agent-cli-liquid
+  has `src`/`tui-src`/`core-src` for all three source packages), so it
+  compiles the *same* sources as the production libraries; dependencies
+  stay minimal, keeping the solver hermetic and fast.
+- `cabal.liquid.project` — builds only those packages (plus the small
+  local `agent-json` dependency), with the pinned compiler. Deliberately
+  not referenced from `cabal.project`.
 
 ## What is verified and what is trusted
 
@@ -94,8 +96,174 @@ Notes for this module:
   replaced; `firstGt`'s `hi` parameter is a runtime-ignored ghost naming
   the upper bound in its contract.
 
+### `Agent.TUI.FencedCode`
+
+- **Marker invariant** — the module's raison d'être ("block numbering and
+  fence matching cannot drift apart"): every `FencedBlock` the parser
+  produces carries a valid marker (backtick or tilde, length >= 3). Checked
+  at the construction site inside `fenceChunks` and propagated through
+  `ContextualFence`; consumers of `fencedBlocks` may rely on it.
+- `fenceOpener` only succeeds with a valid marker.
+- Indent arithmetic: `stripFenceIndent` never reports more than 3 leading
+  spaces, `dropSpaceIndent` shortens by exactly the indent,
+  `stripBodyIndent` never lengthens, `leadingSpaceCount` is bounded by the
+  line length, and the list-container indent chain is non-negative.
+- `sourceLines` preserves the input exactly (in length): no character is
+  dropped or duplicated when splitting into lines. Currently an **axiom**
+  (trusted): the in-logic induction is blocked by an LH panic when
+  reflecting the function (ucsd-progsys/liquidhaskell#2629, base's
+  UNPACKed `SrcLoc` constructor).
+
+Notes for this module:
+
+- Record-dot selection (`OverloadedRecordDot` via `HasField/getField`)
+  crashes liquid-fixpoint's SMT encoding when the selector appears as a
+  dictionary value, so verified modules use pattern matching for field
+  access. Higher-order `assume`s (function-typed arguments) hit the same
+  encoding; first-order wrapper functions (`spanSpace`, `takeWhileSpace`)
+  are used instead.
+- The verification package passes `-fomit-interface-pragmas` (base's
+  UNPACKed constructors trigger the worker/wrapper panic) and
+  `--prune-unsorted` (fixpoint rejects constraints with free variables
+  from unrefined parameters).
+
+### `Agent.CLI.Input.Display`
+
+The first verification spanning packages: `agent-cli-liquid` compiles
+`Agent.CLI.Input.Display` and `Agent.CLI.Input.Types` from `agent-cli`'s
+source **and** `Agent.TUI.TextWidth` from `agent-tui`'s source (plus a few
+leaf `agent-core` modules), so TextWidth's verified contracts (e.g.
+`graphemeCellWidth` non-negative) are available to Display's proofs.
+
+- `DisplayCell` carries a non-negative width and source length (data
+  invariant, checked at construction).
+- `terminalTextWidth` / `textColumns` / `terminalCharWidth` are
+  non-negative.
+- **Column budget**: `takeColumns` and `takeSuffixColumns` provably never
+  return cells whose total width exceeds the budget — the property every
+  overlay and viewport relies on. A mutation weakening the guard
+  (`used > width`) fails the build at the construction site.
+
+`truncateDisplayText`'s budget property is future work: it needs axioms
+about re-clustering (`terminalTextWidth` of concatenated text), which are
+deliberately not assumed yet.
+
+This module required two **verification-enablement refactors** (both
+independently justified):
+
+- `Agent.CLI.Input.Types` now imports `SlashCatalog` from
+  `Agent.CLI.Command.Types` instead of the `Agent.CLI.Command` umbrella,
+  removing an 18-import IO closure from its dependency cone.
+- The attachment types (`ImageAttachment`, `FileAttachment`,
+  `TurnAttachment`) moved from `Agent.Loop.Internal` to a new leaf module
+  `Agent.Loop.Attachments` (re-exported through `Agent.Loop.Internal` and
+  `Agent.Loop`, so the public API is unchanged). This avoids linking the
+  full agent loop — and its `tls` dependency — into the verification
+  build. Note that building all of `agent-core` under GHC 9.14.1 is
+  currently blocked anyway: `tls >= 2` (which the WebSocket transport
+  needs for `Error_TCP_Terminate`) depends on `serialise`/`cborg`, whose
+  `base`/`containers`/`bytestring`/`time` bounds are not yet revised for
+  the 9.14 boot libraries.
+
+### `Agent.CLI.Input.EditOps`
+
+The pure editing core of the inline composer (moved out of
+`Agent.CLI.Input.Editor` in another verification-enablement refactor —
+the editor's state-transition reducer depends on the slash-menu engine,
+whose import closure is far too heavy for the verification build; the
+pure operations now live in their own leaf module, re-exported through
+`Agent.CLI.Input.Editor` for API compatibility).
+
+- **`CursorOk` invariant**: after `insertText`, `backspace`,
+  `deleteAtCursor`, `killStart`, `killEnd`, `killWord`, `historyMove`,
+  `moveMenuSelection`, `normalizeSelection`, and at
+  `initialEditorState`, the cursor is always inside the text
+  (`0 <= cursor <= length text`). The proofs use TextWidth's verified
+  grapheme-boundary contracts directly. Mutation (backspace forgetting
+  to move the cursor back after deletion) fails the build at the
+  function's spec.
+- `selectedSuggestion`: a non-empty menu always yields a suggestion
+  (the index is reduced into range via a checked `mod` wrapper).
+
+`reduceEditorKey` and `acceptSuggestion` remain unverified: their
+invariant needs the replace-range contract of `slashMenuForCatalog`,
+which lives in the `Agent.CLI.Command` umbrella — a future refactor
+candidate.
+
+### `Agent.CLI.TextLayout`
+
+The selection-safety trio for fixed-size overlays (built on Display's
+verified budget contracts):
+
+- `clampSelectionIndex`: the result is non-negative, below the item count
+  whenever there are items, and 0 for an empty list — a selection can
+  never point outside the item list. Mutation (`= count` instead of
+  `count - 1`) fails the build.
+- `selectionWindow`: never returns more rows than its budget.
+- `atMay`: in-range indices always yield a value.
+
+`renderSplitPaneFrame`'s record-dot field access was converted to a
+`SplitPaneFrame{..}` wildcard pattern (record-dot selection crashes
+liquid-fixpoint; see the FencedCode notes). `fitTextCell`'s exact-width
+contract is future work — it needs the same re-clustering axioms as
+`truncateDisplayText`. This module also required the `TextLayout` import
+to move from the `Agent.CLI.Input` umbrella to `Agent.CLI.Input.Display`
+(another de-umbrelling, API unchanged).
+
+### `Agent.TUI.Model.Edit`
+
+The composer cursor/edit operations are straight-line code (no recursion),
+so every contract is proved directly from the `Text` assume boundary with
+no inductions:
+
+- `deleteWordBefore` / `deleteWordAfter` / `deleteToLineStart` /
+  `deleteToLineEnd`: the result is never longer than the input, and the
+  returned cursor always lands inside the resulting text — an out-of-bounds
+  composer cursor is impossible by construction.
+- `lineStartCursor` / `moveWordLeft` never move right of the request and
+  stay non-negative; `lineEndCursor` / `moveWordRight` never move left of
+  the request and never run past the end of the text.
+
 The `size` contract is the property the streaming backpressure accounting
 relies on; previously it was maintained by convention only.
+
+### `Agent.InterAgentMessage`
+
+The first confidentiality (non-disclosure) property in the series: the
+log-safe `show` of `EncryptedInterAgentContent` is **provably constant** —
+it is exactly the `redacted` string, so the encrypted payload cannot leak
+through `Show` into logs or status output. No axioms: the property is
+structural. A mutation that prints the payload
+(`"EncryptedInterAgentContent " <> show text`) fails the build at the
+branch. `interAgentMessagePayload` deliberately returns the token (the
+OpenAI adapter needs it); the contract covers only the `Show` path.
+
+Note: the PLE `--interpreter` engine crashes on string literals
+(`unpackCString#` elaboration), so `agent-core-liquid` uses classic PLE
+(with `--prune-unsorted`); `agent-tui-liquid` still uses the interpreter
+engine, which its modules' proofs were developed against.
+
+### `Agent.OsPath`
+
+The second security property, with `OsPath` fully opaque to the verifier:
+
+- `directoryChain root cwd`: the result is non-empty, **always ends at
+  `cwd`**, and is either exactly `[cwd]` (the containment fallback that
+  prevents discovering files from unrelated filesystem ancestors) or
+  **starts at `root`**. A mutation dropping the `reverse` (a plausible
+  "simplification") fails the build.
+- `isInsideRelative` (the workspace-escape guard in
+  `relativeDisplayPath`): an accepted path is provably never absolute and
+  never starts with `".."`.
+
+**Trusted boundary** (documented in the module): the shape of
+`directoryChainWalk` (true by construction; an in-logic proof is blocked
+because `OsPath` equality cannot be reflected), list reverse/last facts,
+and trivial wrapper specs giving `isAbsolute`/`isDotDotHead` a logic
+presence. The *composition* logic is proved from those facts. The full
+parent-linkage of the chain (every consecutive pair is a
+`takeDirectory` step) is future work — it needs reverse-pair reasoning
+through the opaque path functions.
 
 Notes:
 

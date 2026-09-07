@@ -1,0 +1,63 @@
+cabal-version:      2.2
+name:               agent-cli-liquid
+version:            0.1.0.0
+synopsis:           Liquid Haskell verification of pure agent-cli modules
+description:        Opt-in refinement-type verification for selected pure
+                    agent-cli modules. The verified sources are shared with
+                    agent-cli and agent-tui through the @src@/@tui-src@
+                    symlinks; their @{-@ \@-}@ annotations are comments for
+                    the normal build. This package is built only through
+                    cabal.liquid.project, never by the default project
+                    build. See docs/liquid-haskell.md.
+license:            MIT
+license-file:       LICENSE
+author:             digitally induced GmbH
+maintainer:         marc@digitallyinduced.com
+build-type:         Simple
+
+library
+    hs-source-dirs:     src
+                      , tui-src
+                      , core-src
+    exposed-modules:    Agent.CLI.Input.Types
+                      , Agent.CLI.Input.EditOps
+                      , Agent.CLI.Input.Display
+                      , Agent.CLI.TextLayout
+                      , Agent.TUI.TextWidth
+                      , Agent.Loop.Attachments
+                      , Agent.Dialect
+                      , Agent.Provider
+                      , Agent.Error
+                      , Agent.ReasoningEffort
+    other-modules:      Agent.CLI.Command.Types
+    build-depends:      base
+                      , aeson
+                      , agent-json
+                      , bytestring
+                      , containers
+                      , liquidhaskell == 0.9.14.1.1
+                      , text
+                      , time
+                      , vty >= 6.4 && < 7
+    -- -O0/-fomit-interface-pragmas: liquidhaskell-boot-0.9.14.1.1 cannot
+    -- merge worker/wrapper splits of strict constructors
+    -- (ucsd-progsys/liquidhaskell#2629). --interpreter: Agent.TUI.TextWidth's
+    -- proofs were developed against the PLE interpreter engine.
+    -- --prune-unsorted: fixpoint rejects constraints with free variables
+    -- from unrefined parameters.
+    ghc-options:        -O0 -fomit-interface-pragmas -fplugin=LiquidHaskell
+                        -fplugin-opt=LiquidHaskell:--interpreter
+                        -fplugin-opt=LiquidHaskell:--prune-unsorted
+    default-language:   GHC2021
+    default-extensions: LambdaCase
+                      , MultiWayIf
+                      , OverloadedStrings
+                      , OverloadedRecordDot
+                      , NoFieldSelectors
+                      , DuplicateRecordFields
+                      , BlockArguments
+                      , RecordWildCards
+                      , NamedFieldPuns
+                      , TypeApplications
+                      , ScopedTypeVariables
+                      , PackageImports

@@ -31,14 +31,106 @@ import System.OsPath
     , (</>)
     )
 
+-- Liquid Haskell verification (see docs/liquid-haskell.md).
+--
+-- The annotations below are comments for the normal build. The
+-- @agent-core-liquid@ package (cabal.liquid.project, GHC 9.14.1) compiles
+-- this same source with @-fplugin=LiquidHaskell@, which checks them.
+--
+-- 'OsPath' is fully opaque to the verifier. The trusted boundary is the
+-- small set of documented @assume@ axioms below: the shape of
+-- 'directoryChainWalk' (true by construction), list reverse/last facts, and
+-- trivial wrapper specs giving library functions a logic presence. The
+-- composition logic of 'directoryChain' and the guard structure of
+-- 'isInsideRelative' are proved from those facts.
+--
+-- Termination checking is disabled: 'directoryChainWalk' recurses via the
+-- opaque 'takeDirectory', whose progress the checker cannot see.
+
+{-@ LIQUID "--reflection" @-}
+{-@ LIQUID "--ple" @-}
+{-@ LIQUID "--no-termination" @-}
+
+-- | Logical image of 'reverse' (the Prelude function is not structural and
+-- cannot be reflected).
+{-@ measure lrev :: [a] -> [a] @-}
+
+-- | Logical last element of a non-empty list.
+{-@ measure lastM :: [a] -> a @-}
+
+{-@ assume reverse :: xs:[a] -> {v:[a] | len v == len xs && v == lrev xs} @-}
+{-@ assume last :: {xs:[a] | len xs >= 1} -> {v:a | v == lastM xs} @-}
+
+-- | Trusted list facts (all true for non-empty lists).
+{-@ assume headReverse :: {xs:[a] | len xs >= 1} -> {v:() | head (lrev xs) == lastM xs} @-}
+headReverse :: [a] -> ()
+headReverse _ = ()
+
+{-@ assume lastReverse :: {xs:[a] | len xs >= 1} -> {v:() | lastM (lrev xs) == head xs} @-}
+lastReverse :: [a] -> ()
+lastReverse _ = ()
+
+{-@ assume lastSingleton :: x:a -> {v:() | lastM [x] == x} @-}
+lastSingleton :: a -> ()
+lastSingleton _ = ()
+
+-- | Opaque logical predicates for path properties the verifier cannot see
+-- through. The wrappers below connect code to them at call sites; their
+-- definitions are the trusted boundary.
+{-@ measure isAbsoluteB :: OsPath -> Bool @-}
+{-@ measure isDotDotHeadB :: OsPath -> Bool @-}
+
+-- | Whether a path is absolute. Trusted: matches 'System.OsPath.isAbsolute'.
+{-@ assume isAbsolutePath :: p:OsPath -> {v:Bool | v <=> isAbsoluteB p} @-}
+isAbsolutePath :: OsPath -> Bool
+isAbsolutePath = isAbsolute
+
+-- | Whether the first path component is exactly @".."@. Trusted: matches
+-- the case analysis in the body.
+{-@ assume isDotDotHead :: rel:OsPath -> {v:Bool | v <=> isDotDotHeadB rel} @-}
+isDotDotHead :: OsPath -> Bool
+isDotDotHead rel = case splitDirectories rel of
+    first : _ -> first == dotdot
+    _ -> False
+
+-- | Attach a lemma's postcondition to an expression (ProofCombinators
+-- style): @withProof x (lemma args)@ evaluates to @x@, and the lemma's
+-- contract is visible to the verifier at that point. Zero cost after
+-- inlining.
+withProof :: a -> b -> a
+withProof x _ = x
+{-# INLINE withProof #-}
+
 -- | Directories from @root@ through @cwd@, inclusive.
 --
 -- If @cwd@ is not contained by @root@, return only @cwd@. Callers use this
 -- fallback to avoid discovering files from unrelated filesystem ancestors.
 -- Inputs are expected to be absolute and normalized by the caller.
+--
+-- Verified: the result is non-empty, always ends at @cwd@, and is either
+-- exactly @[cwd]@ (the containment fallback) or starts at @root@.
+{-@ directoryChain :: root:OsPath -> cwd:OsPath
+      -> {v:[OsPath] | len v >= 1
+                       && lastM v == cwd
+                       && (head v == root || v == [cwd])} @-}
 directoryChain :: OsPath -> OsPath -> [OsPath]
 directoryChain root cwd =
-    maybe [cwd] reverse (walk cwd)
+    case directoryChainWalk root cwd of
+        Nothing -> [cwd] `withProof` lastSingleton cwd
+        Just dirs ->
+            reverse dirs
+                `withProof` headReverse dirs
+                `withProof` lastReverse dirs
+
+-- | Trusted: the walk either fails or returns a non-empty chain from @dir@
+-- down to @root@. True by construction: each step prepends the current
+-- directory and recurses to its parent, stopping at @root@ (the base case
+-- requires @dir == root@). An in-logic proof is currently blocked because
+-- 'OsPath' equality cannot be reflected.
+{-@ assume directoryChainWalk :: root:OsPath -> dir:OsPath
+      -> Maybe {v:[OsPath] | len v >= 1 && head v == dir && lastM v == root} @-}
+directoryChainWalk :: OsPath -> OsPath -> Maybe [OsPath]
+directoryChainWalk root = walk
   where
     walk dir
         | dir == root = Just [dir]
@@ -90,11 +182,14 @@ relativeDisplayPath workspace path
             else toText absolute
   where
     isDot rel = rel == dot || Text.null (toText rel)
+
+    -- | Verified: an accepted relative path is never absolute and never
+    -- starts with @".."@ — the two ways a display path could escape the
+    -- workspace.
+    {-@ isInsideRelative :: rel:OsPath
+          -> {v:Bool | v => (not (isAbsoluteB rel) && not (isDotDotHeadB rel))} @-}
     isInsideRelative rel =
-        not (isAbsolute rel)
-            && case splitDirectories rel of
-                first : _ | first == dotdot -> False
-                _ -> True
+        not (isAbsolutePath rel) && not (isDotDotHead rel)
 
 dot :: OsPath
 dot = fromText "."

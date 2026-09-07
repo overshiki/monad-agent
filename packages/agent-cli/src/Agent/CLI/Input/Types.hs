@@ -9,8 +9,8 @@ module Agent.CLI.Input.Types
     , TimedRead(..)
     ) where
 
-import Agent.CLI.Command (SlashCatalog)
-import Agent.Loop (ImageAttachment)
+import Agent.CLI.Command.Types (SlashCatalog)
+import Agent.Loop.Attachments (ImageAttachment)
 import Data.Text (Text)
 
 -- | Outcome of an interactive REPL read.
@@ -43,6 +43,23 @@ data ChoiceKey
     | ChoiceDigit Int
     deriving (Eq, Show)
 
+-- Liquid Haskell: selectors made available to specifications (see
+-- docs/liquid-haskell.md). The cursor-in-text invariant itself is stated
+-- per-function in "Agent.CLI.Input.Editor".
+{-@ data EditorState = EditorState
+      { editorText :: Text
+      , editorCursor :: Int
+      , editorSelected :: Int
+      , editorHistoryIndex :: Maybe Int
+      , editorHistoryDraft :: Text
+      , editorKillBuffer :: Text
+      , editorPasted :: Bool
+      , editorSlashEnabled :: Bool
+      , editorSlashDismissed :: Bool
+      , editorSlashCatalog :: SlashCatalog
+      }
+@-}
+
 data EditorState = EditorState
     { editorText :: !Text
     , editorCursor :: !Int
@@ -56,6 +73,16 @@ data EditorState = EditorState
     , editorSlashCatalog :: !SlashCatalog
     }
     deriving (Eq, Show)
+
+-- Liquid Haskell: every cell carries a non-negative display width and
+-- source length (checked at construction sites in "Agent.CLI.Input.Display";
+-- see docs/liquid-haskell.md).
+{-@ data DisplayCell = DisplayCell
+      { displayCellText :: Text
+      , displayCellWidth :: Nat
+      , displayCellSourceLength :: Nat
+      }
+@-}
 
 data DisplayCell = DisplayCell
     { displayCellText :: !Text

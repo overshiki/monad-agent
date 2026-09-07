@@ -1,7 +1,12 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Agent.Loop.Internal where
+module Agent.Loop.Internal
+    ( module Agent.Loop.Internal
+    , module Agent.Loop.Attachments
+    ) where
+
+import Agent.Loop.Attachments
 
 import Agent.Cancel (CancelFlag, isCancelled, waitCancel)
 import qualified Agent.Json.Decode as Json
@@ -56,8 +61,6 @@ import Control.Monad.Reader
     , runReaderT
     )
 import Data.Aeson (ToJSON(..), object, (.=))
-import Data.ByteString (ByteString)
-import qualified Data.ByteString as ByteString
 import Data.IORef (IORef, modifyIORef', newIORef, readIORef, writeIORef)
 import qualified Data.IntMap.Strict as IntMap
 import Data.IntMap.Strict (IntMap)
@@ -71,41 +74,6 @@ import System.Timeout (timeout)
 
 maxEmptyContinuations :: Int
 maxEmptyContinuations = 2
-
--- | Image bytes attached to a user turn (PNG/JPEG/…).
-data ImageAttachment = ImageAttachment
-    { imageMime :: !Text
-    , imageBytes :: !ByteString
-    } deriving (Eq)
-
-instance Show ImageAttachment where
-    show image =
-        "ImageAttachment { imageMime = " <> show image.imageMime
-            <> ", imageBytes = <redacted>"
-            <> ", imageByteLength = " <> show (ByteString.length image.imageBytes)
-            <> " }"
-
--- | File bytes attached to a user turn. Providers that cannot ingest files
--- natively should fall back to a local path or text summary.
-data FileAttachment = FileAttachment
-    { fileName :: !(Maybe Text)
-    , fileMime :: !Text
-    , fileBytes :: !ByteString
-    } deriving (Eq)
-
-instance Show FileAttachment where
-    show file =
-        "FileAttachment { fileName = " <> show file.fileName
-            <> ", fileMime = " <> show file.fileMime
-            <> ", fileBytes = <redacted>"
-            <> ", fileByteLength = " <> show (ByteString.length file.fileBytes)
-            <> " }"
-
--- | A provider-neutral user attachment, retained in source order.
-data TurnAttachment
-    = ImageAttachmentItem !ImageAttachment
-    | FileAttachmentItem !FileAttachment
-    deriving (Eq, Show)
 
 -- | One input supplied to the provider-neutral agent loop.
 data TurnInput
