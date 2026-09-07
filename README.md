@@ -64,6 +64,17 @@ have to be.
 - **Types as a path toward safer agency:** typed tool decoding, approval rules,
   and execution policies are the current foundation for deeper work with
   LLMs, ADTs, type checkers, effect systems, and program verification.
+- **Refinement-type verification with Liquid Haskell:** the pure core carries
+  machine-checked contracts, verified by SMT at build time and mutation-tested
+  so the specs are known to bite. Verified today: the streaming backpressure
+  accounting invariant (`Agent.TextBuffer`), terminal grapheme/cursor
+  geometry (`Agent.TUI.TextWidth`), fence parsing invariants
+  (`Agent.TUI.FencedCode`), composer cursor safety (`Agent.TUI.Model.Edit`,
+  `Agent.CLI.Input.EditOps`), column budgets and selection bounds for
+  overlays (`Agent.CLI.Input.Display`, `Agent.CLI.TextLayout`), encrypted
+  subagent payload non-disclosure through `Show`
+  (`Agent.InterAgentMessage`), and workspace path containment
+  (`Agent.OsPath`). See [Liquid Haskell verification](#liquid-haskell-verification).
 
 ## Features
 
@@ -415,6 +426,48 @@ cabal run agent-cli:exe:monad-cli
 
 See [`AGENTS.md`](AGENTS.md) for the complete development workflow, including
 multi-package GHCi sessions and CLI testing.
+
+### Liquid Haskell verification
+
+Selected pure modules carry [Liquid
+Haskell](https://ucsd-progsys.github.io/liquidhaskell/) refinement annotations
+in `{-@ ... @-}` comments. The normal build (any supported GHC) treats them
+as comments and is completely unaffected; verification is a separate, opt-in
+build that pins the GHC supported by the current Liquid Haskell release
+(9.14.1) and needs a Z3 executable on `PATH`:
+
+```console
+cabal build --project-file=cabal.liquid.project all
+```
+
+A successful run prints `**** LIQUID: SAFE` for each verified module:
+
+- `Agent.TextBuffer` — the buffer's `size`/`count` fields always match the
+  retained chunks (the streaming backpressure accounting invariant).
+- `Agent.TUI.TextWidth` — grapheme boundary lists start at 0, stay
+  non-negative, and never exceed the text length; cursor clamp/next/previous
+  motion stays in bounds (includes a structural induction proof).
+- `Agent.TUI.FencedCode` — every parsed fenced block carries a valid marker
+  (backtick/tilde, length ≥ 3), so renderer and copy-code fence matching
+  cannot drift apart.
+- `Agent.TUI.Model.Edit` and `Agent.CLI.Input.EditOps` — after every editing
+  operation the composer cursor stays inside the text.
+- `Agent.CLI.Input.Display` — `takeColumns`/`takeSuffixColumns` never exceed
+  the column budget; `Agent.CLI.TextLayout` — a clamped selection index is
+  always in range.
+- `Agent.InterAgentMessage` — the log-safe `Show` of encrypted subagent
+  content is provably constant (`<redacted>`); the payload cannot leak
+  through it.
+- `Agent.OsPath` — `directoryChain` always ends at the working directory and
+  is either the containment fallback or starts at the root;
+  `isInsideRelative` never accepts absolute or `".."`-prefixed paths.
+
+Trusted boundaries (small, documented per module): `Text`/`OsPath` are
+opaque to the verifier, so a handful of `assume` axioms about them are
+trusted; everything else is discharged by Z3. Each module was
+mutation-tested — deliberately breaking the implementation fails the
+verification build. Layout, trusted-boundary, and extension instructions are
+in [`docs/liquid-haskell.md`](docs/liquid-haskell.md).
 
 ## License
 
