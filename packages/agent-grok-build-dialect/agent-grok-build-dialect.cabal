@@ -44,6 +44,8 @@ library
                     , Agent.GrokBuild.Dialect.SearchReplace
                     , Agent.GrokBuild.Dialect.Shell
                     , Agent.GrokBuild.Dialect.Subagent
+                    , Agent.GrokBuild.Dialect.SubagentCatalog
+                    , Agent.GrokBuild.Dialect.SubagentOutcomes
                     , Agent.GrokBuild.Dialect.Task
                     , Agent.GrokBuild.Dialect.TaskControl
                     , Agent.GrokBuild.Dialect.Terminal
@@ -68,6 +70,7 @@ library
                     , time
                     , transformers
                     , unix
+                    , vector
 
 benchmark workflow-snapshots-bench
     import:           common-opts

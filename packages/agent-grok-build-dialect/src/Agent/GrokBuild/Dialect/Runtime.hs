@@ -20,6 +20,8 @@ import Agent.GrokBuild.Dialect.Tools
     , newGrokSession
     )
 import Agent.GrokBuild.Dialect.Shell (resetGrokSessionTemp)
+import Agent.GrokBuild.Dialect.SubagentCatalog (SubagentCatalog)
+import Agent.GrokBuild.Dialect.SubagentOutcomes (SubagentExperience)
 import Agent.GrokBuild.Dialect.Workflow
     ( WorkflowRuntime
     , newWorkflowRuntime
@@ -66,8 +68,10 @@ newGrokCodingTools
     -> Maybe PlanModeHooks
     -> Maybe MultiAgentContext
     -> GrokSubagentSpecs
+    -> SubagentCatalog
+    -> SubagentExperience
     -> IO GrokCodingTools
-newGrokCodingTools env hooks multi typesRef = do
+newGrokCodingTools env hooks multi typesRef catalog experience = do
     resources <- newResourceScope
     flip onException (closeResourceScope resources) do
         plan <- newPlanModeEnv env.toolCwd hooks
@@ -103,6 +107,8 @@ newGrokCodingTools env hooks multi typesRef = do
                     workflows
                     multi
                     typesRef
+                    catalog
+                    experience
             , grokPlanMode = plan
             , grokSuspendGhci = suspendGhciSession ghci
             , grokResetSessionTemp = \tempDir -> do

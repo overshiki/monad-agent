@@ -142,8 +142,8 @@ import Agent.CLI.StartupContext
     ( AgentsContextNotice(..), loadAgentsContext )
 import Agent.CLI.Style ( cliWindowTitle, roleMuted )
 import Agent.CLI.Subagents.Runtime
-    ( SubagentRuntime(subagentOpenAiChild, SubagentRuntime,
-                      subagentOptions, subagentGhciEnabled, subagentBashEnabled,
+    ( SubagentRuntime(subagentOpenAiChild, subagentCatalog, SubagentRuntime,
+                      subagentExperience, subagentOptions, subagentGhciEnabled, subagentBashEnabled,
                       subagentPolicy, subagentPlanHooks, subagentSkillRoots,
                       subagentAllowedRoots, subagentRootAccessRequest,
                       subagentParams, subagentMcpTools, subagentRegistry,
@@ -170,6 +170,11 @@ import Agent.Dialect (Dialect, dialectId)
 import Agent.Error (ApiError)
 import Agent.GrokBuild.Dialect.Goal ()
 import Agent.GrokBuild.Dialect.Runtime ()
+import Agent.GrokBuild.Dialect.SubagentCatalog
+    ( SubagentCatalog
+    , catalogHasModelDefaults
+    )
+import Agent.GrokBuild.Dialect.SubagentOutcomes (SubagentExperience)
 import Agent.GrokBuild.Dialect.Task (GrokSubagentSpecs)
 import Agent.GrokBuild.Dialect.Workflow ()
 import Agent.Loop (ImageAttachment, addTokenUsage, emptyTokenUsage)
@@ -327,6 +332,8 @@ runAgentSession
     -> StartupRuntime
     -> FilePath
     -> Handle
+    -> SubagentCatalog
+    -> SubagentExperience
     -> IORef (Maybe (IO [ResponseItem]))
     -> IORef (Map SubagentId SubagentSession)
     -> SubagentStoreRoot
@@ -409,6 +416,8 @@ runAgentSession
     startup
     stateDirectory
     stderrHandle
+    subagentCatalog
+    subagentExperience
     subagentForkSource
     subagentSessions
     subagentStoreRoot
@@ -612,15 +621,18 @@ runAgentSession
                 , subagentSessions = subagentSessions
                 , subagentStoreRoot = subagentStoreRoot
                 , subagentTypes = agentTypesRef
+                , subagentCatalog = subagentCatalog
+                , subagentExperience = subagentExperience
                 , subagentLegacyTarget = legacySubagentTarget
                 , subagentConnection = inferredTarget.targetConnectionId
                 , subagentMapModel = transportModel
                 , subagentCreateWorktree = Just createSubagentWorktree
                 , subagentSessionTmp = toolEnv.toolSessionTmp
                 , subagentSpawnModelGuidance =
-                    subscriptionSubagentModelGuidance
-                        provider
-                        (tokenProviderBillingMode tokenProvider)
+                    appendCatalogModelNote subagentCatalog
+                        (subscriptionSubagentModelGuidance
+                            provider
+                            (tokenProviderBillingMode tokenProvider))
                 , subagentAllowedChildModels = grokAllowedChildModels
                 , subagentOpenAiChild = openaiChild
                 }
@@ -865,6 +877,20 @@ runAgentSession
                         transition
                         transportModel
                         unavailableProviders
+
+-- | Append a catalog note to the subscription spawn-model guidance when the
+-- catalog binds any agent type (custom or built-in shadowing) to a default
+-- model, so the parent does not assume an omitted model always inherits.
+-- Consumed as free text in the @spawn_agent@ model property description, so
+-- plain appended text is appropriate.
+appendCatalogModelNote :: SubagentCatalog -> Maybe Text -> Maybe Text
+appendCatalogModelNote catalog guidance
+    | catalogHasModelDefaults catalog = (<> catalogNote) <$> guidance
+    | otherwise = guidance
+  where
+    catalogNote =
+        "\n\nCustom subagent types may default to a specific model (see the\
+        \ task tool's agent type list); pass `model` explicitly to override."
 
 -- | Print a copy-pasteable --resume line whenever the CLI session quits.
 -- Ctrl-C is normalized to the same graceful 'RunQuit' result as :q/Ctrl-D so

@@ -1,5 +1,7 @@
 module Agent.GrokBuild.RuntimeSpec (spec) where
 
+import Agent.GrokBuild.Dialect.SubagentCatalog (emptyCatalog)
+import Agent.GrokBuild.Dialect.SubagentOutcomes (noSubagentExperience)
 import Agent.GrokBuild.Dialect.Goal
 import Agent.GrokBuild.Dialect.Runtime
     ( GrokCodingTools(..)
@@ -418,6 +420,8 @@ spec = do
                         Nothing
                         (Just (rootContext registry))
                         rootTypes
+                        emptyCatalog
+                        noSubagentExperience
                     let rootNames = map (.appToolName) root.grokAppTools
                     map (`elem` rootNames)
                         [ "scheduler_create"
@@ -435,6 +439,8 @@ spec = do
                         Nothing
                         (Just (childContext registry))
                         childTypes
+                        emptyCatalog
+                        noSubagentExperience
                     let childNames = map (.appToolName) child.grokAppTools
                     map (`elem` childNames)
                         [ "scheduler_create"

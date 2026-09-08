@@ -160,6 +160,7 @@ import Agent.CLI.Startup.Auth
     ( markStartupStage, setStartupNotice, startupDie )
 import Agent.CLI.StartupContext ()
 import Agent.CLI.Style ()
+import Agent.CLI.SubagentExperience (newSubagentExperience)
 import Agent.CLI.Subagents.Runtime
     ( flushAllSubagentSnapshots,
       persistAndEvictSubagentSessionWithStatus,
@@ -197,6 +198,7 @@ import Agent.Dialect
 import Agent.Error (ApiError)
 import Agent.GrokBuild.Dialect.Goal ()
 import Agent.GrokBuild.Dialect.Runtime ()
+import Agent.GrokBuild.Dialect.SubagentCatalog (SubagentCatalog)
 import Agent.GrokBuild.Dialect.Task ( grokRootChildModels )
 import Agent.GrokBuild.Dialect.Workflow ()
 import Agent.Loop
@@ -354,6 +356,7 @@ runAgentTools
     -> StartupRuntime
     -> FilePath
     -> Handle
+    -> SubagentCatalog
     -> Maybe ModelTarget
     -> TokenProvider
     -> Maybe ProviderTransition
@@ -400,6 +403,7 @@ runAgentTools
     startup
     stateDirectory
     stderrHandle
+    subagentCatalog
     targetHint
     tokenProvider
     transition
@@ -866,6 +870,12 @@ runAgentTools
                 currentMcpInstructions
     mapM_ (reportStartupWarning startup) mcpFleet.mcpFleetWarnings
     setStartupNotice startup.startupFullscreen "Loading built-in tools…"
+    -- Session-scoped subagent outcome tracking, constructed once per
+    -- session alongside the tool surface (not per turn): the sink records
+    -- into one session log shared with nested child tool builders via
+    -- SubagentRuntime, and the history section reflects outcomes known at
+    -- startup.
+    subagentExperience <- newSubagentExperience home cwd
     coding <-
         codingToolsForWithTypes
             dialect
@@ -875,6 +885,8 @@ runAgentTools
             imageHooks
             multiCtx
             agentTypesRef
+            subagentCatalog
+            subagentExperience
             `onException`
                 (MCP.releaseMcpFleetLease mcpLease >> cleanupScratch)
     let closeBeforeSession =
@@ -1158,6 +1170,8 @@ runAgentTools
         startup
         stateDirectory
         stderrHandle
+        subagentCatalog
+        subagentExperience
         subagentForkSource
         subagentSessions
         subagentStoreRoot

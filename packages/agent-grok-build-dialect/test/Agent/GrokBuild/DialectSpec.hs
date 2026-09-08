@@ -1,5 +1,7 @@
 module Agent.GrokBuild.DialectSpec (spec) where
 
+import Agent.GrokBuild.Dialect.SubagentCatalog (emptyCatalog)
+import Agent.GrokBuild.Dialect.SubagentOutcomes (noSubagentExperience)
 import Agent.GrokBuild.Dialect.Shell
     ( GrokSession(..)
     , PersistentShell(..)
@@ -87,7 +89,7 @@ spec = describe "Grok Build dialect" do
         withTempDir \dir -> do
             env <- defaultToolEnv (unsafeEncodeUtf dir)
             typesRef <- newIORef Map.empty
-            coding <- newGrokCodingTools env Nothing Nothing typesRef
+            coding <- newGrokCodingTools env Nothing Nothing typesRef emptyCatalog noSubagentExperience
             let names = map (.appToolName) coding.grokAppTools
             map (`elem` names)
                 [ "run_terminal_cmd"
@@ -109,7 +111,7 @@ spec = describe "Grok Build dialect" do
             let relativeTmp =
                     Text.pack (makeRelative dir "/tmp/agent-output")
             bracket
-                (newGrokCodingTools env Nothing Nothing typesRef)
+                (newGrokCodingTools env Nothing Nothing typesRef emptyCatalog noSubagentExperience)
                 (.grokClose)
                 \coding -> do
                     result <- dispatchToolCall
@@ -410,7 +412,7 @@ withGrokRegistry action =
     withTempDir \dir -> do
         env <- defaultToolEnv (unsafeEncodeUtf dir)
         typesRef <- newIORef Map.empty
-        coding <- newGrokCodingTools env Nothing Nothing typesRef
+        coding <- newGrokCodingTools env Nothing Nothing typesRef emptyCatalog noSubagentExperience
         let registry =
                 either (error . Text.unpack) id $
                     mkToolRegistry coding.grokAppTools

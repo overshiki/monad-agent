@@ -1,5 +1,7 @@
 module Agent.GrokBuild.TaskSpec (spec) where
 
+import Agent.GrokBuild.Dialect.SubagentCatalog (emptyCatalog)
+import Agent.GrokBuild.Dialect.SubagentOutcomes (noSubagentExperience)
 import Agent.GrokBuild.Dialect.Task
 import Agent.Loop (LoopError(..), LoopResult(..), defaultLoopDispatch, emptyTokenUsage)
 import Agent.InterAgentMessage (interAgentMessagePayload)
@@ -41,7 +43,7 @@ spec = describe "Agent.GrokBuild.Dialect.Task" do
         typesRef <- newIORef Map.empty
         let ctx = MultiAgentContext registry (fromFilePath "/tmp") Nothing 0 taskPathRoot
                 (pure Nothing) Nothing Nothing Nothing Nothing Nothing Nothing
-            tool = taskTool (fromFilePath "/tmp") ctx typesRef
+            tool = taskTool (fromFilePath "/tmp") ctx typesRef emptyCatalog noSubagentExperience
             parameters = fromMaybe [] (jsonToolParameters tool)
         let isolationTypes =
                 [ property.propertyType
@@ -105,7 +107,7 @@ spec = describe "Agent.GrokBuild.Dialect.Task" do
         let ctx = MultiAgentContext registry (fromFilePath "/tmp") Nothing 0 taskPathRoot
                 (pure Nothing) Nothing Nothing Nothing Nothing Nothing
                 (Just (grokRootChildModels True))
-            tool = taskTool (fromFilePath "/tmp") ctx typesRef
+            tool = taskTool (fromFilePath "/tmp") ctx typesRef emptyCatalog noSubagentExperience
         tool.appToolDescription `shouldSatisfy`
             Text.isInfixOf "gpt-5.6-luna"
         tool.appToolDescription `shouldSatisfy`
@@ -133,7 +135,7 @@ spec = describe "Agent.GrokBuild.Dialect.Task" do
         let ctx = MultiAgentContext registry (fromFilePath "/tmp") Nothing 0 taskPathRoot
                 (pure Nothing) Nothing Nothing Nothing Nothing Nothing
                 (Just (grokRootChildModels True))
-            tool = taskTool (fromFilePath "/tmp") ctx typesRef
+            tool = taskTool (fromFilePath "/tmp") ctx typesRef emptyCatalog noSubagentExperience
         result <- dispatchToolCall defaultLoopDispatch [tool.appToolHandler]
             (functionToolCall "c1" "task"
                 "{\"prompt\":\"hello\",\"description\":\"search\",\"model\":\"grok-4-1-fast\"}")
@@ -154,7 +156,7 @@ spec = describe "Agent.GrokBuild.Dialect.Task" do
         typesRef <- newIORef Map.empty
         let ctx = MultiAgentContext registry (fromFilePath "/tmp") Nothing 0 taskPathRoot
                 (pure Nothing) Nothing Nothing Nothing Nothing Nothing Nothing
-            tool = taskTool (fromFilePath "/tmp") ctx typesRef
+            tool = taskTool (fromFilePath "/tmp") ctx typesRef emptyCatalog noSubagentExperience
         result <- dispatchToolCall defaultLoopDispatch [tool.appToolHandler]
             (functionToolCall "c1" "task"
                 "{\"prompt\":\"hello\",\"description\":\"test task\",\"model\":\"grok-4.5-mini\"}")
@@ -172,7 +174,7 @@ spec = describe "Agent.GrokBuild.Dialect.Task" do
             (\_ _ -> pure ())
         let ctx = MultiAgentContext registry (fromFilePath "/tmp") Nothing 0 taskPathRoot
                 (pure Nothing) Nothing Nothing Nothing Nothing Nothing Nothing
-            tool = taskTool (fromFilePath "/tmp") ctx typesRef
+            tool = taskTool (fromFilePath "/tmp") ctx typesRef emptyCatalog noSubagentExperience
         _ <- dispatchToolCall defaultLoopDispatch [tool.appToolHandler]
             (functionToolCall "c1" "task" raceArgs)
         takeMVar observed `shouldReturn` (Just "explore", Just "grok-4.5-mini")
@@ -202,7 +204,7 @@ spec = describe "Agent.GrokBuild.Dialect.Task" do
                 pure (Left "persisted subagent dialect is incompatible")
             ctx = MultiAgentContext registry (fromFilePath "/tmp") Nothing 0 taskPathRoot
                 (pure Nothing) (Just restore) Nothing Nothing Nothing Nothing Nothing
-            tool = taskTool (fromFilePath "/tmp") ctx typesRef
+            tool = taskTool (fromFilePath "/tmp") ctx typesRef emptyCatalog noSubagentExperience
         result <- dispatchToolCall defaultLoopDispatch [tool.appToolHandler]
             (functionToolCall "c1" "task"
                 "{\"prompt\":\"continue\",\"description\":\"resume\",\
@@ -237,7 +239,7 @@ spec = describe "Agent.GrokBuild.Dialect.Task" do
         let childId = SubagentId "agent-child"
             ctx = MultiAgentContext registry (fromFilePath "/tmp") (Just childId) 1 taskPathRoot
                 (pure Nothing) Nothing Nothing Nothing Nothing Nothing Nothing
-            tool = taskTool (fromFilePath "/tmp") ctx typesRef
+            tool = taskTool (fromFilePath "/tmp") ctx typesRef emptyCatalog noSubagentExperience
         expectAlwaysReadOnly tool.appToolApproval
         closeSubagentRegistry registry
 
@@ -250,7 +252,7 @@ spec = describe "Agent.GrokBuild.Dialect.Task" do
         let createIsolated = cleanupLease cleaned
             ctx = MultiAgentContext registry (fromFilePath "/tmp") Nothing 0 taskPathRoot (pure Nothing)
                 Nothing (Just createIsolated) Nothing Nothing Nothing Nothing
-            tool = taskTool (fromFilePath "/tmp") ctx typesRef
+            tool = taskTool (fromFilePath "/tmp") ctx typesRef emptyCatalog noSubagentExperience
         result <- dispatchToolCall defaultLoopDispatch [tool.appToolHandler]
             (functionToolCall "c1" "task"
                 "{\"prompt\":\"x\",\"description\":\"y\",\"isolation\":\"worktree\"}")
@@ -271,7 +273,7 @@ spec = describe "Agent.GrokBuild.Dialect.Task" do
         typesRef <- newIORef Map.empty
         let ctx = MultiAgentContext registry (fromFilePath "/tmp") Nothing 0 taskPathRoot
                 (pure Nothing) Nothing (Just (cleanupLease cleaned)) Nothing Nothing Nothing Nothing
-            tool = taskTool (fromFilePath "/tmp") ctx typesRef
+            tool = taskTool (fromFilePath "/tmp") ctx typesRef emptyCatalog noSubagentExperience
         result <- dispatchToolCall defaultLoopDispatch [tool.appToolHandler]
             (functionToolCall "c1" "task" worktreeArgs)
         result.output `shouldSatisfy` Text.isInfixOf "registry is closed"

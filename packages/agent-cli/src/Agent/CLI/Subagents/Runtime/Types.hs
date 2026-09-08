@@ -10,6 +10,8 @@ module Agent.CLI.Subagents.Runtime.Types
 import Agent.CLI.Compaction (OccupancySnapshot)
 import Agent.CLI.Options (ApprovalPolicy, CliOptions)
 import Agent.CLI.Session (LegacySubagentTarget)
+import Agent.GrokBuild.Dialect.SubagentCatalog (SubagentCatalog)
+import Agent.GrokBuild.Dialect.SubagentOutcomes (SubagentExperience)
 import Agent.GrokBuild.Dialect.Task (GrokSubagentSpecs)
 import Agent.Loop (BackendSnapshot)
 import Agent.Provider (Provider, TokenProvider)
@@ -65,6 +67,11 @@ data SubagentRuntime = SubagentRuntime
     , subagentSessions :: !(IORef (Map SubagentId SubagentSession))
     , subagentStoreRoot :: !SubagentStoreRoot
     , subagentTypes :: !GrokSubagentSpecs
+    , subagentCatalog :: !SubagentCatalog
+    , subagentExperience :: !SubagentExperience
+    -- ^ Session-scoped outcome sink + pre-rendered history, shared with
+    -- nested child tool builders so a child's @task@ records into the same
+    -- session log as the root's.
     , subagentLegacyTarget :: !(Maybe LegacySubagentTarget)
     , subagentConnection :: !Text
     , subagentMapModel :: !(Text -> Text)

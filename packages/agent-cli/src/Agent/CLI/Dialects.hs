@@ -4,6 +4,7 @@ module Agent.CLI.Dialects
     , codingToolsForWithTypes
     , filterBashTools
     , filterChildGrokTools
+    , filterChildGrokToolsWithCatalog
     , filterGhciTools
     , isBashTool
     , isBashToolName
@@ -33,9 +34,12 @@ import Agent.GrokBuild.Dialect.Runtime
     , GrokRuntimeControl
     , newGrokCodingTools
     )
+import Agent.GrokBuild.Dialect.SubagentCatalog (SubagentCatalog)
+import Agent.GrokBuild.Dialect.SubagentOutcomes (SubagentExperience)
 import Agent.GrokBuild.Dialect.Task
     ( GrokSubagentSpecs
     , filterGrokToolsForType
+    , filterGrokToolsWithCatalog
     )
 import Agent.ProjectInstructions (LoadedAgentsMd)
 import Agent.ToolDispatch (ToolCall(..))
@@ -91,11 +95,13 @@ codingToolsFor
     -> Maybe SecretPromptHooks
     -> Maybe ImageDisplayHooks
     -> Maybe MultiAgentContext
+    -> SubagentCatalog
+    -> SubagentExperience
     -> IO CodingTools
-codingToolsFor dialect env planHooks secretHooks imageHooks multi = do
+codingToolsFor dialect env planHooks secretHooks imageHooks multi catalog experience = do
     typesRef <- newIORef Map.empty
     codingToolsForWithTypes
-        dialect env planHooks secretHooks imageHooks multi typesRef
+        dialect env planHooks secretHooks imageHooks multi typesRef catalog experience
 
 -- | Host-presented tools (@ask_secret@, @show_image@) are registered only
 -- when the host supplies the matching hooks, so headless and child sessions
@@ -108,9 +114,11 @@ codingToolsForWithTypes
     -> Maybe ImageDisplayHooks
     -> Maybe MultiAgentContext
     -> GrokSubagentSpecs
+    -> SubagentCatalog
+    -> SubagentExperience
     -> IO CodingTools
 codingToolsForWithTypes
-        dialect env planHooks secretHooks imageHooks multi typesRef = do
+        dialect env planHooks secretHooks imageHooks multi typesRef catalog experience = do
     secretStore <- traverse (newSecretStore env) secretHooks
     let closeSecrets = mapM_ closeSecretStore secretStore
         analysisSpawner =
@@ -171,7 +179,7 @@ codingToolsForWithTypes
                     typesRef
                     Nothing
         GrokBuildToolSurface -> do
-            coding <- newGrokCodingTools env planHooks multi typesRef
+            coding <- newGrokCodingTools env planHooks multi typesRef catalog experience
             pure $
                 finish
                     coding.grokAppTools
@@ -197,6 +205,9 @@ codingToolsForWithTypes
 
 filterChildGrokTools :: Text -> [AppTool] -> [AppTool]
 filterChildGrokTools = filterGrokToolsForType
+
+filterChildGrokToolsWithCatalog :: SubagentCatalog -> Text -> [AppTool] -> [AppTool]
+filterChildGrokToolsWithCatalog = filterGrokToolsWithCatalog
 
 filterBashTools :: Bool -> [AppTool] -> [AppTool]
 filterBashTools True = id

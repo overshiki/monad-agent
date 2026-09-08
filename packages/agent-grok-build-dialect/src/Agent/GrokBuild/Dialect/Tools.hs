@@ -27,6 +27,8 @@ import Agent.GrokBuild.Dialect.Shell
     , closeGrokSession
     , newGrokSession
     )
+import Agent.GrokBuild.Dialect.SubagentCatalog (SubagentCatalog)
+import Agent.GrokBuild.Dialect.SubagentOutcomes (SubagentExperience)
 import Agent.GrokBuild.Dialect.Task
     ( GrokSubagentSpecs
     , filterGrokToolsForType
@@ -61,9 +63,11 @@ grokTools
     -> Maybe WorkflowRuntime
     -> Maybe MultiAgentContext
     -> GrokSubagentSpecs
+    -> SubagentCatalog
+    -> SubagentExperience
     -> [AppTool]
 grokTools
-        session ghci planMode goals scheduler workflows multi typesRef =
+        session ghci planMode goals scheduler workflows multi typesRef catalog experience =
     let env = session.grokEnv
         base =
             [ runGhciTool ghci
@@ -93,5 +97,5 @@ grokTools
                     <> maybe [] (pure . workflowTool) workflows
         taskTools = case multi of
             Nothing -> []
-            Just ctx -> [taskTool env.toolCwd ctx typesRef]
+            Just ctx -> [taskTool env.toolCwd ctx typesRef catalog experience]
     in base <> rootRuntimeTools <> taskTools

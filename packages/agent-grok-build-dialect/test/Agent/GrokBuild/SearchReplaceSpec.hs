@@ -1,5 +1,7 @@
 module Agent.GrokBuild.SearchReplaceSpec (spec) where
 
+import Agent.GrokBuild.Dialect.SubagentCatalog (emptyCatalog)
+import Agent.GrokBuild.Dialect.SubagentOutcomes (noSubagentExperience)
 import Agent.GrokBuild.Dialect.Runtime
     ( GrokCodingTools(..)
     , newGrokCodingTools
@@ -29,7 +31,7 @@ spec = describe "search_replace" do
             createDirectory sourceDir
             env <- defaultToolEnv (unsafeEncodeUtf dir)
             typesRef <- newIORef Map.empty
-            coding <- newGrokCodingTools env Nothing Nothing typesRef
+            coding <- newGrokCodingTools env Nothing Nothing typesRef emptyCatalog noSubagentExperience
             result <-
                 dispatchToolCall testConfig
                     (map (.appToolHandler) coding.grokAppTools)

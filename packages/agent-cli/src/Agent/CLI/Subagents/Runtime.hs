@@ -50,7 +50,7 @@ import Agent.CLI.Dialects
     ( CodingTools(..)
     , codingToolsFor
     , filterBashTools
-    , filterChildGrokTools
+    , filterChildGrokToolsWithCatalog
     , filterGhciTools
     )
 import Agent.Codex.Dialect.Subagent (codexSubagentSuffix)
@@ -92,6 +92,11 @@ import Agent.Subagents
 import Agent.Subagents.TaskPath (parseTaskPath, taskPathRoot)
 import Agent.GrokBuild.Dialect.Prompt
     (codingGrokPromptTools, grokSubagentSystemPrompt)
+import Agent.GrokBuild.Dialect.SubagentCatalog
+    ( CatalogEntry(..)
+    , SubagentCatalog
+    , catalogLookup
+    )
 import Agent.GrokBuild.Dialect.Task
     ( GrokSubagentSpec(..)
     , GrokSubagentSpecs
@@ -462,6 +467,8 @@ runCodexSubagent gatewayOnly runtime tokenProvider sendToRoot =
                         Nothing
                         Nothing
                         (Just prepared.preparedMultiContext)
+                        runtime.subagentCatalog
+                        runtime.subagentExperience
                 syncStoreRootFromPlan
                     runtime.subagentStoreRoot
                     coding.codingPlanMode
@@ -472,8 +479,10 @@ runCodexSubagent gatewayOnly runtime tokenProvider sendToRoot =
                     let codingTools =
                             filterGhciTools ghciEnabled $
                                 filterBashTools bashEnabled $
-                                    filterChildGrokTools
-                                        agentType coding.codingAppTools
+                                    filterChildGrokToolsWithCatalog
+                                        runtime.subagentCatalog
+                                        agentType
+                                        coding.codingAppTools
                         tools =
                             codingTools <> runtime.subagentMcpTools
                         generatedInstructions =
@@ -513,6 +522,9 @@ runCodexSubagent gatewayOnly runtime tokenProvider sendToRoot =
                                         " Produce an implementation plan; do not edit implementation files."
                                     _ ->
                                         ""
+                                <> catalogSystemPromptSuffix
+                                    agentType
+                                    runtime.subagentCatalog
                         childParams = requestParams OpenAIProvider model instructions
                             (schemasFromAppTools codexDialect tools) effort
                     toolRegistry <- requireToolRegistry tools
@@ -646,6 +658,8 @@ runHttpSubagent runtime dialect provider sendToRoot mkBackend =
                         Nothing
                         Nothing
                         (Just prepared.preparedMultiContext)
+                        runtime.subagentCatalog
+                        runtime.subagentExperience
                 flip finally coding.codingClose do
                     today <- utctDay <$> getCurrentTime
                     shellPath <-
@@ -654,10 +668,15 @@ runHttpSubagent runtime dialect provider sendToRoot mkBackend =
                                 dialectChildAgentProtocol childDialect of
                             CodexCollaborationProtocol -> coding.codingAppTools
                             GrokTaskProtocol ->
-                                filterChildGrokTools agentType coding.codingAppTools
+                                filterChildGrokToolsWithCatalog
+                                    runtime.subagentCatalog
+                                    agentType
+                                    coding.codingAppTools
                             GenericTaskProtocol ->
-                                filterChildGrokTools
-                                    agentType coding.codingAppTools
+                                filterChildGrokToolsWithCatalog
+                                    runtime.subagentCatalog
+                                    agentType
+                                    coding.codingAppTools
                             NoHostChildAgentProtocol ->
                                 []
                     ghciEnabled <- readIORef runtime.subagentGhciEnabled
@@ -720,6 +739,9 @@ runHttpSubagent runtime dialect provider sendToRoot mkBackend =
                                         genericSubagentSuffix agentType env.subId
                                     NoHostChildAgentProtocol ->
                                         ""
+                                <> catalogSystemPromptSuffix
+                                    agentType
+                                    runtime.subagentCatalog
                         childParams = requestParams provider model instructions
                             (schemasFromAppTools childDialect tools) effort
                     toolRegistry <- requireToolRegistry tools
@@ -911,6 +933,17 @@ runPreparedChild runtime env session toolEnv toolRegistry backend onEvent runChi
         runtime.subagentStoreRoot runtime.subagentRegistry
         runtime.subagentTypes env.subId status session
     pure result
+
+-- | System-prompt suffix from the subagent catalog for the child's agent
+-- type. Empty unless a catalog entry (including one shadowing a built-in id)
+-- defines @system_prompt@.
+catalogSystemPromptSuffix :: Text -> SubagentCatalog -> Text
+catalogSystemPromptSuffix agentType catalog =
+    case catalogLookup agentType catalog of
+        Just entry
+            | Just suffix <- entry.entrySystemPrompt
+            , not (Text.null (Text.strip suffix)) -> "\n\n" <> suffix
+        _ -> ""
 
 genericSubagentSuffix :: Text -> SubagentId -> Text
 genericSubagentSuffix agentType agentId =

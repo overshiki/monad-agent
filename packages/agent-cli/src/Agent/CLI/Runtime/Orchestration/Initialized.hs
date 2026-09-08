@@ -93,7 +93,7 @@ import Agent.CLI.Runtime.Orchestration.Background ()
 import Agent.CLI.Runtime.Orchestration.Concurrent ()
 import Agent.CLI.Runtime.Orchestration.Restart ()
 import Agent.CLI.Runtime.Orchestration.Startup
-    ( setStartupRepository )
+    ( reportStartupWarning, setStartupRepository )
 import Agent.CLI.Runtime.Orchestration.Tools ( runAgentTools )
 import Agent.CLI.Runtime.Orchestration.Types
     ( ActiveHttpAuth(activeHttpGeneration, ActiveHttpAuth,
@@ -128,6 +128,7 @@ import Agent.CLI.Startup.Auth
     ( loadStartupAuth, loadStartupAuthFromResult, markStartupStage, startupDie )
 import Agent.CLI.StartupContext ()
 import Agent.CLI.Style ( setCliWindowTitle )
+import Agent.CLI.SubagentCatalogConfig ( loadSubagentCatalogAt )
 import Agent.CLI.Subagents.Runtime ()
 import Agent.CLI.TUI.App ( setFullscreenWindowTitle )
 import Agent.CLI.TUI.History ()
@@ -310,6 +311,11 @@ runAgentInitializedWithLock
         (startupDie startup . Text.unpack)
         pure
         catalogResult
+    -- The subagent catalog is validated against the model catalog so entries
+    -- can bind agent types to configured model ids. Problems only warn; the
+    -- effective catalog falls back to the shipped defaults.
+    subagentCatalog <-
+        loadSubagentCatalogAt (reportStartupWarning startup) catalog home cwd
     setStartupRepository fullscreen home branch cwd
     markStartupStage startup "Loading credentials…"
     let transitionTarget = (.transitionTarget) <$> transition
@@ -776,6 +782,7 @@ runAgentInitializedWithLock
         startup
         stateDirectory
         stderrHandle
+        subagentCatalog
         targetHint
         tokenProvider
         transition

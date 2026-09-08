@@ -1,5 +1,7 @@
 module Agent.CLI.DialectsSpec (spec) where
 
+import Agent.GrokBuild.Dialect.SubagentCatalog (emptyCatalog)
+import Agent.GrokBuild.Dialect.SubagentOutcomes (noSubagentExperience)
 import Agent.CLI.Dialects
     ( CodingTools(..)
     , codingToolsFor
@@ -70,7 +72,7 @@ spec = describe "Agent.CLI.Dialects" do
 
     it "allocates only the AskUserQuestion MCP fallback for Claude Code" do
         env <- defaultToolEnv (unsafeEncodeUtf "/tmp")
-        coding <- codingToolsFor claudeCodeDialect env Nothing Nothing Nothing Nothing
+        coding <- codingToolsFor claudeCodeDialect env Nothing Nothing Nothing Nothing emptyCatalog noSubagentExperience
         map (.appToolName) coding.codingAppTools
             `shouldBe` ["ask_user_question"]
         coding.codingClose
@@ -79,7 +81,7 @@ spec = describe "Agent.CLI.Dialects" do
         withTempToolEnv \env ->
             forM_ [codexDialect, grokBuildDialect] \dialect -> do
                 withoutSecret <-
-                    codingToolsFor dialect env Nothing Nothing Nothing Nothing
+                    codingToolsFor dialect env Nothing Nothing Nothing Nothing emptyCatalog noSubagentExperience
                 map (.appToolName) withoutSecret.codingAppTools
                     `shouldNotContain` ["ask_secret"]
                 withoutSecret.codingClose
@@ -87,7 +89,7 @@ spec = describe "Agent.CLI.Dialects" do
                 let hooks = SecretPromptHooks
                         (const (pure (Right Nothing)))
                 withSecret <-
-                    codingToolsFor dialect env Nothing (Just hooks) Nothing Nothing
+                    codingToolsFor dialect env Nothing (Just hooks) Nothing Nothing emptyCatalog noSubagentExperience
                 (map (.appToolName) withSecret.codingAppTools
                     `shouldContain` ["ask_secret"])
                     `finally` withSecret.codingClose
@@ -96,14 +98,14 @@ spec = describe "Agent.CLI.Dialects" do
         withTempToolEnv \env ->
             forM_ [codexDialect, grokBuildDialect] \dialect -> do
                 withoutImages <-
-                    codingToolsFor dialect env Nothing Nothing Nothing Nothing
+                    codingToolsFor dialect env Nothing Nothing Nothing Nothing emptyCatalog noSubagentExperience
                 map (.appToolName) withoutImages.codingAppTools
                     `shouldNotContain` ["show_image"]
                 withoutImages.codingClose
 
                 let hooks = ImageDisplayHooks (const (pure (Right ())))
                 withImages <-
-                    codingToolsFor dialect env Nothing Nothing (Just hooks) Nothing
+                    codingToolsFor dialect env Nothing Nothing (Just hooks) Nothing emptyCatalog noSubagentExperience
                 (map (.appToolName) withImages.codingAppTools
                     `shouldContain` ["show_image"])
                     `finally` withImages.codingClose
@@ -111,7 +113,7 @@ spec = describe "Agent.CLI.Dialects" do
     it "registers bounded artifact readers on coding tool surfaces" do
         withTempToolEnv \env ->
             forM_ [codexDialect, grokBuildDialect] \dialect -> do
-                coding <- codingToolsFor dialect env Nothing Nothing Nothing Nothing
+                coding <- codingToolsFor dialect env Nothing Nothing Nothing Nothing emptyCatalog noSubagentExperience
                 let names = map (.appToolName) coding.codingAppTools
                 names `shouldContain`
                     ["read_tool_output", "search_tool_output"]
