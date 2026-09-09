@@ -74,7 +74,8 @@ import Data.Maybe (fromMaybe, isJust, mapMaybe, maybeToList)
 import Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 -- | Adapt a stateless Responses transport to the provider-neutral loop.
 statelessResponsesBackend
     :: (ResponseCreateParams
@@ -148,8 +149,9 @@ withRequestInput ResponseCreateParams{..} items =
         -- Providers validate call_id uniqueness per request; apply after
         -- every other rewrite so the renames see the final item list.
         requestItems =
-            uniquifyRequestCallIds
-                (ensureReasoningHasFollowingItem baseRequestItems)
+            orderToolPairs
+                (uniquifyRequestCallIds
+                    (ensureReasoningHasFollowingItem baseRequestItems))
     in
     ResponseCreateParams
         { input = Just
@@ -157,6 +159,44 @@ withRequestInput ResponseCreateParams{..} items =
                 (prefix <> requestItems))
         , ..
         }
+
+-- | The Responses API requires each tool call to precede its output. The
+-- stateless transcript is assembled from a snapshot followed by fresh tool
+-- results, which can interleave an output before its call (and, in retried
+-- turns, repeat one). Rebuild the tool items so every call is followed by
+-- its outputs, while non-tool items keep their relative order. Runs after
+-- 'uniquifyRequestCallIds', so call ids are unique within the request and a
+-- call id has at most one call item.
+orderToolPairs :: [ResponseItem] -> [ResponseItem]
+orderToolPairs items = concatMap step items <> orphanOutputs
+  where
+    outputsById =
+        Map.fromListWith (flip (<>))
+            ( [ (o.callId, [out]) | out@(FunctionCallOutputItem o) <- items ]
+                <> [ (o.callId, [out]) | out@(CustomToolCallOutputItem o) <- items ]
+            )
+    callIds =
+        Set.fromList
+            ( [ c.callId | FunctionCallItem c <- items ]
+                <> [ c.callId | CustomToolCallItem c <- items ]
+            )
+    step item = case item of
+        FunctionCallItem c -> item : Map.findWithDefault [] c.callId outputsById
+        CustomToolCallItem c -> item : Map.findWithDefault [] c.callId outputsById
+        FunctionCallOutputItem o
+            | o.callId `Set.member` callIds -> []
+        CustomToolCallOutputItem o
+            | o.callId `Set.member` callIds -> []
+        _ -> [item]
+    orphanOutputs =
+        [ out
+        | out@(FunctionCallOutputItem o) <- items
+        , o.callId `Set.notMember` callIds
+        ]
+            <> [ out
+               | out@(CustomToolCallOutputItem o) <- items
+               , o.callId `Set.notMember` callIds
+               ]
 
 requestInputPrefix :: Maybe ResponseInput -> [ResponseItem]
 requestInputPrefix = \case
