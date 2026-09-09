@@ -17,12 +17,14 @@ build-type:         Simple
 
 library
     hs-source-dirs:     src
+                      , dialect-src
                       , tui-src
                       , core-src
     exposed-modules:    Agent.CLI.Input.Types
                       , Agent.CLI.Input.EditOps
                       , Agent.CLI.Input.Display
                       , Agent.CLI.TextLayout
+                      , Agent.GrokBuild.Dialect.SubagentCatalog
                       , Agent.TUI.TextWidth
                       , Agent.Loop.Attachments
                       , Agent.Dialect
@@ -36,6 +38,7 @@ library
                       , bytestring
                       , containers
                       , liquidhaskell == 0.9.14.1.1
+                      , vector
                       , text
                       , time
                       , vty >= 6.4 && < 7
@@ -48,6 +51,7 @@ library
     ghc-options:        -O0 -fomit-interface-pragmas -fplugin=LiquidHaskell
                         -fplugin-opt=LiquidHaskell:--interpreter
                         -fplugin-opt=LiquidHaskell:--prune-unsorted
+                        -fplugin-opt=LiquidHaskell:--ple-with-undecided-guards
     default-language:   GHC2021
     default-extensions: LambdaCase
                       , MultiWayIf

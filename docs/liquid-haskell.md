@@ -190,6 +190,32 @@ invariant needs the replace-range contract of `slashMenuForCatalog`,
 which lives in the `Agent.CLI.Command` umbrella — a future refactor
 candidate.
 
+### `Agent.GrokBuild.Dialect.SubagentCatalog`
+
+The overlay-merge semantics for `subagents.json` — the rule deciding which
+config entries win. The central verified contract is the
+**lookup-composition law** (`mergeLookupLaw`):
+
+```haskell
+catalogLookup wanted (merge base overlay)
+    == maybeAlt (catalogLookup wanted overlay) (catalogLookup wanted base)
+```
+
+Looking up an id in a merged catalog tries the overlay first and falls back
+to the defaults — entry-level replacement with overlay precedence, exactly
+the `models.json` semantics the module documents. Proved via
+`lookupIdAppend` (lookup distributes over append), `lookupReplaced`
+(replacements answer at the defaults' position), and the appended-entries
+lemmas; the merge itself was simplified from a `Data.Map` lookup to a
+first-match list lookup, which is identical on the duplicate-free catalogs
+the loader enforces (and trivially fast at catalog sizes). A mutation that
+drops overlay precedence (defaults winning) fails the build.
+
+- `catalogModelFor`: a default model is returned only for ids present in
+  the catalog.
+- The trusted boundary here is just `textEquals` (SMT equality on `Text`);
+  everything else is proved.
+
 ### `Agent.CLI.TextLayout`
 
 The selection-safety trio for fixed-size overlays (built on Display's
