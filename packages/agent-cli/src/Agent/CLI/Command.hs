@@ -265,6 +265,7 @@ parseSlash catalog raw line = case Text.words line of
                     then ReplToggleFast
                     else ReplCommandError "usage: /fast"
             "model" -> parseModelCommand args
+            "model-test" -> ReplModelTest args
             "plan" ->
                 let description =
                         Text.strip (Text.drop (Text.length command) line)

@@ -2,6 +2,7 @@
 module Agent.CLI.Session.Interaction
     ( buildPromptState
     , runBtwQuestion
+    , runModelTest
     , setSessionEffort
     , setSessionEffortText
     , syncFullscreenPrompt
@@ -18,6 +19,17 @@ import Agent.CLI.Command
     , setReasoningEffort
     )
 import Agent.CLI.Interrupt (withTurnCancel)
+import Agent.CLI.ModelTest
+    ( ProbeOutcome(..)
+    , classifyProbe
+    , defaultProbeTimeoutMicros
+    , formatProbeLine
+    , matchesFilters
+    , modelTestQuestion
+    , sessionConnectionTargets
+    , targetId
+    )
+import Agent.Concurrent (mapConcurrentlyBounded)
 import Agent.CLI.Options
     ( ApprovalPolicy
     , normalizeReasoningEffortForDialect
@@ -28,6 +40,7 @@ import Agent.CLI.Render
     , putTextLn
     , renderAssistantText
     )
+import Agent.CLI.Request (setRequestModel)
 import Agent.CLI.ReplMode
     ( replModeFromState
     , replModeLabel
@@ -57,7 +70,10 @@ import Agent.ReasoningEffort
     , parseReasoningEffort
     , reasoningEffortText
     )
-import Agent.Responses.Types (ResponseCreateParams)
+import Agent.Responses.Types
+    ( ResponseCreateParams
+    , ResponseItem
+    )
 import Agent.Tools.PlanMode
     ( PlanModeEnv(..)
     , PlanModeState
@@ -77,6 +93,8 @@ import Data.IORef
 import Data.Maybe (isJust)
 import Data.Text (Text)
 import qualified Data.Text as Text
+import Data.Time.Clock (diffUTCTime, getCurrentTime)
+import System.Timeout (timeout)
 
 -- | Publish the current session prompt metadata to a retained fullscreen
 -- runtime before replaying a pending turn after a provider rebuild.
@@ -212,3 +230,101 @@ runBtwQuestion registerCancel env question = do
                     emitUiEvent runtime (UiAssistantHistory answer)
                 Nothing ->
                     putTextLn stdoutHandle (renderAssistantText color answer)
+
+-- | Probe the models configured on the session connection and report which
+-- respond right now. Out-of-band like @/btw@: nothing enters the
+-- conversation, no tools are offered, and every probe is one fresh request
+-- with a small fixed question through the session's btw backend.
+runModelTest :: SessionEnv -> [Text] -> IO ()
+runModelTest env filters = do
+    let stdoutHandle = env.sessionRender.renderStdout
+        stderrHandle = env.sessionRender.renderStderr
+        fullscreen = env.sessionFullscreen
+        targets =
+            filter (matchesFilters filters)
+                (sessionConnectionTargets
+                    env.sessionProvider
+                    env.sessionConnection
+                    env.sessionModelCatalog)
+    if null targets
+        then do
+            color <- resolveColor stderrHandle
+            let suffix =
+                    if null filters
+                        then ""
+                        else
+                            " matching "
+                                <> Text.intercalate ", " filters
+                message =
+                    "no configured models to test"
+                        <> suffix
+                        <> " on connection "
+                        <> env.sessionConnection
+            case fullscreen of
+                Just runtime -> emitUiEvent runtime (UiErrorMessage message)
+                Nothing ->
+                    putTextLn stderrHandle (roleError color message)
+        else do
+            color <- resolveColor stdoutHandle
+            baseParams <- readIORef env.sessionParams
+            forM_ fullscreen \runtime ->
+                emitUiEvent runtime
+                    (UiSetNotice (Just (progressNotice "model-test · probing…")))
+            results <-
+                mapConcurrentlyBounded 4 (probeTarget baseParams) targets
+            forM_ fullscreen \runtime ->
+                emitUiEvent runtime (UiSetNotice Nothing)
+            let okCount = length [() | (_, _, ProbeOk) <- results]
+                summary =
+                    "model-test: "
+                        <> Text.pack (show okCount)
+                        <> "/"
+                        <> Text.pack (show (length results))
+                        <> " models responded on "
+                        <> env.sessionConnection
+                emitLine line =
+                    case fullscreen of
+                        Just runtime -> emitUiEvent runtime (UiSystemMessage line)
+                        Nothing -> putTextLn stdoutHandle line
+            mapM_ (emitLine . summarize) results
+            emitLine summary
+  where
+    probeTarget baseParams target = do
+        probeParamsRef <-
+            newIORef
+                (setRequestModel
+                    env.sessionProvider
+                    (targetId target)
+                    baseParams)
+        transcriptRef <- newIORef []
+        started <- getCurrentTime
+        result <-
+            timeout defaultProbeTimeoutMicros $
+                runBtwWithCancel
+                    cancelScope
+                    env.sessionBtwBackend
+                    probeParamsRef
+                    transcriptRef
+                    modelTestQuestion
+        finished <- getCurrentTime
+        let latencyMs =
+                floor
+                    (realToFrac (diffUTCTime finished started) * 1000)
+                    :: Int
+            outcome =
+                case result of
+                    Nothing -> ProbeTimeout
+                    Just probeResult -> classifyProbe probeResult
+        pure (target, latencyMs, outcome)
+
+    cancelScope cancel action =
+        withTurnCancel env.sessionInterrupt cancel $
+            case env.sessionFullscreen of
+                Nothing
+                    | env.sessionBackground -> action
+                    | otherwise ->
+                        withEscCancel cancel env.sessionEscPaused action
+                Just _ -> action
+
+    summarize (target, latencyMs, outcome) =
+        formatProbeLine target (Just latencyMs) outcome

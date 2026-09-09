@@ -8,6 +8,7 @@ module Agent.CLI.Subagents.Runtime.Types
     ) where
 
 import Agent.CLI.Compaction (OccupancySnapshot)
+import Agent.CLI.ModelConfig (ModelCatalog)
 import Agent.CLI.Options (ApprovalPolicy, CliOptions)
 import Agent.CLI.Session (LegacySubagentTarget)
 import Agent.GrokBuild.Dialect.SubagentCatalog (SubagentCatalog)
@@ -68,6 +69,9 @@ data SubagentRuntime = SubagentRuntime
     , subagentStoreRoot :: !SubagentStoreRoot
     , subagentTypes :: !GrokSubagentSpecs
     , subagentCatalog :: !SubagentCatalog
+    , subagentModelCatalog :: !ModelCatalog
+    -- ^ Loaded model catalog used to resolve a child model id to the
+    -- provider/connection that owns it (cross-provider target resolution).
     , subagentExperience :: !SubagentExperience
     -- ^ Session-scoped outcome sink + pre-rendered history, shared with
     -- nested child tool builders so a child's @task@ records into the same

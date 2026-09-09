@@ -53,6 +53,10 @@ data ReplAction
     | ReplToggleFast
     | ReplShowModel
     | ReplSetModel Text
+    | ReplModelTest [Text]
+      -- ^ Probe the session connection's configured models and report which
+      -- respond right now (availability + latency). Arguments filter the
+      -- probed set by model id or connection substring.
     | ReplEnableCodeMode
     | ReplToggleAlwaysApprove
     | ReplMouseCapture (Maybe Bool)

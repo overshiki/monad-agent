@@ -692,20 +692,16 @@ runAgentProviders
                                     getParams
                                     occupancy
                                     backend
-                        case multiCtx of
-                            Just ctx ->
-                                setSubagentRunner ctx.multiRegistry $
-                                    runXaiParentSubagent
-                                        subagentRuntime
-                                        dialect
-                                        ctx.multiSendToRoot
-                                        (\childParams ->
-                                            protectXaiOverflow
-                                                contextTokensRef
-                                                (pure childParams)
-                                                (xaiBackend xaiOptions tokenProvider
-                                                    (pure childParams)))
-                            Nothing -> pure ()
+                        installXaiSubagentRunner
+                            subagentRuntime
+                            dialect
+                            multiCtx
+                            (\childParams ->
+                                protectXaiOverflow
+                                    contextTokensRef
+                                    (pure childParams)
+                                    (xaiBackend xaiOptions tokenProvider
+                                        (pure childParams)))
                         let backend =
                                 withPendingInputs pendingNotices $
                                     withConnectionRecovery $
@@ -775,21 +771,17 @@ runAgentProviders
                                     getParams
                                     occupancy
                                     backend
-                        case multiCtx of
-                            Just ctx ->
-                                setSubagentRunner ctx.multiRegistry $
-                                    runHttpSubagent
-                                        subagentRuntime
-                                        dialect
-                                        GeminiProvider
-                                        ctx.multiSendToRoot
-                                        (\childParams ->
-                                            protectGeminiOverflow
-                                                geminiOccupancy
-                                                (pure childParams)
-                                                (makeBackend
-                                                    (pure childParams)))
-                            Nothing -> pure ()
+                        installHttpSubagentRunner
+                            subagentRuntime
+                            dialect
+                            GeminiProvider
+                            multiCtx
+                            (\childParams ->
+                                protectGeminiOverflow
+                                    geminiOccupancy
+                                    (pure childParams)
+                                    (makeBackend
+                                        (pure childParams)))
                         let backend =
                                 withPendingInputs pendingNotices $
                                     withConnectionRecovery $
@@ -1033,21 +1025,17 @@ runAgentProviders
                                     getParams
                                     occupancy
                                     backend
-                        case multiCtx of
-                            Just ctx ->
-                                setSubagentRunner ctx.multiRegistry $
-                                    runHttpSubagent
-                                        subagentRuntime
-                                        dialect
-                                        OpenRouterProvider
-                                        ctx.multiSendToRoot
-                                        (\childParams ->
-                                            protectOverflow
-                                                contextTokensRef
-                                                (pure childParams)
-                                                (makeBackend
-                                                    (pure childParams)))
-                            Nothing -> pure ()
+                        installHttpSubagentRunner
+                            subagentRuntime
+                            dialect
+                            OpenRouterProvider
+                            multiCtx
+                            (\childParams ->
+                                protectOverflow
+                                    contextTokensRef
+                                    (pure childParams)
+                                    (makeBackend
+                                        (pure childParams)))
                         let backend =
                                 withPendingInputs pendingNotices $
                                     withConnectionRecovery $
@@ -1132,21 +1120,17 @@ runAgentProviders
                                     getParams
                                     occupancy
                                     backend
-                        case multiCtx of
-                            Just ctx ->
-                                setSubagentRunner ctx.multiRegistry $
-                                    runHttpSubagent
-                                        subagentRuntime
-                                        dialect
-                                        DeepSeekProvider
-                                        ctx.multiSendToRoot
-                                        (\childParams ->
-                                            protectDeepSeekOverflow
-                                                deepSeekOccupancy
-                                                (pure childParams)
-                                                (makeBackend
-                                                    (pure childParams)))
-                            Nothing -> pure ()
+                        installHttpSubagentRunner
+                            subagentRuntime
+                            dialect
+                            DeepSeekProvider
+                            multiCtx
+                            (\childParams ->
+                                protectDeepSeekOverflow
+                                    deepSeekOccupancy
+                                    (pure childParams)
+                                    (makeBackend
+                                        (pure childParams)))
                         let backend =
                                 withPendingInputs pendingNotices $
                                     withConnectionRecovery $
@@ -1211,21 +1195,17 @@ runAgentProviders
                                     getParams
                                     occupancy
                                     backend
-                        case multiCtx of
-                            Just ctx ->
-                                setSubagentRunner ctx.multiRegistry $
-                                    runHttpSubagent
-                                        subagentRuntime
-                                        dialect
-                                        KimiProvider
-                                        ctx.multiSendToRoot
-                                        (\childParams ->
-                                            protectKimiOverflow
-                                                kimiOccupancy
-                                                (pure childParams)
-                                                (makeBackend
-                                                    (pure childParams)))
-                            Nothing -> pure ()
+                        installHttpSubagentRunner
+                            subagentRuntime
+                            dialect
+                            KimiProvider
+                            multiCtx
+                            (\childParams ->
+                                protectKimiOverflow
+                                    kimiOccupancy
+                                    (pure childParams)
+                                    (makeBackend
+                                        (pure childParams)))
                         let backend =
                                 withPendingInputs pendingNotices $
                                     withConnectionRecovery $
@@ -1280,6 +1260,54 @@ runAgentProviders
                 startupDie startup
                     (Text.unpack (formatApiErrorAt now err))
 
+-- | Install the HTTP-family child runner (OpenRouter, DeepSeek, Kimi) for
+-- this session's multi-agent context. Every HTTP provider branch registers
+-- the identical shape: the registry gets one @runHttpSubagent@ for the
+-- provider, whose child backend factory overflow-guards a per-provider
+-- occupancy budget before handing parameters to the provider backend. The
+-- shared helper keeps the three branches identical by construction; the
+-- per-provider @mkChildBackend@ closure supplies the provider-specific
+-- backend + overflow guard.
+installHttpSubagentRunner
+    :: SubagentRuntime
+    -> Dialect
+    -> Provider
+    -> Maybe MultiAgentContext
+    -> (ResponseCreateParams -> Backend)
+    -> IO ()
+installHttpSubagentRunner runtime dialect provider multiCtx mkChildBackend =
+    case multiCtx of
+        Nothing -> pure ()
+        Just ctx ->
+            setSubagentRunner ctx.multiRegistry $
+                runHttpSubagent
+                    runtime
+                    dialect
+                    provider
+                    ctx.multiSendToRoot
+                    mkChildBackend
+
+-- | Install the xAI child runner for the session's multi-agent context.
+-- xAI children use their own collaboration runner ('runXaiParentSubagent')
+-- rather than the generic HTTP one, but the registration shape is the same
+-- single-runner install, with the per-provider child backend closure
+-- supplying the xAI backend + overflow guard.
+installXaiSubagentRunner
+    :: SubagentRuntime
+    -> Dialect
+    -> Maybe MultiAgentContext
+    -> (ResponseCreateParams -> Backend)
+    -> IO ()
+installXaiSubagentRunner runtime dialect multiCtx mkChildBackend =
+    case multiCtx of
+        Nothing -> pure ()
+        Just ctx ->
+            setSubagentRunner ctx.multiRegistry $
+                runXaiParentSubagent
+                    runtime
+                    dialect
+                    ctx.multiSendToRoot
+                    mkChildBackend
 
 sessionRunnerContinuation :: SessionRunner.SessionRunnerContinuation
 sessionRunnerContinuation =

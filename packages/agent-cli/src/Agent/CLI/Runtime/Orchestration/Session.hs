@@ -143,7 +143,7 @@ import Agent.CLI.StartupContext
 import Agent.CLI.Style ( cliWindowTitle, roleMuted )
 import Agent.CLI.Subagents.Runtime
     ( SubagentRuntime(subagentOpenAiChild, subagentCatalog, SubagentRuntime,
-                      subagentExperience, subagentOptions, subagentGhciEnabled, subagentBashEnabled,
+                      subagentExperience, subagentModelCatalog, subagentOptions, subagentGhciEnabled, subagentBashEnabled,
                       subagentPolicy, subagentPlanHooks, subagentSkillRoots,
                       subagentAllowedRoots, subagentRootAccessRequest,
                       subagentParams, subagentMcpTools, subagentRegistry,
@@ -622,6 +622,7 @@ runAgentSession
                 , subagentStoreRoot = subagentStoreRoot
                 , subagentTypes = agentTypesRef
                 , subagentCatalog = subagentCatalog
+                , subagentModelCatalog = catalog
                 , subagentExperience = subagentExperience
                 , subagentLegacyTarget = legacySubagentTarget
                 , subagentConnection = inferredTarget.targetConnectionId

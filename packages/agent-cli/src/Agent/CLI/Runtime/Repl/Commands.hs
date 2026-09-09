@@ -31,7 +31,7 @@ import Agent.CLI.Command
                  ReplCopyCode, ReplCopyDiff, ReplCopyPath, ReplCopySession,
                  ReplDesktop,
                  ReplShowTerminal, ReplShowEffort, ReplSetEffort, ReplShowModel,
-                 ReplSetModel, ReplToggleFast, ReplEnableCodeMode,
+                 ReplSetModel, ReplModelTest, ReplToggleFast, ReplEnableCodeMode,
                  ReplToggleAlwaysApprove, ReplMouseCapture, ReplCompact, ReplPlan,
                  ReplViewPlan, ReplQueue, ReplTranscript, ReplEditPrompt,
                  ReplContext, ReplHistory, ReplFind,
@@ -185,7 +185,7 @@ import Agent.CLI.Session.Choices
     ( accountUsageText, showAccountUsage )
 import Agent.CLI.Session.History
     ( modifyLiveAttachments, readLiveAttachments, readLiveTranscript )
-import Agent.CLI.Session.Interaction ( runBtwQuestion )
+import Agent.CLI.Session.Interaction ( runBtwQuestion, runModelTest )
 import Agent.CLI.Session.Lifecycle ()
 import Agent.CLI.Session.Runtime.Types ()
 import Agent.CLI.Session.Selection
@@ -1137,6 +1137,9 @@ handleReplLine
                             Right edited -> continueWith edited
                     ReplBtw question -> do
                         runBtwQuestion True env question
+                        continue
+                    ReplModelTest filters -> do
+                        runModelTest env filters
                         continue
                     ReplRecap ->
                         case fullscreen of

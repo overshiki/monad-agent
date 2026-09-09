@@ -44,6 +44,18 @@ import Agent.CLI.Subagents.Runtime.Target
      validatePersistedSubagentTarget)
 import Agent.CLI.Subagents.Runtime.OpenAI
     (freshOpenAiBackend, freshOpenAiBackendWithTurnState)
+import Agent.CLI.Subagents.TargetResolution
+    ( childTargetConnection
+    , childTargetProvider
+    , foreignTargetMessage
+    , isSameConnectionTarget
+    , resolveChildTarget
+    )
+import Agent.CLI.Auth (LoadedAuth(..), loadAuth)
+import Agent.DeepSeek.LoopBackend (deepSeekBackend)
+import qualified Agent.DeepSeek.Options as DeepSeek (clientOptionsFromEnv)
+import Agent.Kimi.LoopBackend (kimiBackend)
+import qualified Agent.Kimi.Options as Kimi (clientOptionsFromEnv)
 import Agent.CLI.Tools
     (hostedSearchToolNames, requireToolRegistry, schemasFromAppTools)
 import Agent.CLI.Dialects
@@ -618,145 +630,168 @@ runHttpSubagent runtime dialect provider sendToRoot mkBackend =
                     childEffort
             provisionalEffectiveModel =
                 runtime.subagentMapModel provisionalModel
-        prepared <-
-            prepareChild
-                runtime
-                provider
-                provisionalEffectiveModel
-                (maybe
-                    (dialectId dialect)
-                    (dialectIdForModel provider . runtime.subagentMapModel)
-                    childModel)
-                env
-                sendToRoot
-        let (model, effort) =
-                resolveChildModelAndEffort
+        case childModel of
+            Nothing ->
+                goRest
+                    env previous prompt onEvent
+                    agentType childModel childEffort parentParams
+                    provisionalEffectiveModel
+            Just rawModel ->
+                case ensureChildOnSessionConnection runtime provider rawModel of
+                    Right () ->
+                        goRest
+                            env previous prompt onEvent
+                            agentType childModel childEffort parentParams
+                            provisionalEffectiveModel
+                    Left _ ->
+                        dispatchForeignOrFail
+                            runtime dialect provider sendToRoot
+                            env previous prompt onEvent rawModel
+  where
+    goRest
+        env previous prompt onEvent
+        agentType childModel childEffort parentParams
+        provisionalEffectiveModel
+        = do
+            prepared <-
+                prepareChild
+                    runtime
                     provider
-                    parentParams
-                    prepared.preparedSession.subSessionEffectiveModel
-                    childModel
-                    childEffort
-            effectiveModel =
-                maybe
-                    prepared.preparedSession.subSessionEffectiveModel
-                    runtime.subagentMapModel
-                    childModel
-        sessionTmp <- readIORef runtime.subagentSessionTmp
-        case activeSubagentTargetError
-                provider runtime.subagentConnection
-                effectiveModel prepared.preparedSession of
-            Just err -> pure (Left (LoopUnexpected err))
-            Nothing -> do
-                let childDialect =
-                        dialectForId
-                            prepared.preparedSession.subSessionDialect
-                coding <-
-                    codingToolsFor
-                        childDialect
-                        prepared.preparedToolEnv
-                        (Just runtime.subagentPlanHooks)
-                        Nothing
-                        Nothing
-                        (Just prepared.preparedMultiContext)
-                        runtime.subagentCatalog
-                        runtime.subagentExperience
-                flip finally coding.codingClose do
-                    today <- utctDay <$> getCurrentTime
-                    shellPath <-
-                        Text.pack . fromMaybe defaultShell <$> lookupEnv "SHELL"
-                    let childTools = case
-                                dialectChildAgentProtocol childDialect of
-                            CodexCollaborationProtocol -> coding.codingAppTools
-                            GrokTaskProtocol ->
-                                filterChildGrokToolsWithCatalog
-                                    runtime.subagentCatalog
-                                    agentType
-                                    coding.codingAppTools
-                            GenericTaskProtocol ->
-                                filterChildGrokToolsWithCatalog
-                                    runtime.subagentCatalog
-                                    agentType
-                                    coding.codingAppTools
-                            NoHostChildAgentProtocol ->
-                                []
-                    ghciEnabled <- readIORef runtime.subagentGhciEnabled
-                    bashEnabled <- readIORef runtime.subagentBashEnabled
-                    let codingTools =
-                            filterGhciTools ghciEnabled $
-                                filterBashTools bashEnabled childTools
-                        tools =
-                            codingTools <> runtime.subagentMcpTools
-                        baseInstructions =
-                            case dialectChildAgentProtocol childDialect of
-                                CodexCollaborationProtocol ->
-                                    systemPromptForTools
-                                        childDialect
-                                        (map (.appToolName) tools)
-                                        env.subCwd
-                                        sessionTmp
-                                        today
-                                        True
-                                GrokTaskProtocol ->
-                                    Text.intercalate "\n\n" $
-                                        filter (not . Text.null)
-                                            [ grokSubagentSystemPrompt
-                                                codingGrokPromptTools
-                                                (hostedSearchToolNames childDialect
-                                                    ++ map (.appToolName) tools)
-                                                env.subCwd
-                                                today
-                                                (Text.pack SystemInfo.os)
-                                                shellPath
-                                                agentType
-                                                env.subId.unSubagentId
-                                            , sessionTempGuidance sessionTmp
-                                            ]
-                                GenericTaskProtocol ->
-                                    systemPromptForTools
-                                        childDialect
-                                        (map (.appToolName) tools)
-                                        env.subCwd
-                                        sessionTmp
-                                        today
-                                        True
-                                NoHostChildAgentProtocol ->
-                                    systemPrompt
-                                        childDialect
-                                        env.subCwd
-                                        sessionTmp
-                                        today
-                                        True
-                        instructions =
-                            baseInstructions
-                                <> "\n\n"
-                                <> case
+                    provisionalEffectiveModel
+                    (maybe
+                        (dialectId dialect)
+                        (dialectIdForModel provider . runtime.subagentMapModel)
+                        childModel)
+                    env
+                    sendToRoot
+            let (model, effort) =
+                    resolveChildModelAndEffort
+                        provider
+                        parentParams
+                        prepared.preparedSession.subSessionEffectiveModel
+                        childModel
+                        childEffort
+                effectiveModel =
+                    maybe
+                        prepared.preparedSession.subSessionEffectiveModel
+                        runtime.subagentMapModel
+                        childModel
+            sessionTmp <- readIORef runtime.subagentSessionTmp
+            case activeSubagentTargetError
+                    provider runtime.subagentConnection
+                    effectiveModel prepared.preparedSession of
+                Just err -> pure (Left (LoopUnexpected err))
+                Nothing -> do
+                    let childDialect =
+                            dialectForId
+                                prepared.preparedSession.subSessionDialect
+                    coding <-
+                        codingToolsFor
+                            childDialect
+                            prepared.preparedToolEnv
+                            (Just runtime.subagentPlanHooks)
+                            Nothing
+                            Nothing
+                            (Just prepared.preparedMultiContext)
+                            runtime.subagentCatalog
+                            runtime.subagentExperience
+                    flip finally coding.codingClose do
+                        today <- utctDay <$> getCurrentTime
+                        shellPath <-
+                            Text.pack . fromMaybe defaultShell <$> lookupEnv "SHELL"
+                        let childTools = case
                                     dialectChildAgentProtocol childDialect of
+                                CodexCollaborationProtocol -> coding.codingAppTools
+                                GrokTaskProtocol ->
+                                    filterChildGrokToolsWithCatalog
+                                        runtime.subagentCatalog
+                                        agentType
+                                        coding.codingAppTools
+                                GenericTaskProtocol ->
+                                    filterChildGrokToolsWithCatalog
+                                        runtime.subagentCatalog
+                                        agentType
+                                        coding.codingAppTools
+                                NoHostChildAgentProtocol ->
+                                    []
+                        ghciEnabled <- readIORef runtime.subagentGhciEnabled
+                        bashEnabled <- readIORef runtime.subagentBashEnabled
+                        let codingTools =
+                                filterGhciTools ghciEnabled $
+                                    filterBashTools bashEnabled childTools
+                            tools =
+                                codingTools <> runtime.subagentMcpTools
+                            baseInstructions =
+                                case dialectChildAgentProtocol childDialect of
                                     CodexCollaborationProtocol ->
-                                        codexSubagentSuffix env.subId
+                                        systemPromptForTools
+                                            childDialect
+                                            (map (.appToolName) tools)
+                                            env.subCwd
+                                            sessionTmp
+                                            today
+                                            True
                                     GrokTaskProtocol ->
-                                        ""
+                                        Text.intercalate "\n\n" $
+                                            filter (not . Text.null)
+                                                [ grokSubagentSystemPrompt
+                                                    codingGrokPromptTools
+                                                    (hostedSearchToolNames childDialect
+                                                        ++ map (.appToolName) tools)
+                                                    env.subCwd
+                                                    today
+                                                    (Text.pack SystemInfo.os)
+                                                    shellPath
+                                                    agentType
+                                                    env.subId.unSubagentId
+                                                , sessionTempGuidance sessionTmp
+                                                ]
                                     GenericTaskProtocol ->
-                                        genericSubagentSuffix agentType env.subId
+                                        systemPromptForTools
+                                            childDialect
+                                            (map (.appToolName) tools)
+                                            env.subCwd
+                                            sessionTmp
+                                            today
+                                            True
                                     NoHostChildAgentProtocol ->
-                                        ""
-                                <> catalogSystemPromptSuffix
-                                    agentType
-                                    runtime.subagentCatalog
-                        childParams = requestParams provider model instructions
-                            (schemasFromAppTools childDialect tools) effort
-                    toolRegistry <- requireToolRegistry tools
-                    let backend =
-                            withConnectionRecovery $
-                                mkBackend childParams
-                    runPreparedChild
-                        runtime env prepared.preparedSession
-                        prepared.preparedToolEnv toolRegistry
-                        backend onEvent
-                        (\config ->
-                            runLoop
-                                config
-                                previous
-                                (interAgentMessagePayload prompt))
+                                        systemPrompt
+                                            childDialect
+                                            env.subCwd
+                                            sessionTmp
+                                            today
+                                            True
+                            instructions =
+                                baseInstructions
+                                    <> "\n\n"
+                                    <> case
+                                        dialectChildAgentProtocol childDialect of
+                                        CodexCollaborationProtocol ->
+                                            codexSubagentSuffix env.subId
+                                        GrokTaskProtocol ->
+                                            ""
+                                        GenericTaskProtocol ->
+                                            genericSubagentSuffix agentType env.subId
+                                        NoHostChildAgentProtocol ->
+                                            ""
+                                    <> catalogSystemPromptSuffix
+                                        agentType
+                                        runtime.subagentCatalog
+                            childParams = requestParams provider model instructions
+                                (schemasFromAppTools childDialect tools) effort
+                        toolRegistry <- requireToolRegistry tools
+                        let backend =
+                                withConnectionRecovery $
+                                    mkBackend childParams
+                        runPreparedChild
+                            runtime env prepared.preparedSession
+                            prepared.preparedToolEnv toolRegistry
+                            backend onEvent
+                            (\config ->
+                                runLoop
+                                    config
+                                    previous
+                                    (interAgentMessagePayload prompt))
 
 defaultShell :: String
 defaultShell
@@ -846,6 +881,112 @@ prepareChild runtime provider currentEffectiveModel currentDialect env sendToRoo
         , preparedToolEnv = childToolEnv
         , preparedMultiContext = childCtx
         }
+
+-- | Interim guard for cross-provider subagent execution (Phase 2 wiring).
+-- When a child's effective model resolves in the model catalog to a
+-- different connection than the session's, fail the spawn immediately with a
+-- clear error instead of silently sending the foreign model id over the
+-- session's transport. Models absent from the catalog are left to the
+-- existing transport — they may be session-internal defaults such as the
+-- parent's own model.
+ensureChildOnSessionConnection
+    :: SubagentRuntime
+    -> Provider
+    -> Text
+    -> Either Text ()
+ensureChildOnSessionConnection runtime provider effectiveModel =
+    case resolveChildTarget runtime.subagentModelCatalog effectiveModel of
+        Left _ -> Right ()
+        Right target
+            | isSameConnectionTarget provider runtime.subagentConnection target ->
+                Right ()
+            | otherwise ->
+                Left
+                    (foreignTargetMessage
+                        provider
+                        runtime.subagentConnection
+                        target)
+
+-- | Phase 3 slice: dispatch a child whose catalog model belongs to a
+-- foreign key-based HTTP provider (DeepSeek, Kimi). The child runs through
+-- the same @runHttpSubagent@ path as a same-provider child, but with the
+-- foreign provider's own lazily loaded credential, env options, connection,
+-- and identity transport mapping. Unsupported providers or a missing
+-- credential fall back to the interim clear error.
+dispatchForeignOrFail
+    :: SubagentRuntime
+    -> Dialect
+    -> Provider
+    -> Maybe (InterAgentMessage -> IO (Either Text Text))
+    -> SubagentSpawnEnv
+    -> Maybe Text
+    -> InterAgentMessage
+    -> (LoopEvent -> IO ())
+    -> Text
+    -> IO (Either LoopError LoopResult)
+dispatchForeignOrFail runtime dialect _provider sendToRoot env previous prompt onEvent rawModel =
+    case resolveChildTarget runtime.subagentModelCatalog rawModel of
+        Left _ ->
+            -- Not in the catalog: the existing transport owns it (a
+            -- session-internal default); the caller should not have routed
+            -- here, so fail with the interim message shape.
+            pure $ Left $ LoopUnexpected $
+                "cannot resolve subagent model " <> rawModel
+        Right target
+            | childTargetProvider target `elem` foreignHttpKeyProviders ->
+                dispatch target
+            | otherwise ->
+                pure $ Left $ LoopUnexpected $
+                    foreignTargetMessage
+                        _provider
+                        runtime.subagentConnection
+                        target
+  where
+    dispatch target = do
+        authResult <- loadAuth (Just (childTargetProvider target))
+        case authResult of
+            Left authError ->
+                pure $ Left $ LoopUnexpected $
+                    foreignTargetMessage
+                        _provider
+                        runtime.subagentConnection
+                        target
+                        <> " (credential unavailable: "
+                        <> authError
+                        <> ")"
+            Right loaded -> do
+                childBackend <- foreignChildBackend (childTargetProvider target) loaded
+                let runtimeForeign =
+                        runtime
+                            { subagentConnection = childTargetConnection target
+                            , subagentMapModel = id
+                            }
+                runHttpSubagent
+                    runtimeForeign
+                    dialect
+                    (childTargetProvider target)
+                    sendToRoot
+                    childBackend
+                    env
+                    previous
+                    prompt
+                    onEvent
+
+    foreignChildBackend provider loaded = case provider of
+        DeepSeekProvider -> do
+            options <- DeepSeek.clientOptionsFromEnv
+            pure $ \childParams ->
+                deepSeekBackend options loaded.loadedTokenProvider
+                    (pure childParams)
+        KimiProvider -> do
+            options <- Kimi.clientOptionsFromEnv
+            pure $ \childParams ->
+                kimiBackend options loaded.loadedTokenProvider
+                    (pure childParams)
+        _ -> error "dispatchForeignOrFail: unsupported provider"
+
+foreignHttpKeyProviders :: [Provider]
+foreignHttpKeyProviders = [DeepSeekProvider, KimiProvider]
 
 resolveChildModelAndEffort
     :: Provider

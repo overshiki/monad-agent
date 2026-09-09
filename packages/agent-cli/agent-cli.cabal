@@ -199,6 +199,7 @@ library
                     , Agent.CLI.McpManager
                     , Agent.CLI.ModelConfig
                     , Agent.CLI.Models
+                    , Agent.CLI.ModelTest
                     , Agent.CLI.NativeAgents
                     , Agent.CLI.Notification
                     , Agent.CLI.Options
@@ -233,6 +234,7 @@ library
                     , Agent.CLI.Status
                     , Agent.CLI.SteeringInputs
                     , Agent.CLI.SubagentStore
+                    , Agent.CLI.Subagents.TargetResolution
                     , Agent.CLI.Subagents.Runtime
                     , Agent.CLI.Style
                     , Agent.CLI.SubagentCatalogConfig
