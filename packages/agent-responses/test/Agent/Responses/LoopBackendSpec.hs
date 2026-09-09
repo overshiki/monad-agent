@@ -52,6 +52,8 @@ import Agent.Responses.Types
     , ResponseInput(..)
     , ResponseCreateParams(..)
     , TaggedObject(..)
+    , WebSearchAction(..)
+    , WebSearchCall(..)
     , defaultResponseCreateParams
     )
 import qualified Data.Aeson as Aeson
@@ -310,6 +312,97 @@ backendSpec = describe "tokenProviderStatelessResponsesBackend" do
             params = paramsWithInputItems stale
             request = withRequestInput params fresh
         request.input `shouldBe` Just (ResponseInputItems fresh)
+
+    it "mirrors singular web-search queries into the plural field for replay" do
+        let searchCall action = WebSearchCallItem WebSearchCall
+                { itemId = Nothing
+                , status = Nothing
+                , action = Just action
+                }
+            singular = searchCall (WebSearchQuery (Just "haskell") Nothing)
+            plural = searchCall (WebSearchQuery Nothing (Just ["haskell"]))
+            openPage = searchCall (WebSearchOpenPage (Just "https://example.com"))
+            request = withRequestInput defaultResponseCreateParams
+                [singular, plural, openPage]
+        request.input `shouldBe` Just
+            (ResponseInputItems
+                [ searchCall
+                    (WebSearchQuery (Just "haskell") (Just ["haskell"]))
+                , plural
+                , openPage
+                ])
+
+    it "renames duplicate call ids and retargets their paired outputs" do
+        let call k args = FunctionCallItem FunctionCall
+                { itemId = Nothing
+                , callId = k
+                , name = "run_terminal_cmd"
+                , namespace = Nothing
+                , provider = Nothing
+                , arguments = args
+                , encryptedFunctionArgs = Nothing
+                , status = Nothing
+                }
+            output k result = FunctionCallOutputItem FunctionCallOutput
+                { itemId = Nothing
+                , callId = k
+                , name = Nothing
+                , namespace = Nothing
+                , provider = Nothing
+                , output = rawJsonFromEncoding
+                    (Aeson.toEncoding (result :: Text.Text))
+                , status = Nothing
+                }
+            items =
+                [ call "run_terminal_cmd_12" "ghc"
+                , output "run_terminal_cmd_12" "ok-ghc"
+                , call "run_terminal_cmd_12" "curl"
+                , output "run_terminal_cmd_12" "ok-curl"
+                , call "run_terminal_cmd_13" "ls"
+                , output "run_terminal_cmd_13" "ok-ls"
+                ]
+            request = withRequestInput defaultResponseCreateParams items
+        request.input `shouldBe` Just (ResponseInputItems
+            [ call "run_terminal_cmd_12" "ghc"
+            , output "run_terminal_cmd_12" "ok-ghc"
+            , call "run_terminal_cmd_12#2" "curl"
+            , output "run_terminal_cmd_12#2" "ok-curl"
+            , call "run_terminal_cmd_13" "ls"
+            , output "run_terminal_cmd_13" "ok-ls"
+            ])
+
+    it "leaves custom tool call ids alone unless they collide" do
+        let call k = CustomToolCallItem CustomToolCall
+                { itemId = Nothing
+                , callId = k
+                , name = "lookup"
+                , namespace = Nothing
+                , input = "{}"
+                , status = Nothing
+                }
+            output k = CustomToolCallOutputItem CustomToolCallOutput
+                { itemId = Nothing
+                , callId = k
+                , name = Nothing
+                , output = rawJsonFromEncoding
+                    (Aeson.toEncoding ("ok" :: Text.Text))
+                , status = Nothing
+                }
+            items =
+                [ call "lookup_1"
+                , output "lookup_1"
+                , call "lookup_1"
+                , output "lookup_1"
+                , output "lookup_9"
+                ]
+            request = withRequestInput defaultResponseCreateParams items
+        request.input `shouldBe` Just (ResponseInputItems
+            [ call "lookup_1"
+            , output "lookup_1"
+            , call "lookup_1#2"
+            , output "lookup_1#2"
+            , output "lookup_9"
+            ])
 
     it "preserves only developer items marked as base instructions" do
         let additional = UnknownResponseItem TaggedObject

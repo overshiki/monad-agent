@@ -140,12 +140,16 @@ withRequestInput ResponseCreateParams{..} items =
         -- status before they become input (see 'stripReplayedItemStatus').
         normalizedItems =
             map (normalizeRequestItem . stripReplayedItemStatus) items
-        requestItems
+        baseRequestItems
             | any isAdditionalTools prefix =
-                ensureReasoningHasFollowingItem
-                    (map stripResponsesLiteImageDetails normalizedItems)
+                map stripResponsesLiteImageDetails normalizedItems
             | otherwise =
-                ensureReasoningHasFollowingItem normalizedItems
+                normalizedItems
+        -- Providers validate call_id uniqueness per request; apply after
+        -- every other rewrite so the renames see the final item list.
+        requestItems =
+            uniquifyRequestCallIds
+                (ensureReasoningHasFollowingItem baseRequestItems)
     in
     ResponseCreateParams
         { input = Just
@@ -246,7 +250,24 @@ normalizeRequestItem = \case
                 , passthrough = message.passthrough
 
                 }
+    WebSearchCallItem call ->
+        WebSearchCallItem WebSearchCall
+            { itemId = call.itemId
+            , status = call.status
+            , action = normalizeSearchAction <$> call.action
+            }
     item -> item
+
+-- DeepSeek's server-side decoder requires the plural @queries@ field on
+-- @search@ actions, while OpenAI emits the singular @query@. Mirror the
+-- singular form into the plural at the wire boundary so transcripts
+-- recorded by other providers replay on DeepSeek without rewriting
+-- session stores. Providers that ignore the extra field are unaffected.
+normalizeSearchAction :: WebSearchAction -> WebSearchAction
+normalizeSearchAction = \case
+    WebSearchQuery (Just query) Nothing ->
+        WebSearchQuery (Just query) (Just [query])
+    action -> action
 
 normalizeAssistantPart :: ResponseContentPart -> ResponseContentPart
 normalizeAssistantPart = \case
@@ -258,6 +279,96 @@ normalizeAssistantPart = \case
 
             }
     part -> part
+
+-- | Providers validate @call_id@ uniqueness across the whole request. Models
+-- occasionally reuse a @call_id@ for a later call in the same conversation
+-- (observed: deepseek-v4-flash numbering collisions across loop iterations
+-- within one turn). Each live request still carried only one of those calls,
+-- so the original run succeeded, but a stateless backend replaying the
+-- accumulated transcript puts both calls in one request and the provider
+-- rejects it (\"Duplicate 'call_id'\"). Rewrite later collisions to fresh
+-- deterministic ids and retarget their paired outputs — matched in order of
+-- appearance — at the wire boundary. The transcript keeps the original ids;
+-- the pairing is recomputed identically on every replay.
+uniquifyRequestCallIds :: [ResponseItem] -> [ResponseItem]
+uniquifyRequestCallIds = go Map.empty
+  where
+    go _ [] = []
+    go pending (item : rest) = case item of
+        FunctionCallItem call ->
+            let (pending', callId') = claimCallId pending call.callId
+            in rebuildFunctionCall call callId' : go pending' rest
+        FunctionCallOutputItem out ->
+            let (pending', callId') = claimOutputCallId pending out.callId
+            in rebuildFunctionOutput out callId' : go pending' rest
+        CustomToolCallItem call ->
+            let (pending', callId') = claimCallId pending call.callId
+            in rebuildCustomCall call callId' : go pending' rest
+        CustomToolCallOutputItem out ->
+            let (pending', callId') = claimOutputCallId pending out.callId
+            in rebuildCustomOutput out callId' : go pending' rest
+        _ -> item : go pending rest
+
+-- | 'callId' is a duplicate record field across the call and output types,
+-- so rebuilds go through constructors instead of record update syntax.
+rebuildFunctionCall :: FunctionCall -> Text -> ResponseItem
+rebuildFunctionCall call callId' = FunctionCallItem FunctionCall
+    { itemId = call.itemId
+    , callId = callId'
+    , name = call.name
+    , namespace = call.namespace
+    , provider = call.provider
+    , arguments = call.arguments
+    , encryptedFunctionArgs = call.encryptedFunctionArgs
+    , status = call.status
+    }
+
+rebuildFunctionOutput :: FunctionCallOutput -> Text -> ResponseItem
+rebuildFunctionOutput out callId' = FunctionCallOutputItem FunctionCallOutput
+    { itemId = out.itemId
+    , callId = callId'
+    , name = out.name
+    , namespace = out.namespace
+    , provider = out.provider
+    , output = out.output
+    , status = out.status
+    }
+
+rebuildCustomCall :: CustomToolCall -> Text -> ResponseItem
+rebuildCustomCall call callId' = CustomToolCallItem CustomToolCall
+    { itemId = call.itemId
+    , callId = callId'
+    , name = call.name
+    , namespace = call.namespace
+    , input = call.input
+    , status = call.status
+    }
+
+rebuildCustomOutput :: CustomToolCallOutput -> Text -> ResponseItem
+rebuildCustomOutput out callId' = CustomToolCallOutputItem CustomToolCallOutput
+    { itemId = out.itemId
+    , callId = callId'
+    , name = out.name
+    , output = out.output
+    , status = out.status
+    }
+
+-- | First occurrence of a call id keeps it and opens an empty rename queue;
+-- later collisions are renamed deterministically (@cid#2@, @cid#3@, ...) and
+-- the rename is queued for the output that answers the call.
+claimCallId :: Map Text [Text] -> Text -> (Map Text [Text], Text)
+claimCallId pending cid = case Map.lookup cid pending of
+    Nothing -> (Map.insert cid [] pending, cid)
+    Just renames ->
+        let next = cid <> "#" <> Text.pack (show (length renames + 2))
+        in (Map.insert cid (renames ++ [next]) pending, next)
+
+-- | Outputs consume pending renames FIFO, pairing each renamed call with the
+-- first still-unanswered output carrying the original id.
+claimOutputCallId :: Map Text [Text] -> Text -> (Map Text [Text], Text)
+claimOutputCallId pending cid = case Map.lookup cid pending of
+    Just (next : rest) -> (Map.insert cid rest pending, next)
+    _ -> (pending, cid)
 
 -- | Responses rejects a trailing reasoning item with @missing_following_item@.
 -- Stateless backends resend the local transcript, so splice an empty assistant
