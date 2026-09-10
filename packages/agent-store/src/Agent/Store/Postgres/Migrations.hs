@@ -234,8 +234,20 @@ coreMigrations =
               \ ADD COLUMN IF NOT EXISTS parent_turn_id uuid"
             , "ALTER TABLE IF EXISTS harness.sessions\
               \ ADD COLUMN IF NOT EXISTS focus_turn_id uuid"
-            , "CREATE INDEX IF NOT EXISTS session_turns_parent_turn_id_idx\
-              \ ON harness.session_turns (session_id, parent_turn_id)"
+            , "DO $ha$\
+              \ BEGIN\
+              \   IF EXISTS (\
+              \     SELECT 1 FROM information_schema.columns\
+              \     WHERE table_schema = 'harness'\
+              \       AND table_name = 'session_turns'\
+              \       AND column_name = 'parent_turn_id'\
+              \   ) THEN\
+              \     CREATE INDEX IF NOT EXISTS\
+              \       session_turns_parent_turn_id_idx\
+              \       ON harness.session_turns (session_id, parent_turn_id);\
+              \   END IF;\
+              \ END\
+              \ $ha$"
             ]
         }
     ]
