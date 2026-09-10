@@ -25,10 +25,12 @@ module Agent.Store.Postgres.Session
     , appendSessionTurnIndexed
     , appendSessionTurnIndexedWithPromptReset
     , appendSessionTurns
+    , setSessionFocus
     , loadSession
     , loadSessionWithImplementation
     , loadSessions
     , loadSessionMetadata
+    , loadSessionFocus
     , loadLatestSessionPromptEpoch
     , loadActiveSession
     , loadActiveSessionWithImplementation

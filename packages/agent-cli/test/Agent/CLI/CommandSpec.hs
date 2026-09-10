@@ -133,6 +133,11 @@ spec = do
                 `shouldBe`
                     ReplCommandError
                         "--at is not supported in this version"
+            parseReplLine "/switch 7" `shouldBe` ReplSwitch 7
+            parseReplLine "/switch -1"
+                `shouldBe` ReplCommandError "usage: /switch <turn-index>"
+            parseReplLine "/switch 3 4"
+                `shouldBe` ReplCommandError "usage: /switch <turn-index>"
             parseReplLine "/export" `shouldBe` ReplExport Nothing
             parseReplLine "/export  notes/session.md  "
                 `shouldBe` ReplExport (Just "notes/session.md")
@@ -467,6 +472,7 @@ spec = do
                     , "diff"
                     , "fork"
                     , "checkout"
+                    , "switch"
                     , "export"
                     , "history"
                     , "find"

@@ -243,6 +243,9 @@ parseSlash catalog raw line = case Text.words line of
             "checkout" ->
                 parseCheckoutCommand
                     (Text.strip (Text.drop (Text.length command) line))
+            "switch" ->
+                parseSwitchCommand
+                    (Text.strip (Text.drop (Text.length command) line))
             "export" ->
                 let path = Text.strip (Text.drop (Text.length command) line)
                 in ReplExport
@@ -648,6 +651,23 @@ parseCheckoutCommand input =
                 ReplCommandError "usage: /checkout <branch>"
             | otherwise -> ReplCheckout branch
         _ -> ReplCommandError "usage: /checkout <branch>"
+
+parseSwitchCommand :: Text -> ReplAction
+parseSwitchCommand input =
+    case Text.words input of
+        [indexText]
+            | Just index <- parseInt64 (Text.unpack indexText)
+            , index >= 0 ->
+                ReplSwitch index
+        _ -> ReplCommandError "usage: /switch <turn-index>"
+  where
+    parseInt64 = \case
+        '-':_ -> Nothing
+        digits
+            | null digits -> Nothing
+            | all isDigit digits -> Just (read digits)
+            | otherwise -> Nothing
+
 
 parseCopyCommand :: Text -> ReplAction
 parseCopyCommand input

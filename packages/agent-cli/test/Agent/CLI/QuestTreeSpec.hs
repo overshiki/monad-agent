@@ -4,6 +4,7 @@ import Agent.CLI.QuestTree
     ( QuestNode(..)
     , buildQuestTree
     , defaultFocus
+    , findByIndex
     , lineageToRoot
     , questRoots
     )
@@ -30,6 +31,11 @@ spec = describe "Agent.CLI.QuestTree" do
     it "picks the newest turn as the default focus" do
         let tree = buildTree [node "a" Nothing 0, node "b" (Just "a") 1, node "c" (Just "b") 2]
         defaultFocus tree `shouldBe` Just "c"
+
+    it "finds a turn by index" do
+        let tree = buildTree [node "a" Nothing 0, node "b" (Just "a") 1, node "c" (Just "b") 2]
+        findByIndex tree 1 `shouldBe` Just "b"
+        findByIndex tree 42 `shouldBe` Nothing
 
     it "defaults to no focus on an empty tree" do
         defaultFocus (buildTree []) `shouldBe` Nothing

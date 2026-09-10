@@ -582,6 +582,45 @@ spec = describe "PostgreSQL session schema" do
                         (closeStore store)
                 ) `finally` cleanup
 
+    it "sets and reads the session focus turn" $
+        withSystemTempDirectory "ha" \stateDirectory -> do
+            let config = defaultManagedPostgresConfig stateDirectory ""
+                cleanup = stopManagedPostgres config >> pure ()
+            (openStore config >>= \case
+                Left err -> expectationFailure ("could not open store: " <> show err)
+                Right store ->
+                    finally
+                        (do
+                            let pool = trustedPool store
+                                now = read "2026-08-23 12:00:00 UTC"
+                                metadata = testMetadata now
+                            createSession pool metadata `shouldReturn` Right True
+                            appendSessionTurn pool (testTurn now) metadata `shouldReturn` Right True
+                            appendSessionTurn pool (testTurn now) metadata `shouldReturn` Right True
+                            loadSession pool "session-1" >>= \case
+                                Left err -> expectationFailure ("loadSession: " <> show err)
+                                Right Nothing -> expectationFailure "session missing"
+                                Right (Just stored) ->
+                                    case toList stored.storedTurns of
+                                        [first, second] -> do
+                                            -- The store advances focus on each append,
+                                            -- so focus starts on the newest turn.
+                                            loadSessionFocus pool "session-1"
+                                                `shouldReturn` Right (Just second.storedTurnId)
+                                            setSessionFocus pool "session-1" first.storedTurnId
+                                                `shouldReturn` Right True
+                                            loadSessionFocus pool "session-1"
+                                                `shouldReturn` Right (Just first.storedTurnId)
+                                            setSessionFocus
+                                                pool
+                                                "session-1"
+                                                "00000000-0000-0000-0000-000000000000"
+                                                `shouldReturn` Right False
+                                        _ -> expectationFailure "expected two turns"
+                        )
+                        (closeStore store)
+                ) `finally` cleanup
+
 testMetadata :: UTCTime -> SessionMetadata
 testMetadata now = SessionMetadata
     { sessionMetadataKey = "session-1"

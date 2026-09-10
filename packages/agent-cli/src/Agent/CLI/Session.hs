@@ -44,6 +44,7 @@ module Agent.CLI.Session
     , loadActiveSession
     , loadSessionMeta
     , loadQuestTree
+    , switchSessionFocus
     , loadRecentSessionTurns
     , loadSessionTurnsBefore
     , loadSessionTurnsAfter
@@ -123,7 +124,7 @@ import Agent.CLI.Session.Codec
     , validateSessionMeta
     )
 import Agent.CLI.Models (ModelTarget(..))
-import Agent.CLI.QuestTree (QuestNode(..), QuestTree, buildQuestTree)
+import Agent.CLI.QuestTree (QuestNode(..), QuestTree, buildQuestTree, findByIndex)
 import Agent.CLI.SessionTitle (titleRefreshIndex)
 import Agent.Dialect (DialectId)
 import Agent.Loop (TokenUsage(..))
@@ -1122,14 +1123,15 @@ loadActiveSession pool root sessionId = runExceptT do
         storedPrompt
         stored
 
--- | Load a session's turn lineage (ids + parent pointers) as a quest tree.
--- This is the CLI-level surface of the store's 'parent_turn_id' links; the
--- context assembler walks it (see Agent.CLI.QuestTree and docs/session-tree.md).
+-- | Load a session's turn lineage (ids + parent pointers) as a quest tree,
+-- plus the session's current focus turn (if any). This is the CLI-level
+-- surface of the store's 'parent_turn_id' links; the context assembler walks
+-- it (see Agent.CLI.QuestTree and docs/session-tree.md).
 loadQuestTree
     :: StorePool
     -> OsPath
     -> Text
-    -> IO (Either Text QuestTree)
+    -> IO (Either Text (QuestTree, Maybe Text))
 loadQuestTree pool root sessionId = runExceptT do
     _ <- except (sessionDirForId root sessionId)
     stored <- loadWithLegacyImport root pool sessionId Store.loadSession
@@ -1141,7 +1143,33 @@ loadQuestTree pool root sessionId = runExceptT do
                 }
             | turn <- Vector.toList stored.storedTurns
             ]
-    except (buildQuestTree nodes)
+    tree <- except (buildQuestTree nodes)
+    focus <-
+        lift (Store.loadSessionFocus pool sessionId)
+            >>= either (throwE . renderStoreError) pure
+    pure (tree, focus)
+
+-- | Move a session's focus to the turn with the given index. Returns the
+-- focused turn id on success. This updates the persisted focus only; the
+-- live request path does not yet rebuild its context from it (P5 remainder).
+switchSessionFocus
+    :: StorePool
+    -> OsPath
+    -> Text
+    -> Int64
+    -> IO (Either Text Text)
+switchSessionFocus pool root sessionId turnIndex = runExceptT do
+    (tree, _) <- ExceptT (loadQuestTree pool root sessionId)
+    turnId <-
+        maybe
+            (throwE ("no turn with index " <> Text.pack (show turnIndex)))
+            pure
+            (findByIndex tree turnIndex)
+    ok <-
+        lift (Store.setSessionFocus pool sessionId turnId)
+            >>= either (throwE . renderStoreError) pure
+    unless ok (throwE "could not switch session focus")
+    pure turnId
 
 loadStoredPromptEpoch
     :: StorePool

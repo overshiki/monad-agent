@@ -14,6 +14,7 @@ module Agent.Store.Postgres.Session.Write
     , appendSessionTurnIndexed
     , appendSessionTurnIndexedWithPromptReset
     , appendSessionTurns
+    , setSessionFocus
     , deleteSession
     , importLegacySession
     , withSessionAdvisoryLock
@@ -296,6 +297,22 @@ deleteSession pool sessionKey occurredAt =
                             }
                         insertEventStatement
                     pure True
+
+-- | Move a session's focus to a turn that belongs to it. Returns 'False'
+-- when the session does not exist, is deleted, or the turn is not part of it.
+setSessionFocus
+    :: StorePool
+    -> Text
+    -> Text
+    -> IO (Either StoreError Bool)
+setSessionFocus pool sessionKey focusTurnId =
+    withSession pool $
+        Transactions.transaction Transactions.Serializable Transactions.Write do
+            _ <- Transaction.statement sessionKey blockingAdvisoryLockStatement
+            changed <- Transaction.statement
+                (sessionKey, focusTurnId)
+                setFocusByKeyStatement
+            pure (maybe False (const True) changed)
 
 importLegacySession
     :: StorePool
@@ -676,6 +693,20 @@ setFocusStatement = mkStatement
         <> (snd >$< Encoders.param (Encoders.nonNullable Encoders.text))
     )
     Decoders.noResult
+    True
+
+-- | Move focus by session key, validating the turn belongs to the session.
+setFocusByKeyStatement :: Statement (Text, Text) (Maybe Text)
+setFocusByKeyStatement = mkStatement
+    "UPDATE harness.sessions s SET focus_turn_id = $2::uuid\
+    \ WHERE s.session_key = $1 AND s.deleted_at IS NULL\
+    \ AND EXISTS (SELECT 1 FROM harness.session_turns t\
+    \   WHERE t.turn_id = $2::uuid AND t.session_id = s.session_id)\
+    \ RETURNING s.session_id::text"
+    ( (fst >$< Encoders.param (Encoders.nonNullable Encoders.text))
+        <> (snd >$< Encoders.param (Encoders.nonNullable Encoders.text))
+    )
+    (Decoders.rowMaybe (Decoders.column (Decoders.nonNullable Decoders.text)))
     True
 
 deleteProjectionStatement

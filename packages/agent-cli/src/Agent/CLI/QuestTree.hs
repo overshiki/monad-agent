@@ -12,12 +12,14 @@ module Agent.CLI.QuestTree
     , lineageToRoot
     , questRoots
     , defaultFocus
+    , findByIndex
     ) where
 
 import Data.Int (Int64)
 import Data.List (maximumBy)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (listToMaybe)
 import Data.Text (Text)
 
 -- | One turn in the lineage: its id, its parent's id ('Nothing' marks a quest
@@ -116,3 +118,12 @@ defaultFocus tree =
                         (\a b -> compare a.questNodeIndex b.questNodeIndex)
                         nodes
             in Just newest.questNodeId
+
+-- | The turn id at the given turn index, if any turn has it.
+findByIndex :: QuestTree -> Int64 -> Maybe Text
+findByIndex tree index =
+    listToMaybe
+        [ n.questNodeId
+        | n <- Map.elems tree.treeNodes
+        , n.questNodeIndex == index
+        ]

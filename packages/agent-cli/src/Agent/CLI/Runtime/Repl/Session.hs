@@ -19,7 +19,7 @@ import Agent.CLI.Command
       ForkRequest(..),
       ReplAction(ReplRenameAuto, ReplResume, ReplSearch, ReplHome, ReplRewind, ReplClear,
                  ReplNew, ReplDelete, ReplShowSession, ReplShowSessionInfo, ReplAfk,
-                 ReplWorktree, ReplRename, ReplFork, ReplCheckout),
+                 ReplWorktree, ReplRename, ReplFork, ReplCheckout, ReplSwitch),
       ShellMode(ShellNone, ShellGhci, ShellBash, ShellBoth),
       SlashCatalog(slashCatalogToolNames) )
 import Agent.CLI.Compaction ()
@@ -82,6 +82,7 @@ import Agent.CLI.Session
       sessionRewindChoices,
       sessionsRoot,
       setManualSessionTitle,
+      switchSessionFocus,
       Persistence(PersistenceEnabled, PersistenceDisabled),
       PersistenceState(PersistenceActive, PersistencePending),
       SessionCreate(createCwd, SessionCreate, createPool, createEffort,
@@ -587,6 +588,39 @@ handleSessionAction
     ReplCheckout branch -> do
         color <- resolveColor stderr
         checkoutSessionBranch color branch
+    ReplSwitch index -> do
+        color <- resolveColor stderr
+        let failSwitch message = do
+                displayError message $
+                    putTextLn stderr (roleError color message)
+                continue
+        case persist of
+            PersistenceDisabled ->
+                failSwitch "/switch requires a persisted interactive session"
+            PersistenceEnabled slotRef ->
+                readIORef slotRef >>= \case
+                    PersistencePending{} ->
+                        failSwitch
+                            "/switch is available after the first persisted turn"
+                    PersistenceActive source -> do
+                        let root = takeDirectory source.sessionDir
+                        result <-
+                            switchSessionFocus
+                                databasePool
+                                root
+                                source.sessionMeta.metaId
+                                index
+                        case result of
+                            Left err -> failSwitch err
+                            Right _ -> do
+                                let message =
+                                        "focused on turn "
+                                            <> Text.pack (show index)
+                                displayInfo message $
+                                    putTextLn stderr
+                                        (roleMuted color
+                                            (glyphOk <> message))
+                                continue
     ReplShowSession -> do
         color <- resolveColor stdout
         case persist of

@@ -25,11 +25,15 @@ no schema or code changes are implied by this file.
   model and deterministic segment-1 (nearest-history) selection; `StoredTurn`
   now exposes `storedTurnId`, and `Agent.CLI.QuestTree` + `loadQuestTree`
   reconstruct the turn lineage and walk it (`lineageToRoot`, `questRoots`,
-  `defaultFocus`). `assembleLineageFromTree` joins the two: it resolves a
-  focus, walks its lineage, and assembles segment-1 under the budget. All pure
-  and unit-tested, but not yet wired into the live request path.
-- **P3–P5 pending**: no relevance, hierarchical compaction, focus navigation,
-  or tree UX yet.
+  `defaultFocus`, `findByIndex`). `assembleLineageFromTree` joins the two: it
+  resolves a focus, walks its lineage, and assembles segment-1 under the
+  budget. All pure and unit-tested, but not yet wired into the live request
+  path.
+- **P5 partial**: the store exposes `loadSessionFocus` / `setSessionFocus`,
+  `loadQuestTree` returns the current focus, and the `/switch <turn-index>`
+  command moves it. The live request path does not yet rebuild its context
+  from the focus, and `/quest` (creating a branch) is not implemented.
+- **P3–P4 pending**: no relevance, hierarchical compaction, or tree UX yet.
 
 ## Goals and non-goals
 

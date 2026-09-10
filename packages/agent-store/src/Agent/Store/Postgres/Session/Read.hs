@@ -15,6 +15,7 @@ module Agent.Store.Postgres.Session.Read
     , loadSessionWithImplementation
     , loadSessions
     , loadSessionMetadata
+    , loadSessionFocus
     , loadLatestSessionPromptEpoch
     , loadActiveSession
     , loadActiveSessionWithImplementation
@@ -154,6 +155,20 @@ loadSessionMetadata pool sessionKey =
     withSession pool $
         Transactions.transaction Transactions.RepeatableRead Transactions.Read $
             Transaction.statement sessionKey loadMetadataStatement
+
+-- | The session's current focus turn, or 'Nothing' when the session is missing
+-- or has not committed a turn yet.
+loadSessionFocus
+    :: StorePool
+    -> Text
+    -> IO (Either StoreError (Maybe Text))
+loadSessionFocus pool sessionKey =
+    withSession pool $
+        Transactions.transaction Transactions.RepeatableRead Transactions.Read do
+            focus <- Transaction.statement sessionKey loadFocusStatement
+            pure (case focus of
+                Just value -> value
+                Nothing -> Nothing)
 
 loadLatestSessionPromptEpoch
     :: StorePool
@@ -464,6 +479,14 @@ loadMetadataStatement = mkStatement
         <> " WHERE session_key = $1 AND deleted_at IS NULL")
     (Encoders.param (Encoders.nonNullable Encoders.text))
     (Decoders.rowMaybe metadataRow)
+    True
+
+loadFocusStatement :: Statement Text (Maybe (Maybe Text))
+loadFocusStatement = mkStatement
+    "SELECT focus_turn_id::text FROM harness.sessions\
+    \ WHERE session_key = $1 AND deleted_at IS NULL"
+    (Encoders.param (Encoders.nonNullable Encoders.text))
+    (Decoders.rowMaybe (Decoders.column (Decoders.nullable Decoders.text)))
     True
 
 listMetadataStatement :: Statement () [SessionMetadata]

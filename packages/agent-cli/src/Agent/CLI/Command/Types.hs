@@ -13,6 +13,7 @@ module Agent.CLI.Command.Types
 
 import Agent.Dialect (DialectId)
 import Agent.ReasoningEffort (ReasoningEffort)
+import Data.Int (Int64)
 import Data.Map.Strict (Map)
 import Data.Set (Set)
 import Data.Text (Text)
@@ -46,6 +47,8 @@ data ReplAction
     | ReplFork !ForkRequest
     | ReplCheckout !Text
     -- ^ Switch to a git branch and resume the chat linked to it.
+    | ReplSwitch !Int64
+    -- ^ Move the session focus to the turn with this index.
     | ReplExport (Maybe Text)
     | ReplPermissions
     | ReplShowEffort
