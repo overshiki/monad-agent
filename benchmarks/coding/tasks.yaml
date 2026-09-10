@@ -11,9 +11,9 @@ runs:
   max_concurrency: 3
 
 matrix:
-  - { id: deepseek-flash-default, model: deepseek-v4-flash }
-  - { id: deepseek-flash-ghci, model: deepseek-v4-flash, shell: ghci }
-  - { id: kimi-k3-default, model: kimi-k3 }
+  - { id: deepseek-flash-default, provider: deepseek, model: deepseek-v4-flash }
+  - { id: deepseek-flash-ghci, provider: deepseek, model: deepseek-v4-flash, shell: ghci }
+  - { id: kimi-k3-default, provider: kimi, model: kimi-k3 }
 
 tasks:
   - id: hello
