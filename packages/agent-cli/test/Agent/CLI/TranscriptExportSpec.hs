@@ -26,7 +26,8 @@ import System.Directory
     )
 import qualified System.Directory.OsPath as Directory
 import qualified System.FilePath as FilePath
-import System.OsPath (OsPath, unsafeEncodeUtf, (</>))
+import System.OsPath (OsPath, (</>))
+import Agent.OsPath (unsafeEncodeUtf)
 import System.Posix.Temp (mkdtemp)
 import System.Posix.Files (fileMode, getFileStatus, setFileMode)
 import Test.Hspec

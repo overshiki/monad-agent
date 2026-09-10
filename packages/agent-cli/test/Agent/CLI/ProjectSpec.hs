@@ -4,7 +4,8 @@ import Agent.CLI.Project
 import Agent.CLI.Models (ModelTarget(..))
 import Agent.Dialect (DialectId(..))
 import Agent.Provider (Provider(..))
-import System.OsPath (OsPath, decodeUtf, unsafeEncodeUtf)
+import System.OsPath (OsPath, decodeUtf)
+import Agent.OsPath (unsafeEncodeUtf)
 import Control.Exception (bracket)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Char8 as LBS8

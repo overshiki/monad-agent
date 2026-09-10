@@ -7,7 +7,7 @@ import Agent.Dialect
     , genericResponsesDialect
     , grokBuildDialect
     )
-import System.OsPath (unsafeEncodeUtf)
+import Agent.OsPath (unsafeEncodeUtf)
 import Agent.Provider (BillingMode(..), Provider(..))
 import Data.Time.Calendar (fromGregorian)
 import qualified Data.Text as Text

@@ -26,7 +26,8 @@ import System.Directory
     , removePathForcibly
     )
 import System.IO (hClose, openTempFile)
-import System.OsPath (OsPath, unsafeEncodeUtf)
+import System.OsPath (OsPath)
+import Agent.OsPath (unsafeEncodeUtf)
 import Test.Hspec
 
 spec :: Spec

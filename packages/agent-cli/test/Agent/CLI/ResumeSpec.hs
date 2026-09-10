@@ -20,7 +20,7 @@ import Agent.Store.Postgres.Session (ConversationSearchResult(..))
 import Data.Time.Clock (addUTCTime)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified Data.Text as Text
-import System.OsPath (unsafeEncodeUtf)
+import Agent.OsPath (unsafeEncodeUtf)
 import Test.Hspec
 
 fromFilePath = unsafeEncodeUtf

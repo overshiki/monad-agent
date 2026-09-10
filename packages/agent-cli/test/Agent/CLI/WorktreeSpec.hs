@@ -1,7 +1,7 @@
 module Agent.CLI.WorktreeSpec (spec) where
 
 import Agent.CLI.Config
-import Agent.CLI.Worktree
+import Agent.CLI.Worktree hiding (git)
 import Control.Concurrent.Async (mapConcurrently)
 import Control.Exception.Safe (bracket)
 import Data.IORef (modifyIORef', newIORef, readIORef)
@@ -24,9 +24,9 @@ import System.OsPath
     , addTrailingPathSeparator
     , decodeUtf
     , takeFileName
-    , unsafeEncodeUtf
     , (</>)
     )
+import Agent.OsPath (unsafeEncodeUtf)
 import System.Posix.Temp (mkdtemp)
 import System.Process (CreateProcess(..), proc, readCreateProcessWithExitCode)
 import Test.Hspec

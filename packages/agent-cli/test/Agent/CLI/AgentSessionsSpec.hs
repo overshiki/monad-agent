@@ -8,7 +8,8 @@ import Agent.CLI.Session
 import Agent.CLI.SessionLock
 import Agent.Dialect (DialectId(..))
 import Agent.Loop (defaultLoopDispatch)
-import System.OsPath (OsPath, decodeUtf, unsafeEncodeUtf, (</>))
+import System.OsPath (OsPath, decodeUtf, (</>))
+import Agent.OsPath (unsafeEncodeUtf)
 import Agent.Provider (Provider(..))
 import Agent.ToolDispatch
     ( ToolCallResult(..)

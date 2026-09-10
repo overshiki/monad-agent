@@ -3,7 +3,7 @@ module Agent.CLI.OptionsSpec (spec) where
 import Agent.CLI.Options
 import Agent.Dialect (DialectId(..))
 import Agent.Loop (defaultLoopMaxTurns)
-import System.OsPath (unsafeEncodeUtf)
+import Agent.OsPath (unsafeEncodeUtf)
 import Agent.Provider (Provider(..))
 import Agent.ReasoningEffort (ReasoningEffort(..))
 import Agent.TUI.Motion (MotionMode(..))

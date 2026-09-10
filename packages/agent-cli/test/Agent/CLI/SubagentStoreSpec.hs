@@ -27,7 +27,8 @@ import Agent.CLI.Subagents.Runtime
     )
 import Agent.CLI.Request (requestParams)
 import Agent.Responses.Types
-import System.OsPath (OsPath, decodeUtf, unsafeEncodeUtf)
+import System.OsPath (OsPath, decodeUtf)
+import Agent.OsPath (unsafeEncodeUtf)
 import Agent.Subagents
     ( SubagentId(..)
     , SubagentIdentity(..)

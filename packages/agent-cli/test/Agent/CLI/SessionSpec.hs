@@ -52,7 +52,8 @@ import System.Directory.OsPath
     , removePathForcibly
     )
 import qualified System.FilePath as FilePath
-import System.OsPath (OsPath, decodeUtf, unsafeEncodeUtf, (</>))
+import System.OsPath (OsPath, decodeUtf, (</>))
+import Agent.OsPath (unsafeEncodeUtf)
 import System.Posix.Files (fileMode, getFileStatus)
 import System.Posix.Temp (mkdtemp)
 import Test.Hspec
@@ -938,7 +939,8 @@ spec = describe "Agent.CLI.Session" do
                     source
                     [sourceTurn]
                     (Just "Fork title")
-                    forkCwd >>= \case
+                    forkCwd
+                    Nothing >>= \case
                     Left err -> expectationFailure (Text.unpack err)
                     Right forked -> do
                         forked.sessionMeta.metaId

@@ -106,6 +106,8 @@ spec = do
                     , XAIProvider
                     , OpenRouterProvider
                     , GeminiProvider
+                    , DeepSeekProvider
+                    , KimiProvider
                     , ClaudeCodeProvider
                     ]
 
@@ -315,6 +317,8 @@ spec = do
                     , XAIProvider
                     , OpenRouterProvider
                     , GeminiProvider
+                    , DeepSeekProvider
+                    , KimiProvider
                     , ClaudeCodeProvider
                     ]
 

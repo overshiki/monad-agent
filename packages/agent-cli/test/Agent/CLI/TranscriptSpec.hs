@@ -25,7 +25,7 @@ import Agent.TUI.Model
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Time.Clock (UTCTime)
-import System.OsPath (unsafeEncodeUtf)
+import Agent.OsPath (unsafeEncodeUtf)
 import Test.Hspec
 
 spec :: Spec

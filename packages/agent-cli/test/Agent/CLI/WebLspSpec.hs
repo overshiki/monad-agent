@@ -39,8 +39,8 @@ import System.Directory.OsPath (createDirectoryIfMissing)
 import qualified System.FilePath as FilePath
 import System.OsPath
     ( takeDirectory
-    , unsafeEncodeUtf
     )
+import Agent.OsPath (unsafeEncodeUtf)
 import System.Posix.Temp (mkdtemp)
 import Test.Hspec
 

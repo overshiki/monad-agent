@@ -39,7 +39,7 @@ import Data.IORef
 import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as Text
-import System.OsPath (unsafeEncodeUtf)
+import Agent.OsPath (unsafeEncodeUtf)
 import Test.Hspec
 
 spec :: Spec

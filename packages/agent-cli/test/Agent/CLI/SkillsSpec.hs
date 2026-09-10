@@ -3,7 +3,8 @@ module Agent.CLI.SkillsSpec (spec) where
 import Agent.CLI.Command (SkillCommand(..))
 import Agent.CLI.Options (CliOptions(..), defaultCliOptions)
 import Agent.CLI.Skills
-import System.OsPath (takeDirectory, unsafeEncodeUtf)
+import System.OsPath (takeDirectory)
+import Agent.OsPath (unsafeEncodeUtf)
 import Agent.Skills
 import Data.IORef (newIORef, readIORef)
 import qualified Data.Text as Text

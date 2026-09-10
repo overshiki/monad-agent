@@ -26,7 +26,7 @@ import System.Directory
     , removePathForcibly
     )
 import System.FilePath ((</>), takeExtension)
-import System.OsPath (unsafeEncodeUtf)
+import Agent.OsPath (unsafeEncodeUtf)
 import System.Posix.Temp (mkdtemp)
 import Test.Hspec
 

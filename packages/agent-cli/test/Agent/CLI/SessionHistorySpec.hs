@@ -23,7 +23,7 @@ import qualified Data.Foldable as Foldable
 import Data.IORef (newIORef, readIORef, writeIORef)
 import Data.Text (Text)
 import Data.Time (UTCTime(..), fromGregorian)
-import System.OsPath (unsafeEncodeUtf)
+import Agent.OsPath (unsafeEncodeUtf)
 import Test.Hspec (Spec, describe, it, shouldBe, shouldReturn)
 
 spec :: Spec

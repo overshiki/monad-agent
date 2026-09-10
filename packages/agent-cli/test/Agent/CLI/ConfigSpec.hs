@@ -17,8 +17,8 @@ import System.OsPath
     ( OsPath
     , decodeUtf
     , takeDirectory
-    , unsafeEncodeUtf
     )
+import Agent.OsPath (unsafeEncodeUtf)
 import System.Posix.Temp (mkdtemp)
 import System.Posix.Files
     ( fileMode

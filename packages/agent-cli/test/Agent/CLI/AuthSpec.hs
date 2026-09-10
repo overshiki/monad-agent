@@ -13,7 +13,8 @@ import Agent.Error
     , CredentialExhaustionReason(..)
     , credentialsExhausted
     )
-import System.OsPath (OsPath, decodeUtf, unsafeEncodeUtf)
+import System.OsPath (OsPath, decodeUtf)
+import Agent.OsPath (unsafeEncodeUtf)
 import Agent.OpenAI.Auth (AuthState(..))
 import qualified Agent.OpenAI.Auth as OpenAI
 import qualified Agent.OpenAI.Credential as OpenAICredential

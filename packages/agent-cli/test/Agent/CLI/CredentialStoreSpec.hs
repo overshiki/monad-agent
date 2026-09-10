@@ -18,9 +18,9 @@ import System.OsPath
     ( OsPath
     , decodeUtf
     , takeDirectory
-    , unsafeEncodeUtf
     , (</>)
     )
+import Agent.OsPath (unsafeEncodeUtf)
 import System.Directory
     ( createDirectory
     , doesFileExist

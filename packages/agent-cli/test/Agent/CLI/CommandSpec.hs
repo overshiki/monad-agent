@@ -100,21 +100,26 @@ spec = do
             parseReplLine "/diff now"
                 `shouldBe` ReplCommandError "usage: /diff"
             parseReplLine "/fork"
-                `shouldBe` ReplFork (ForkRequest Nothing Nothing)
+                `shouldBe` ReplFork (ForkRequest Nothing Nothing Nothing)
             parseReplLine "/fork   experiment branch  "
                 `shouldBe`
                     ReplFork
-                        (ForkRequest Nothing (Just "experiment branch"))
+                        (ForkRequest Nothing Nothing (Just "experiment branch"))
             parseReplLine "/fork --worktree fix the tests"
                 `shouldBe`
                     ReplFork
-                        (ForkRequest (Just True) (Just "fix the tests"))
+                        (ForkRequest (Just True) Nothing (Just "fix the tests"))
             parseReplLine "/fork --no-worktree"
-                `shouldBe` ReplFork (ForkRequest (Just False) Nothing)
+                `shouldBe` ReplFork (ForkRequest (Just False) Nothing Nothing)
+            parseReplLine "/fork --branch feature-a"
+                `shouldBe`
+                    ReplFork
+                        (ForkRequest Nothing (Just "feature-a") Nothing)
             parseReplLine "/fork --unknown stays a directive"
                 `shouldBe`
                     ReplFork
                         (ForkRequest
+                            Nothing
                             Nothing
                             (Just "--unknown stays a directive"))
             parseReplLine "/fork --worktree --no-worktree"
@@ -461,11 +466,13 @@ spec = do
                     , "review"
                     , "diff"
                     , "fork"
+                    , "checkout"
                     , "export"
                     , "history"
                     , "find"
                     , "permissions"
                     , "model"
+                    , "model-test"
                     , "effort"
                     , "fast"
                     , "plan"
@@ -559,7 +566,7 @@ spec = do
                         && "/btw" `elem` xs
                         && "/rewind" `elem` xs
                         && "/undo" `elem` xs)
-            slashCompletionCandidates "" "/mo" `shouldBe` ["/model", "/mouse"]
+            slashCompletionCandidates "" "/mo" `shouldBe` ["/model", "/model-test", "/mouse"]
             slashCompletionCandidates "ledom/" "high" `shouldBe` []
 
         it "completes effort and model arguments" do
@@ -591,7 +598,7 @@ spec = do
             slashCompletionCandidates "emaner/" "-"
                 `shouldBe` ["--auto"]
             slashCompletionCandidates "krof/" "-"
-                `shouldBe` ["--worktree", "--no-worktree"]
+                `shouldBe` ["--worktree", "--no-worktree", "--branch", "-b"]
             slashCompletionCandidates "llehs/" "b"
                 `shouldBe` ["bash", "both"]
 
@@ -609,7 +616,7 @@ spec = do
                         (("/" <>) . (.slashName))
                         defaultSlashCatalog.slashCatalogCommands
             displays "/mo" 3
-                `shouldBe` ["/model", "/mouse", "/codemod", "/permissions"]
+                `shouldBe` ["/model", "/mouse", "/model-test", "/codemod", "/permissions"]
             displays "/ra" 3 `shouldSatisfy` ("/reload-auth" `elem`)
             displays "look at /mo" 11 `shouldBe` []
 

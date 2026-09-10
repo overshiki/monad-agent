@@ -49,7 +49,8 @@ import Agent.MCP
     )
 import Agent.Provider (Provider(..))
 import Agent.Responses.Types (defaultResponseCreateParams)
-import System.OsPath (OsPath, unsafeEncodeUtf)
+import System.OsPath (OsPath)
+import Agent.OsPath (unsafeEncodeUtf)
 import Agent.TUI.Model
     ( PromptState(..)
     , UiEvent(..)

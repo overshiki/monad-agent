@@ -9,7 +9,7 @@ import Agent.CLI.WindowTitle
     )
 import Agent.TUI.Motion (MotionMode(..))
 import Data.IORef (modifyIORef', newIORef, readIORef)
-import System.OsPath (unsafeEncodeUtf)
+import Agent.OsPath (unsafeEncodeUtf)
 import qualified Data.ByteString as ByteString
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as TextEncoding

@@ -38,18 +38,23 @@ spec = do
 
     describe "renderPickerFrame" do
         it "mentions all providers, current model, and controls" do
-            let frame =
-                    renderPickerFrame False $
-                        initialPickerState
-                            catalog
-                            "xai"
-                            XAIProvider
-                            "grok-4.6"
-                            GrokBuildDialect
+            let state =
+                    initialPickerState
+                        catalog
+                        "xai"
+                        XAIProvider
+                        "grok-4.6"
+                        GrokBuildDialect
+                frame = renderPickerFrame False state
             frame `shouldSatisfy` Text.isInfixOf "xai"
             frame `shouldSatisfy` Text.isInfixOf "openai"
             frame `shouldSatisfy` Text.isInfixOf "openrouter"
-            frame `shouldSatisfy` Text.isInfixOf "claude-code"
+            frame `shouldSatisfy` Text.isInfixOf "deepseek"
+            -- Providers past the first viewport page still render under a filter.
+            renderPickerFrame False state { pickerFilter = "kimi" }
+                `shouldSatisfy` Text.isInfixOf "kimi"
+            renderPickerFrame False state { pickerFilter = "claude" }
+                `shouldSatisfy` Text.isInfixOf "claude-code"
             defaultModelFor catalog XAIProvider
                 `shouldSatisfy` maybe False (\model -> Text.isInfixOf model frame)
             frame `shouldSatisfy` Text.isInfixOf "grok-4.6"

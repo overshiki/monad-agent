@@ -16,7 +16,8 @@ import System.Directory
     )
 import System.FilePath (takeDirectory)
 import System.IO (hClose, openTempFile)
-import System.OsPath (OsPath, decodeUtf, unsafeEncodeUtf)
+import System.OsPath (OsPath, decodeUtf)
+import Agent.OsPath (unsafeEncodeUtf)
 import System.Posix.Files (fileMode, getFileStatus)
 import Test.Hspec
 
