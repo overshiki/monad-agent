@@ -31,6 +31,7 @@ sessionSchemaStatements =
       \ legacy_target_dialect text,\
       \ cwd text NOT NULL,\
       \ git_branch text,\
+      \ focus_turn_id uuid,\
       \ effort text NOT NULL,\
       \ title text NOT NULL,\
       \ title_is_manual boolean NOT NULL,\
@@ -101,6 +102,7 @@ sessionSchemaStatements =
       \ usage_output_tokens bigint,\
       \ usage_cached_tokens bigint,\
       \ provider_telemetry_json text,\
+      \ parent_turn_id uuid,\
       \ search_vector tsvector GENERATED ALWAYS AS (\
       \   setweight(to_tsvector('english', coalesce(user_text, '')), 'A') ||\
       \   setweight(to_tsvector('english', coalesce(assistant_text, '')), 'B')\
@@ -128,6 +130,8 @@ sessionSchemaStatements =
     , "CREATE INDEX IF NOT EXISTS session_turns_checkpoint_idx\
       \ ON harness.session_turns (session_id, turn_index DESC)\
       \ WHERE transcript_effect <> 'append'"
+    , "CREATE INDEX IF NOT EXISTS session_turns_parent_turn_id_idx\
+      \ ON harness.session_turns (session_id, parent_turn_id)"
     ]
     <> sessionSearchIndexStatements
     <> sessionItemSchemaStatements

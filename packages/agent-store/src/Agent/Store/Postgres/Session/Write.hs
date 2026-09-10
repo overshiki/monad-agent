@@ -211,6 +211,8 @@ appendSessionTurnIndexedInternal resetPrompt pool turn metadata =
             case changed of
                 Nothing -> pure Nothing
                 Just (sessionId, sequence, turnIndex) -> do
+                    parentId <-
+                        Transaction.statement sessionId currentFocusStatement
                     eventId <- Transaction.statement
                         EventInsert
                             { eventInsertSessionId = sessionId
@@ -225,9 +227,11 @@ appendSessionTurnIndexedInternal resetPrompt pool turn metadata =
                             , turnInsertEventId = eventId
                             , turnInsertIndex = turnIndex
                             , turnInsertEventSequence = sequence
+                            , turnInsertParentId = parentId
                             , turnInsertTurn = turn
                             }
                         insertTurnStatement
+                    _ <- Transaction.statement (sessionId, turnId) setFocusStatement
                     insertResponseItems turnId turn.sessionTurnItems
                     when resetPrompt do
                         _ <- Transaction.statement
@@ -382,6 +386,8 @@ appendTurnTransaction turn metadata = do
     case changed of
         Nothing -> pure False
         Just (sessionId, sequence, turnIndex) -> do
+            parentId <-
+                Transaction.statement sessionId currentFocusStatement
             eventId <- Transaction.statement
                 EventInsert
                     { eventInsertSessionId = sessionId
@@ -396,9 +402,11 @@ appendTurnTransaction turn metadata = do
                     , turnInsertEventId = eventId
                     , turnInsertIndex = turnIndex
                     , turnInsertEventSequence = sequence
+                    , turnInsertParentId = parentId
                     , turnInsertTurn = turn
                     }
                 insertTurnStatement
+            _ <- Transaction.statement (sessionId, turnId) setFocusStatement
             insertResponseItems turnId turn.sessionTurnItems
             pure True
 
@@ -414,6 +422,7 @@ data TurnInsert = TurnInsert
     , turnInsertEventId :: !Text
     , turnInsertIndex :: !Int64
     , turnInsertEventSequence :: !Int64
+    , turnInsertParentId :: !(Maybe Text)
     , turnInsertTurn :: !SessionTurn
     }
 
@@ -600,10 +609,10 @@ insertTurnStatement = mkStatement
     \ user_text, assistant_text, error_text, response_id,\
     \ transcript_effect,\
     \ usage_input_tokens, usage_output_tokens, usage_cached_tokens,\
-    \ provider_telemetry_json\
+    \ provider_telemetry_json, parent_turn_id\
     \ ) VALUES (\
     \ $1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,\
-    \ $14\
+    \ $14, $15::uuid\
     \ ) RETURNING turn_id::text"
     ( ((.turnInsertSessionId) >$< Encoders.param (Encoders.nonNullable Encoders.text))
         <> ((.turnInsertEventId) >$< Encoders.param (Encoders.nonNullable Encoders.text))
@@ -622,6 +631,8 @@ insertTurnStatement = mkStatement
         <> ((usageField (.sessionUsageCachedTokens) . (.turnInsertTurn))
             >$< Encoders.param (Encoders.nullable Encoders.int8))
         <> ((.sessionTurnProviderTelemetry) . (.turnInsertTurn)
+            >$< Encoders.param (Encoders.nullable Encoders.text))
+        <> ((.turnInsertParentId)
             >$< Encoders.param (Encoders.nullable Encoders.text))
     )
     (Decoders.singleRow (Decoders.column (Decoders.nonNullable Decoders.text)))
@@ -644,6 +655,28 @@ insertTurnStatement = mkStatement
     turnResponseId value = value.turnInsertTurn.sessionTurnResponseId
     turnEffect :: TurnInsert -> Text
     turnEffect value = transcriptEffectText value.turnInsertTurn.sessionTurnEffect
+
+-- | The current focus turn (the parent of the next appended turn). 'Nothing'
+-- for a session that has not yet committed a turn: the first turn becomes a
+-- quest root.
+currentFocusStatement :: Statement Text (Maybe Text)
+currentFocusStatement = mkStatement
+    "SELECT focus_turn_id::text FROM harness.sessions\
+    \ WHERE session_id = $1::uuid"
+    (Encoders.param (Encoders.nonNullable Encoders.text))
+    (Decoders.singleRow (Decoders.column (Decoders.nullable Decoders.text)))
+    True
+
+-- | Advance the focus turn to the newly appended turn.
+setFocusStatement :: Statement (Text, Text) ()
+setFocusStatement = mkStatement
+    "UPDATE harness.sessions SET focus_turn_id = $2::uuid\
+    \ WHERE session_id = $1::uuid"
+    ( (fst >$< Encoders.param (Encoders.nonNullable Encoders.text))
+        <> (snd >$< Encoders.param (Encoders.nonNullable Encoders.text))
+    )
+    Decoders.noResult
+    True
 
 deleteProjectionStatement
     :: Statement (Text, UTCTime) (Maybe (Text, Int64))

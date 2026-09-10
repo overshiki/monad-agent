@@ -154,6 +154,7 @@ data StoredTurn = StoredTurn
     { storedTurnIndex :: !Int64
     , storedEventSequence :: !Int64
     , storedTurn :: !SessionTurn
+    , storedTurnParentId :: !(Maybe Text)
     }
     deriving (Eq, Show)
 

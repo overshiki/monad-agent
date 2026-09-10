@@ -226,6 +226,18 @@ coreMigrations =
               \ $ha$"
             ]
         }
+    , Migration
+        { migrationVersion = 106
+        , migrationName = "session quest-tree lineage"
+        , migrationStatements =
+            [ "ALTER TABLE IF EXISTS harness.session_turns\
+              \ ADD COLUMN IF NOT EXISTS parent_turn_id uuid"
+            , "ALTER TABLE IF EXISTS harness.sessions\
+              \ ADD COLUMN IF NOT EXISTS focus_turn_id uuid"
+            , "CREATE INDEX IF NOT EXISTS session_turns_parent_turn_id_idx\
+              \ ON harness.session_turns (session_id, parent_turn_id)"
+            ]
+        }
     ]
 
 -- Version 1 shipped only on the in-development PostgreSQL branch. Empty
