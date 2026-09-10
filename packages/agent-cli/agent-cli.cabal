@@ -155,6 +155,7 @@ library
                     , Agent.CLI.CodeModeRuntime
                     , Agent.CLI.Compaction
                     , Agent.CLI.Context
+                    , Agent.CLI.Context.Assembler
                     , Agent.CLI.Connectivity
                     , Agent.CLI.Command
                     , Agent.CLI.ComputerUse
@@ -453,6 +454,7 @@ test-suite agent-cli-test
                     , Agent.CLI.ConfigSpec
                     , Agent.CLI.CompactionSpec
                     , Agent.CLI.ContextSpec
+                    , Agent.CLI.ContextAssemblerSpec
                     , Agent.CLI.ConversationStoreSpec
                     , Agent.CLI.ConnectivitySpec
                     , Agent.CLI.CredentialStoreSpec

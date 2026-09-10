@@ -17,6 +17,7 @@ import qualified Agent.CLI.CommandSpec as CommandSpec
 import qualified Agent.CLI.ConfigSpec as ConfigSpec
 import qualified Agent.CLI.CompactionSpec as CompactionSpec
 import qualified Agent.CLI.ContextSpec as ContextSpec
+import qualified Agent.CLI.ContextAssemblerSpec as ContextAssemblerSpec
 import qualified Agent.CLI.ConversationStoreSpec as ConversationStoreSpec
 import qualified Agent.CLI.ConnectivitySpec as ConnectivitySpec
 import qualified Agent.CLI.CredentialStoreSpec as CredentialStoreSpec
@@ -106,6 +107,7 @@ main = hspec do
     ConfigSpec.spec
     CompactionSpec.spec
     ContextSpec.spec
+    ContextAssemblerSpec.spec
     ConversationStoreSpec.spec
     ConnectivitySpec.spec
     CredentialStoreSpec.spec
