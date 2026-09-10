@@ -21,14 +21,17 @@ import Agent.CLI.Command
 import Agent.CLI.Interrupt (withTurnCancel)
 import Agent.CLI.ModelTest
     ( ProbeOutcome(..)
+    , catalogTargets
     , classifyProbe
     , defaultProbeTimeoutMicros
     , formatProbeLine
     , matchesFilters
     , modelTestQuestion
-    , sessionConnectionTargets
+    , targetConn
     , targetId
+    , targetProvider
     )
+import Agent.CLI.Subagents.Runtime (loadForeignHttpBackend)
 import Agent.Concurrent (mapConcurrentlyBounded)
 import Agent.CLI.Options
     ( ApprovalPolicy
@@ -64,6 +67,7 @@ import Agent.CLI.TUI.App
     ( emitUiEvent
     )
 import Agent.Loop (TokenUsage)
+import Agent.Provider (Provider(..))
 import Agent.Dialect (DialectId, dialectId)
 import Agent.ReasoningEffort
     ( ReasoningEffort
@@ -231,10 +235,13 @@ runBtwQuestion registerCancel env question = do
                 Nothing ->
                     putTextLn stdoutHandle (renderAssistantText color answer)
 
--- | Probe the models configured on the session connection and report which
--- respond right now. Out-of-band like @/btw@: nothing enters the
--- conversation, no tools are offered, and every probe is one fresh request
--- with a small fixed question through the session's btw backend.
+-- | Probe the models a subagent can be dispatched to — every catalog model
+-- with an available credential, across providers — and report which respond
+-- right now. Out-of-band like @/btw@: nothing enters the conversation, no
+-- tools are offered, and every probe is one fresh request with a small fixed
+-- question. The session's own provider uses the session backend; foreign
+-- providers use a lazily loaded one-shot backend (shared with cross-provider
+-- subagent dispatch); models whose provider has no credential are skipped.
 runModelTest :: SessionEnv -> [Text] -> IO ()
 runModelTest env filters = do
     let stdoutHandle = env.sessionRender.renderStdout
@@ -242,10 +249,7 @@ runModelTest env filters = do
         fullscreen = env.sessionFullscreen
         targets =
             filter (matchesFilters filters)
-                (sessionConnectionTargets
-                    env.sessionProvider
-                    env.sessionConnection
-                    env.sessionModelCatalog)
+                (catalogTargets env.sessionModelCatalog)
     if null targets
         then do
             color <- resolveColor stderrHandle
@@ -258,8 +262,7 @@ runModelTest env filters = do
                 message =
                     "no configured models to test"
                         <> suffix
-                        <> " on connection "
-                        <> env.sessionConnection
+                        <> " in the model catalog"
             case fullscreen of
                 Just runtime -> emitUiEvent runtime (UiErrorMessage message)
                 Nothing ->
@@ -280,8 +283,7 @@ runModelTest env filters = do
                         <> Text.pack (show okCount)
                         <> "/"
                         <> Text.pack (show (length results))
-                        <> " models responded on "
-                        <> env.sessionConnection
+                        <> " models responded"
                 emitLine line =
                     case fullscreen of
                         Just runtime -> emitUiEvent runtime (UiSystemMessage line)
@@ -289,11 +291,29 @@ runModelTest env filters = do
             mapM_ (emitLine . summarize) results
             emitLine summary
   where
-    probeTarget baseParams target = do
+    probeTarget baseParams target
+        | targetProvider target == env.sessionProvider
+        , targetConn target == env.sessionConnection =
+            runProbe baseParams env.sessionBtwBackend target
+        | otherwise = do
+            backendFactory <- loadForeignHttpBackend (targetProvider target)
+            case backendFactory of
+                Nothing ->
+                    pure
+                        ( target
+                        , Nothing
+                        , ProbeSkipped
+                            ("no credential for "
+                                <> providerName (targetProvider target))
+                        )
+                Just mkBackend ->
+                    runProbe baseParams mkBackend target
+
+    runProbe baseParams mkBackend target = do
         probeParamsRef <-
             newIORef
                 (setRequestModel
-                    env.sessionProvider
+                    (targetProvider target)
                     (targetId target)
                     baseParams)
         transcriptRef <- newIORef []
@@ -302,7 +322,7 @@ runModelTest env filters = do
             timeout defaultProbeTimeoutMicros $
                 runBtwWithCancel
                     cancelScope
-                    env.sessionBtwBackend
+                    mkBackend
                     probeParamsRef
                     transcriptRef
                     modelTestQuestion
@@ -315,7 +335,16 @@ runModelTest env filters = do
                 case result of
                     Nothing -> ProbeTimeout
                     Just probeResult -> classifyProbe probeResult
-        pure (target, latencyMs, outcome)
+        pure (target, Just latencyMs, outcome)
+
+    providerName = \case
+        DeepSeekProvider -> "deepseek"
+        KimiProvider -> "kimi"
+        OpenRouterProvider -> "openrouter"
+        OpenAIProvider -> "openai"
+        XAIProvider -> "xai"
+        GeminiProvider -> "gemini"
+        ClaudeCodeProvider -> "claude"
 
     cancelScope cancel action =
         withTurnCancel env.sessionInterrupt cancel $
@@ -327,4 +356,4 @@ runModelTest env filters = do
                 Just _ -> action
 
     summarize (target, latencyMs, outcome) =
-        formatProbeLine target (Just latencyMs) outcome
+        formatProbeLine target latencyMs outcome

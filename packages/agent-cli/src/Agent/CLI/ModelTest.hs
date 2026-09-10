@@ -1,5 +1,5 @@
--- | @/model-test@: probe the session connection's configured models and
--- report which respond right now.
+-- | @/model-test@: probe the session's configured models — across every
+-- connection with an available credential — and report which respond now.
 --
 -- A probe is one real, minimal model request (no tools, no inherited
 -- transcript) through the same out-of-band backend path @/btw@ uses, so
@@ -9,7 +9,7 @@
 -- @Session/Interaction.hs@ owns the I/O (timeouts, concurrency, cancel).
 module Agent.CLI.ModelTest
     ( ModelTestTarget(..)
-    , sessionConnectionTargets
+    , catalogTargets
     , matchesFilters
     , ProbeOutcome(..)
     , classifyProbe
@@ -19,6 +19,7 @@ module Agent.CLI.ModelTest
     , defaultProbeTimeoutMicros
     , targetId
     , targetConn
+    , targetProvider
     ) where
 
 import Agent.CLI.Btw (BtwError(..))
@@ -34,31 +35,36 @@ import Data.List (nubBy, sortBy)
 import Data.Text (Text)
 import qualified Data.Text as Text
 
--- | A resolved probe target on the session connection.
+-- | A resolved probe target: the model and the provider/connection that own
+-- it.
 data ModelTestTarget = ModelTestTarget
     { probeModelId :: !Text
     , probeConnectionId :: !Text
+    , probeProvider :: !Provider
     }
     deriving (Eq, Show)
 
 -- Field selectors are suppressed by NoFieldSelectors; these accessors keep
 -- the module record-dot free.
 targetId :: ModelTestTarget -> Text
-targetId (ModelTestTarget modelId _) = modelId
+targetId (ModelTestTarget modelId _ _) = modelId
 
 targetConn :: ModelTestTarget -> Text
-targetConn (ModelTestTarget _ connectionId) = connectionId
+targetConn (ModelTestTarget _ connectionId _) = connectionId
 
--- | The catalog models available on this provider/connection (deduplicated
--- and sorted by model id).
-sessionConnectionTargets :: Provider -> Text -> ModelCatalog -> [ModelTestTarget]
-sessionConnectionTargets provider connectionId catalog =
-    [ ModelTestTarget id' conn
+targetProvider :: ModelTestTarget -> Provider
+targetProvider (ModelTestTarget _ _ provider) = provider
+
+-- | Every catalog model (deduplicated by model id and sorted), regardless of
+-- provider/connection. These are the models a subagent could be dispatched
+-- to; /model-test probes them all.
+catalogTargets :: ModelCatalog -> [ModelTestTarget]
+catalogTargets catalog =
+    [ ModelTestTarget id' conn provider'
     | ModelOption{ modelTarget = target } <- modelCatalog catalog
     , let id' = target.targetModelId
     , let conn = target.targetConnectionId
-    , target.targetProvider == provider
-    , conn == connectionId
+    , let provider' = target.targetProvider
     ]
     |> nubBy (\left right -> targetId left == targetId right)
     |> sortBy (\left right -> compare (targetId left) (targetId right))
@@ -86,6 +92,7 @@ data ProbeOutcome
     | ProbeEmpty
     | ProbeToolCall
     | ProbeInvalid
+    | ProbeSkipped !Text
     | ProbeTransport !Text
     deriving (Eq, Show)
 
@@ -109,6 +116,7 @@ probeStatusText = \case
     ProbeEmpty -> "empty"
     ProbeToolCall -> "tool call"
     ProbeInvalid -> "invalid"
+    ProbeSkipped _ -> "skipped"
     ProbeTransport _ -> "failed"
 
 -- | The minimal question each probe sends. Kept tiny: the reply only needs
@@ -137,6 +145,7 @@ formatProbeLine target latencyMs outcome =
   where
     detail = case outcome of
         ProbeTransport text -> text
+        ProbeSkipped text -> text
         ProbeEmpty -> "model returned no text"
         ProbeToolCall -> "model tried to call a tool; no tools were run"
         ProbeInvalid -> "model returned an invalid response"

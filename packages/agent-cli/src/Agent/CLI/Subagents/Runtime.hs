@@ -8,6 +8,7 @@ module Agent.CLI.Subagents.Runtime
     , persistSubagentSnapshotWithStatus, prepareCollaborationSpawn
     , restoreAgentFromDisk, resolveChildModelAndEffort, runCodexSubagent
     , runHttpSubagent, runXaiParentSubagent, grokSpawnedChildIdentity
+    , loadForeignHttpBackend
     , usesOpenAiChildTransport, validatePersistedSubagentTarget
     ) where
 import Agent.CLI.Approval (childApprove)
@@ -943,19 +944,16 @@ dispatchForeignOrFail runtime dialect _provider sendToRoot env previous prompt o
                         target
   where
     dispatch target = do
-        authResult <- loadAuth (Just (childTargetProvider target))
-        case authResult of
-            Left authError ->
+        childBackend <- loadForeignHttpBackend (childTargetProvider target)
+        case childBackend of
+            Nothing ->
                 pure $ Left $ LoopUnexpected $
                     foreignTargetMessage
                         _provider
                         runtime.subagentConnection
                         target
-                        <> " (credential unavailable: "
-                        <> authError
-                        <> ")"
-            Right loaded -> do
-                childBackend <- foreignChildBackend (childTargetProvider target) loaded
+                        <> " (credential unavailable)"
+            Just mkBackend -> do
                 let runtimeForeign =
                         runtime
                             { subagentConnection = childTargetConnection target
@@ -966,27 +964,44 @@ dispatchForeignOrFail runtime dialect _provider sendToRoot env previous prompt o
                     dialect
                     (childTargetProvider target)
                     sendToRoot
-                    childBackend
+                    mkBackend
                     env
                     previous
                     prompt
                     onEvent
 
-    foreignChildBackend provider loaded = case provider of
-        DeepSeekProvider -> do
-            options <- DeepSeek.clientOptionsFromEnv
-            pure $ \childParams ->
-                deepSeekBackend options loaded.loadedTokenProvider
-                    (pure childParams)
-        KimiProvider -> do
-            options <- Kimi.clientOptionsFromEnv
-            pure $ \childParams ->
-                kimiBackend options loaded.loadedTokenProvider
-                    (pure childParams)
-        _ -> error "dispatchForeignOrFail: unsupported provider"
-
 foreignHttpKeyProviders :: [Provider]
 foreignHttpKeyProviders = [DeepSeekProvider, KimiProvider]
+
+-- | Lazily build a one-shot backend for a foreign key-based HTTP provider
+-- (DeepSeek, Kimi), loading its credential non-interactively and its
+-- environment options. 'Nothing' when the provider has no usable
+-- credential. Shared by foreign child dispatch and @/model-test@.
+loadForeignHttpBackend
+    :: Provider
+    -> IO (Maybe (ResponseCreateParams -> Backend))
+loadForeignHttpBackend provider
+    | provider `notElem` foreignHttpKeyProviders = pure Nothing
+    | otherwise = do
+        authResult <- loadAuth (Just provider)
+        case authResult of
+            Left _ -> pure Nothing
+            Right loaded -> Just <$> foreignHttpBackend provider loaded
+
+foreignHttpBackend
+    :: Provider
+    -> LoadedAuth
+    -> IO (ResponseCreateParams -> Backend)
+foreignHttpBackend provider loaded = case provider of
+    DeepSeekProvider -> do
+        options <- DeepSeek.clientOptionsFromEnv
+        pure $ \params ->
+            deepSeekBackend options loaded.loadedTokenProvider (pure params)
+    KimiProvider -> do
+        options <- Kimi.clientOptionsFromEnv
+        pure $ \params ->
+            kimiBackend options loaded.loadedTokenProvider (pure params)
+    _ -> error "foreignHttpBackend: unsupported provider"
 
 resolveChildModelAndEffort
     :: Provider
