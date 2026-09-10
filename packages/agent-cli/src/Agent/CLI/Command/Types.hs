@@ -47,6 +47,8 @@ data ReplAction
     | ReplFork !ForkRequest
     | ReplCheckout !Text
     -- ^ Switch to a git branch and resume the chat linked to it.
+    | ReplMerge !Text
+    -- ^ Merge a git branch into the current checkout and record it in the chat.
     | ReplSwitch !Int64
     -- ^ Move the session focus to the turn with this index.
     | ReplExport (Maybe Text)

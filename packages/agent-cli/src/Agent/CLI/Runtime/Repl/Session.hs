@@ -19,7 +19,7 @@ import Agent.CLI.Command
       ForkRequest(..),
       ReplAction(ReplRenameAuto, ReplResume, ReplSearch, ReplHome, ReplRewind, ReplClear,
                  ReplNew, ReplDelete, ReplShowSession, ReplShowSessionInfo, ReplAfk,
-                 ReplWorktree, ReplRename, ReplFork, ReplCheckout, ReplSwitch),
+                 ReplWorktree, ReplRename, ReplFork, ReplCheckout, ReplSwitch, ReplMerge),
       ShellMode(ShellNone, ShellGhci, ShellBash, ShellBoth),
       SlashCatalog(slashCatalogToolNames) )
 import Agent.CLI.Compaction ()
@@ -84,6 +84,7 @@ import Agent.CLI.Session
       setManualSessionTitle,
       switchSessionFocus,
       loadFocusedTranscript,
+      appendMergeMarker,
       Persistence(PersistenceEnabled, PersistenceDisabled),
       PersistenceState(PersistenceActive, PersistencePending),
       SessionCreate(createCwd, SessionCreate, createPool, createEffort,
@@ -590,6 +591,9 @@ handleSessionAction
     ReplCheckout branch -> do
         color <- resolveColor stderr
         checkoutSessionBranch color branch
+    ReplMerge branch -> do
+        color <- resolveColor stderr
+        mergeSessionBranch color branch
     ReplSwitch index -> do
         color <- resolveColor stderr
         let failSwitch message = do
@@ -1048,6 +1052,71 @@ handleSessionAction
         rootWithSep root
             | root == "/" = "/"
             | otherwise = root <> "/"
+    -- | @/merge@: merge a branch into the current checkout, then record the
+    -- merge in the current session's history. The session marker must be
+    -- possible before the git merge runs, so a persistence problem aborts
+    -- before git mutates anything.
+    mergeSessionBranch color branch = do
+        let failMerge message = do
+                displayError message $
+                    putTextLn stderr (roleError color message)
+                continue
+        sessionSlot <-
+            case persist of
+                PersistenceDisabled -> pure Nothing
+                PersistenceEnabled slotRef -> Just <$> readIORef slotRef
+        repo <- git cwd ["rev-parse", "--is-inside-work-tree"]
+        case (sessionSlot, fmap Text.strip repo) of
+            (_, Right "true") -> do
+                current <- git cwd ["rev-parse", "--abbrev-ref", "HEAD"]
+                case fmap Text.strip current of
+                    Right currentBranch
+                        | currentBranch == branch ->
+                            failMerge ("cannot merge branch '" <> branch <> "' into itself")
+                    _ -> do
+                        merged <- git cwd ["merge", Text.unpack branch]
+                        case merged of
+                            Left err -> failMerge err
+                            Right _ ->
+                                case sessionSlot of
+                                    Just (PersistenceActive source) -> do
+                                        summary <- forkSummaryForBranch branch
+                                        _ <- appendMergeMarker source branch summary
+                                        let message =
+                                                "merged branch '"
+                                                    <> branch
+                                                    <> "'"
+                                        displayInfo message $
+                                            putTextLn stderr
+                                                (roleMuted color
+                                                    (glyphOk <> message))
+                                        continue
+                                    _ -> do
+                                        let message =
+                                                "merged branch '"
+                                                    <> branch
+                                                    <> "' (not recorded: no persisted session)"
+                                        displayInfo message $
+                                            putTextLn stderr
+                                                (roleMuted color
+                                                    (glyphOk <> message))
+                                        continue
+            _ -> failMerge "not a git repository"
+    forkSummaryForBranch branch = do
+        (metas, _) <-
+            listSessions
+                databasePool
+                (sessionsRoot env.sessionHome)
+        pure $
+            case
+                [ meta.metaTitle
+                | meta <- metas
+                , meta.metaGitBranch == Just branch
+                ]
+              of
+                title : _ -> title
+                [] -> "Merged " <> branch <> "."
+
     chooseForkWorktree color = \case
         Just value -> pure (Just value)
         Nothing ->

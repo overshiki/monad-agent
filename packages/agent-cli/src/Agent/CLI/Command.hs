@@ -243,6 +243,9 @@ parseSlash catalog raw line = case Text.words line of
             "checkout" ->
                 parseCheckoutCommand
                     (Text.strip (Text.drop (Text.length command) line))
+            "merge" ->
+                parseMergeCommand
+                    (Text.strip (Text.drop (Text.length command) line))
             "switch" ->
                 parseSwitchCommand
                     (Text.strip (Text.drop (Text.length command) line))
@@ -651,6 +654,15 @@ parseCheckoutCommand input =
                 ReplCommandError "usage: /checkout <branch>"
             | otherwise -> ReplCheckout branch
         _ -> ReplCommandError "usage: /checkout <branch>"
+
+parseMergeCommand :: Text -> ReplAction
+parseMergeCommand input =
+    case Text.words input of
+        [branch]
+            | Text.null (Text.strip branch) ->
+                ReplCommandError "usage: /merge <branch>"
+            | otherwise -> ReplMerge branch
+        _ -> ReplCommandError "usage: /merge <branch>"
 
 parseSwitchCommand :: Text -> ReplAction
 parseSwitchCommand input =

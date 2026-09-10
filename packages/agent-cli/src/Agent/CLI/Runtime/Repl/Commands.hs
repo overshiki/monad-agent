@@ -39,7 +39,7 @@ import Agent.CLI.Command
                  ReplHome, ReplRewind, ReplClear, ReplNew, ReplDelete,
                  ReplShowSession, ReplShowSessionInfo, ReplAfk, ReplWorktree,
                  ReplRename, ReplRenameAuto, ReplInit, ReplReview, ReplDiff,
-                 ReplFork, ReplCheckout, ReplSwitch, ReplExport, ReplPermissions,
+                 ReplFork, ReplCheckout, ReplSwitch, ReplMerge, ReplExport, ReplPermissions,
                  ReplLogin, ReplUsage, ReplReloadAuth,
                  ReplHelp),
       ShellMode(ShellNone, ShellGhci, ShellBash, ShellBoth),
@@ -1168,6 +1168,7 @@ handleReplLine
                     action@ReplDelete -> handleSessionAction env slashCatalog continue action
                     action@ReplFork{} -> handleSessionAction env slashCatalog continue action
                     action@ReplCheckout{} -> handleSessionAction env slashCatalog continue action
+                    action@ReplMerge{} -> handleSessionAction env slashCatalog continue action
                     action@ReplSwitch{} -> handleSessionAction env slashCatalog continue action
                     action@ReplShowSession -> handleSessionAction env slashCatalog continue action
                     action@ReplShowSessionInfo -> handleSessionAction env slashCatalog continue action

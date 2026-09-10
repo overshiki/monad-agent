@@ -138,6 +138,11 @@ spec = do
                 `shouldBe` ReplCommandError "usage: /switch <turn-index>"
             parseReplLine "/switch 3 4"
                 `shouldBe` ReplCommandError "usage: /switch <turn-index>"
+            parseReplLine "/merge feature-a" `shouldBe` ReplMerge "feature-a"
+            parseReplLine "/merge"
+                `shouldBe` ReplCommandError "usage: /merge <branch>"
+            parseReplLine "/merge a b"
+                `shouldBe` ReplCommandError "usage: /merge <branch>"
             parseReplLine "/export" `shouldBe` ReplExport Nothing
             parseReplLine "/export  notes/session.md  "
                 `shouldBe` ReplExport (Just "notes/session.md")
@@ -472,6 +477,7 @@ spec = do
                     , "diff"
                     , "fork"
                     , "checkout"
+                    , "merge"
                     , "switch"
                     , "export"
                     , "history"

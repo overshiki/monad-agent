@@ -35,6 +35,7 @@ module Agent.CLI.Session
     , appendTurnWithPromptResetIndexed
     , appendTurnKeepTitle
     , appendTurnKeepTitleIndexed
+    , appendMergeMarker
     , sessionRewindChoices
     , rewindSession
     , addSessionUsage
@@ -1011,6 +1012,27 @@ appendTurnKeepTitleIndexed
     -> IO (SessionHandle, Int64)
 appendTurnKeepTitleIndexed handle turn =
     appendTurnWithMetaTransitionIndexed handle turn id
+
+-- | Append a merge marker turn recording that a git branch was merged into
+-- this session's history. No model items; the assistant text carries a summary.
+appendMergeMarker
+    :: SessionHandle
+    -> Text
+    -> Text
+    -> IO SessionHandle
+appendMergeMarker handle branch summary = do
+    now <- normalizePostgresTimestamp <$> getCurrentTime
+    appendTurnKeepTitle handle SessionTurn
+        { turnAt = now
+        , turnUserText = "merged branch '" <> branch <> "'"
+        , turnAssistantText = Just summary
+        , turnError = Nothing
+        , turnResponseId = Nothing
+        , turnEffect = TranscriptAppend
+        , turnItems = []
+        , turnUsage = Nothing
+        , turnProviderTelemetry = []
+        }
 
 -- | Prompts in the current immutable transcript branch, paired with the turns
 -- that should remain when rewinding to immediately before that prompt.

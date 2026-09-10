@@ -13,6 +13,7 @@ slashCommands =
     , cmd "diff" [] "/diff" "Show Git diff, including untracked files" False
     , cmd "fork" [] "/fork [--worktree|--no-worktree] [--branch <name>] [DIRECTIVE]" "Fork the current chat into a peer session" True
     , cmd "checkout" [] "/checkout <branch>" "Switch to a git branch and resume the chat linked to it" True
+    , cmd "merge" [] "/merge <branch>" "Merge a git branch and record it in the current chat" True
     , cmd "switch" [] "/switch <turn-index>" "Move the session focus to a turn" True
     , cmd "export" [] "/export [PATH]" "Export the conversation as Markdown" True
     , cmd "history" [] "/history" "Search prompt history and reuse a prompt" False
