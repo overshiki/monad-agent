@@ -100,13 +100,15 @@ runCell agentBin suiteDir resultsDir suite resultsRef (combo, task, trial) = do
                     <> Text.pack (show (runTimeoutSeconds (suiteRuns suite))) <> "s")
             Just (Left exception) ->
                 pure ("", False, 0, Text.pack (show exception))
-            Just (Right (exitCode, stdoutText, stderrText))
-                | exitCode /= ExitSuccess ->
-                    pure ("", False, 0, Text.pack (trim stdoutText <> trim stderrText))
-                | otherwise -> do
-                    let answer = Text.pack (trim stdoutText)
-                    (pass', score') <- validateAnswer agentBin workspace combo task answer
-                    pure (answer, pass', score', "")
+            Just (Right (exitCode, stdoutText, stderrText)) -> do
+                writeFile (workspace </> "stdout.log") stdoutText
+                writeFile (workspace </> "stderr.log") stderrText
+                if exitCode /= ExitSuccess
+                    then pure ("", False, 0, Text.pack (trim stdoutText <> trim stderrText))
+                    else do
+                        let answer = Text.pack (trim stdoutText)
+                        (pass', score') <- validateAnswer agentBin workspace combo task answer
+                        pure (answer, pass', score', "")
     let result = BenchResult
             { resultCombo = comboId combo
             , resultTask = taskId task
