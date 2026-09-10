@@ -21,8 +21,14 @@ no schema or code changes are implied by this file.
   the new turn, and a `NULL` parent marks a quest root. Lineage lives on
   `StoredTurn` (read) and `TurnInsert` (write), not on `SessionTurn`, so the
   CLI is unchanged. Fork snapshots chain their copied turns the same way.
-- **P2–P5 pending**: no context assembler, relevance, hierarchical compaction,
-  or tree UX yet; `parent_turn_id` is currently informational.
+- **P2 partial**: `Agent.CLI.Context.Assembler` defines the segment/budget
+  model and deterministic segment-1 (nearest-history) selection; `StoredTurn`
+  now exposes `storedTurnId`, and `Agent.CLI.QuestTree` + `loadQuestTree`
+  reconstruct the turn lineage and walk it (`lineageToRoot`, `questRoots`,
+  `defaultFocus`). Both are pure and unit-tested, but not yet wired into the
+  live request path.
+- **P3–P5 pending**: no relevance, hierarchical compaction, focus navigation,
+  or tree UX yet.
 
 ## Goals and non-goals
 

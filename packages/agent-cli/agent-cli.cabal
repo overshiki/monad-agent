@@ -215,6 +215,7 @@ library
                     , Agent.CLI.Progress
                     , Agent.CLI.Project
                     , Agent.CLI.Prompt
+                    , Agent.CLI.QuestTree
                     , Agent.CLI.Recap
                     , Agent.CLI.Request
                     , Agent.CLI.Review
@@ -494,6 +495,7 @@ test-suite agent-cli-test
                     , Agent.CLI.ProviderFallbackSpec
                     , Agent.CLI.ProviderAvailabilitySpec
                     , Agent.CLI.ProviderTransitionSpec
+                    , Agent.CLI.QuestTreeSpec
                     , Agent.CLI.RequestSpec
                     , Agent.CLI.RenderSpec
                     , Agent.CLI.ReplStatusSpec

@@ -43,6 +43,7 @@ module Agent.CLI.Session
     , loadSessions
     , loadActiveSession
     , loadSessionMeta
+    , loadQuestTree
     , loadRecentSessionTurns
     , loadSessionTurnsBefore
     , loadSessionTurnsAfter
@@ -122,6 +123,7 @@ import Agent.CLI.Session.Codec
     , validateSessionMeta
     )
 import Agent.CLI.Models (ModelTarget(..))
+import Agent.CLI.QuestTree (QuestNode(..), QuestTree, buildQuestTree)
 import Agent.CLI.SessionTitle (titleRefreshIndex)
 import Agent.Dialect (DialectId)
 import Agent.Loop (TokenUsage(..))
@@ -1119,6 +1121,27 @@ loadActiveSession pool root sessionId = runExceptT do
         sessionId
         storedPrompt
         stored
+
+-- | Load a session's turn lineage (ids + parent pointers) as a quest tree.
+-- This is the CLI-level surface of the store's 'parent_turn_id' links; the
+-- context assembler walks it (see Agent.CLI.QuestTree and docs/session-tree.md).
+loadQuestTree
+    :: StorePool
+    -> OsPath
+    -> Text
+    -> IO (Either Text QuestTree)
+loadQuestTree pool root sessionId = runExceptT do
+    _ <- except (sessionDirForId root sessionId)
+    stored <- loadWithLegacyImport root pool sessionId Store.loadSession
+    let nodes =
+            [ QuestNode
+                { questNodeId = turn.storedTurnId
+                , questNodeParentId = turn.storedTurnParentId
+                , questNodeIndex = turn.storedTurnIndex
+                }
+            | turn <- Vector.toList stored.storedTurns
+            ]
+    except (buildQuestTree nodes)
 
 loadStoredPromptEpoch
     :: StorePool

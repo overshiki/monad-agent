@@ -153,6 +153,7 @@ data StoredEvent = StoredEvent
 data StoredTurn = StoredTurn
     { storedTurnIndex :: !Int64
     , storedEventSequence :: !Int64
+    , storedTurnId :: !Text
     , storedTurn :: !SessionTurn
     , storedTurnParentId :: !(Maybe Text)
     }

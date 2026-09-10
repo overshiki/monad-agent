@@ -364,6 +364,7 @@ loadStoredTurnWith implementation row = do
         pure StoredTurn
             { storedTurnIndex = row.turnRowIndex
             , storedEventSequence = row.turnRowEventSequence
+            , storedTurnId = row.turnRowId
             , storedTurnParentId = row.turnRowParentId
             , storedTurn = SessionTurn
                 { sessionTurnOccurredAt = row.turnRowOccurredAt

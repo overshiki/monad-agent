@@ -58,6 +58,7 @@ import qualified Agent.CLI.RecapSpec as RecapSpec
 import qualified Agent.CLI.ProviderFallbackSpec as ProviderFallbackSpec
 import qualified Agent.CLI.ProviderAvailabilitySpec as ProviderAvailabilitySpec
 import qualified Agent.CLI.ProviderTransitionSpec as ProviderTransitionSpec
+import qualified Agent.CLI.QuestTreeSpec as QuestTreeSpec
 import qualified Agent.CLI.RequestSpec as RequestSpec
 import qualified Agent.CLI.RenderSpec as RenderSpec
 import qualified Agent.CLI.ReplStatusSpec as ReplStatusSpec
@@ -148,6 +149,7 @@ main = hspec do
     ProviderFallbackSpec.spec
     ProviderAvailabilitySpec.spec
     ProviderTransitionSpec.spec
+    QuestTreeSpec.spec
     RequestSpec.spec
     RenderSpec.spec
     ReplStatusSpec.spec
