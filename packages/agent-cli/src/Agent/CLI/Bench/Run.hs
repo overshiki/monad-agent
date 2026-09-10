@@ -14,6 +14,7 @@ import Agent.Concurrent (mapConcurrentlyBounded)
 import Control.Exception.Safe (tryIO)
 import Control.Monad (forM_, when)
 import Data.Aeson (ToJSON(..), object, (.=))
+import Control.Concurrent.MVar (MVar, newMVar, withMVar)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
@@ -58,6 +59,51 @@ instance ToJSON BenchResult where
         , "error" .= resultError r
         ]
 
+-- | Live progress tracking for the benchmark run: per-cell start/finish
+-- lines plus a running pass tally, so a long run shows what is happening.
+data Progress = Progress
+    { progressCounts :: !(IORef (Int, Int))
+    , progressLock :: !(MVar ())
+    , progressTotal :: !Int
+    }
+
+newProgress :: Int -> IO Progress
+newProgress total = Progress <$> newIORef (0, 0) <*> newMVar () <*> pure total
+
+logStarted :: Progress -> Combo -> Task -> Int -> IO ()
+logStarted progress combo task trial =
+    withMVar (progressLock progress) \_ ->
+        putStrLn ("[" <> Text.unpack (comboId combo) <> "] "
+            <> Text.unpack (taskId task)
+            <> " trial "
+            <> show trial
+            <> ": started")
+
+logFinished :: Progress -> BenchResult -> IO ()
+logFinished progress result =
+    withMVar (progressLock progress) \_ -> do
+        (done, passed) <- readIORef (progressCounts progress)
+        let done' = done + 1
+            passed' = passed + if resultPass result then 1 else 0
+        writeIORef (progressCounts progress) (done', passed')
+        putStrLn ("[" <> Text.unpack (resultCombo result) <> "] "
+            <> Text.unpack (resultTask result)
+            <> " trial "
+            <> show (resultTrial result)
+            <> ": "
+            <> (if resultPass result then "pass" else "FAIL")
+            <> " score="
+            <> show (resultScore result)
+            <> " "
+            <> show (resultLatencyMs result)
+            <> "ms  ["
+            <> show done'
+            <> "/"
+            <> show (progressTotal progress)
+            <> " done, "
+            <> show passed'
+            <> " pass]")
+
 -- | Run every (combo, task) cell @trials@ times with bounded concurrency.
 runSuite :: FilePath -> FilePath -> FilePath -> Suite -> IO [BenchResult]
 runSuite agentBin suiteDir resultsDir suite = do
@@ -68,9 +114,26 @@ runSuite agentBin suiteDir resultsDir suite = do
             , task <- suiteTasks suite
             , trial <- [1 .. runTrials (suiteRuns suite)]
             ]
+    progress <- newProgress (length cells)
+    putStrLn ("suite " <> Text.unpack (suiteName suite)
+        <> ": "
+        <> show (length (suiteMatrix suite))
+        <> " configurations × "
+        <> show (length (suiteTasks suite))
+        <> " tasks × "
+        <> show (runTrials (suiteRuns suite))
+        <> " trials = "
+        <> show (length cells)
+        <> " runs (concurrency "
+        <> show (runMaxConcurrency (suiteRuns suite))
+        <> ", timeout "
+        <> show (runTimeoutSeconds (suiteRuns suite))
+        <> "s, results -> "
+        <> resultsDir
+        <> ")")
     mapConcurrentlyBounded
         (runMaxConcurrency (suiteRuns suite))
-        (runCell agentBin suiteDir resultsDir suite resultsRef)
+        (runCell agentBin suiteDir resultsDir suite resultsRef progress)
         cells
     reverse <$> readIORef resultsRef
 
@@ -80,10 +143,12 @@ runCell
     -> FilePath
     -> Suite
     -> IORef [BenchResult]
+    -> Progress
     -> (Combo, Task, Int)
     -> IO ()
-runCell agentBin suiteDir resultsDir suite resultsRef (combo, task, trial) = do
+runCell agentBin suiteDir resultsDir suite resultsRef progress (combo, task, trial) = do
     workspace <- prepareWorkspace resultsDir suiteDir task combo trial
+    logStarted progress combo task trial
     let args = ["-p", Text.unpack (taskPrompt task)] <> comboFlags combo
         agentProc = (proc agentBin args) { cwd = Just workspace }
     started <- getCurrentTime
@@ -120,6 +185,7 @@ runCell agentBin suiteDir resultsDir suite resultsRef (combo, task, trial) = do
             , resultError = errText
             }
     modifyIORef resultsRef (result :)
+    logFinished progress result
 
 -- | A fresh per-(task, combo, trial) workspace, seeded with the task's
 -- fixture files, in which the agent runs and the grader checks the result.
