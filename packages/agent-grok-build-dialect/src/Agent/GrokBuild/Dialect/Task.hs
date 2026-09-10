@@ -674,6 +674,7 @@ formatTaskStarted agentId args worktreePath =
         <> "\n\
         \type: "
         <> args.subagentType
+        <> modelLine
         <> "\n\
         \description: "
         <> args.description
@@ -682,6 +683,9 @@ formatTaskStarted agentId args worktreePath =
         \When you need its result, use get_task_output with task_ids=[\""
         <> agentId.unSubagentId
         <> "\"] and a positive timeout_ms."
+  where
+    modelLine =
+        maybe "" (\model -> "\nmodel: " <> model) args.model
 
 formatTaskCompleted
     :: SubagentId
@@ -696,6 +700,7 @@ formatTaskCompleted agentId args worktreePath timedOut mstatus =
                 <> agentId.unSubagentId
                 <> "\ntype: "
                 <> args.subagentType
+                <> maybe "" (\model -> "\nmodel: " <> model) args.model
                 <> "\ndescription: "
                 <> args.description
                 <> maybe "" (\path -> "\nworktree_path: " <> toText path) worktreePath
