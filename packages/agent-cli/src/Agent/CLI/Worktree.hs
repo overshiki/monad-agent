@@ -4,6 +4,7 @@ module Agent.CLI.Worktree
     , createWorktreeWithFetch
     , createManagedWorktree
     , createManagedWorktreeWithProgress
+    , createManagedWorktreeWithBranch
     , removeWorktree
     , cleanupStaleWorktrees
     , defaultWorktreeKeepCount
@@ -155,7 +156,20 @@ createWorktreeWithFetchProgress
     -> OsPath
     -> OsPath
     -> IO (Either Text OsPath)
-createWorktreeWithFetchProgress report fetchLatest source root = runExceptT do
+createWorktreeWithFetchProgress report fetchLatest source root =
+    fmap fst <$> createWorktreeWithBranchProgress report fetchLatest source root
+
+-- | Like 'createWorktreeWithFetchProgress' but also reports the git branch
+-- the new worktree is checked out on. A branch is only created when a fetch
+-- base was resolved; otherwise the worktree is a detached HEAD and the branch
+-- is 'Nothing'.
+createWorktreeWithBranchProgress
+    :: (WorktreeProgress -> IO ())
+    -> Bool
+    -> OsPath
+    -> OsPath
+    -> IO (Either Text (OsPath, Maybe Text))
+createWorktreeWithBranchProgress report fetchLatest source root = runExceptT do
     lift (report WorktreeInspectingRepository)
     repo <- gitToplevel source
     repoName <- gitRepositoryName repo
@@ -187,6 +201,23 @@ createManagedWorktreeWithProgress report home source =
         Left err -> pure (Left err)
         Right config ->
             createWorktreeWithFetchProgress
+                report
+                config.configWorktree.worktreeFetchLatestUpstream
+                source
+                (worktreeRoot home)
+
+-- | Like 'createManagedWorktreeWithProgress' but also reports the git branch
+-- the new worktree is checked out on (see 'createWorktreeWithBranchProgress').
+createManagedWorktreeWithBranch
+    :: (WorktreeProgress -> IO ())
+    -> OsPath
+    -> OsPath
+    -> IO (Either Text (OsPath, Maybe Text))
+createManagedWorktreeWithBranch report home source =
+    loadHarnessConfig home >>= \case
+        Left err -> pure (Left err)
+        Right config ->
+            createWorktreeWithBranchProgress
                 report
                 config.configWorktree.worktreeFetchLatestUpstream
                 source
@@ -559,7 +590,7 @@ addUnique
     -> Integer
     -> Maybe Text
     -> Int
-    -> ExceptT Text IO OsPath
+    -> ExceptT Text IO (OsPath, Maybe Text)
 addUnique repo root repoName day start base attempt
     | attempt >= 32 =
         throwE "could not pick a unique worktree path"
@@ -588,7 +619,13 @@ addUnique repo root repoName day start base attempt
                         | otherwise -> do
                             lift (cleanupWorktreeCandidate repo path)
                             throwE err
-                    Right _ -> pure path
+                    Right _ ->
+                        pure
+                            ( path
+                            , case base of
+                                Just _ -> Just (Text.pack branch)
+                                Nothing -> Nothing
+                            )
 
 cleanupWorktreeCandidate :: OsPath -> OsPath -> IO ()
 cleanupWorktreeCandidate repo path = do

@@ -132,6 +132,7 @@ import Agent.CLI.Usage ()
 import Agent.CLI.WebFetch ()
 import Agent.CLI.Worktree
     ( createManagedWorktreeWithProgress
+    , createManagedWorktreeWithBranch
     , git
     , removeWorktree
     , worktreeProgressMessage
@@ -520,23 +521,24 @@ handleSessionAction
                                                 if useWorktree
                                                     then
                                                         withReplActivity \report ->
-                                                            createManagedWorktreeWithProgress
+                                                            createManagedWorktreeWithBranch
                                                                 (report
                                                                     . worktreeProgressMessage)
                                                                 env.sessionHome
                                                                 source.sessionMeta.metaCwd
                                                             >>= pure . fmap
-                                                                (\path ->
-                                                                    (path, Just path))
+                                                                (\(path, branch) ->
+                                                                    (path, Just path, branch))
                                                     else
                                                         pure
                                                             (Right
                                                                 ( source.sessionMeta.metaCwd
                                                                 , Nothing
+                                                                , Nothing
                                                                 ))
                                         case destination of
                                             Left err -> failFork err
-                                            Right (newCwd, worktreePath) -> do
+                                            Right (newCwd, worktreePath, gitBranch) -> do
                                                 let root =
                                                         takeDirectory source.sessionDir
                                                     cleanup =
@@ -564,7 +566,7 @@ handleSessionAction
                                                                             turns
                                                                             Nothing
                                                                             newCwd
-                                                                            Nothing)
+                                                                            gitBranch)
                                                         `onException` cleanup
                                                 case result of
                                                     Left err -> do
