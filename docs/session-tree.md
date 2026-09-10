@@ -25,8 +25,9 @@ no schema or code changes are implied by this file.
   model and deterministic segment-1 (nearest-history) selection; `StoredTurn`
   now exposes `storedTurnId`, and `Agent.CLI.QuestTree` + `loadQuestTree`
   reconstruct the turn lineage and walk it (`lineageToRoot`, `questRoots`,
-  `defaultFocus`). Both are pure and unit-tested, but not yet wired into the
-  live request path.
+  `defaultFocus`). `assembleLineageFromTree` joins the two: it resolves a
+  focus, walks its lineage, and assembles segment-1 under the budget. All pure
+  and unit-tested, but not yet wired into the live request path.
 - **P3–P5 pending**: no relevance, hierarchical compaction, focus navigation,
   or tree UX yet.
 

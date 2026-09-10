@@ -6,21 +6,24 @@
 -- instructions, tools, skills, generated context) is supplied by the caller;
 -- segments 2 (relevant) and 3 (reference/compact) are future work.
 --
--- Today the input is the already-linearized active transcript, so an unbounded
--- budget reproduces the current context byte-for-byte. Walking parent pointers
--- to linearize a non-linear quest tree arrives with the focus/navigation work
--- (P5); the budget contract below is deliberately independent of how the
--- lineage is produced.
+-- 'assembleLineage' operates on an already-linearized transcript;
+-- 'assembleLineageFromTree' walks a quest tree from a focus. The budget
+-- contract is shared and is independent of how the lineage is produced.
 module Agent.CLI.Context.Assembler
     ( ContextBudget(..)
     , ContextSegmentKind(..)
     , ContextSegment(..)
     , unboundedBudget
     , assembleLineage
+    , assembleLineageFromTree
     ) where
 
+import Agent.CLI.QuestTree (QuestTree, defaultFocus, lineageToRoot)
 import Agent.OpenAI.Compaction (estimateItemsTokens)
 import Agent.Responses.Types (ResponseItem)
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import Data.Text (Text)
 
 -- | Where a segment's items sit in the assembled context.
 data ContextSegmentKind
@@ -58,6 +61,39 @@ assembleLineage budget items =
     case budget.budgetLineageTokens of
         Nothing -> items
         Just limit -> keepNewestToFit limit items
+
+-- | Segment 1 from a quest tree: resolve the focus, walk its lineage to the
+-- root, concatenate each turn's items, then trim to the budget.
+--
+-- The items map keys are turn ids; the focus defaults to the newest turn.
+-- This walks append-log lineage, so an unbounded budget over a linear session
+-- (no reset/replace markers) reproduces the transcript byte-for-byte;
+-- effect-aware reconstruction of rewound or compacted branches stays with the
+-- store's active-transcript load.
+assembleLineageFromTree
+    :: ContextBudget
+    -> QuestTree
+    -> Map Text [ResponseItem]
+    -> Maybe Text
+    -> Either Text [ResponseItem]
+assembleLineageFromTree budget tree itemsAt focus = do
+    focusId <-
+        case focus of
+            Just fid -> Right fid
+            Nothing ->
+                maybe
+                    (Left "cannot assemble context from an empty quest tree")
+                    Right
+                    (defaultFocus tree)
+    ids <- lineageToRoot tree focusId
+    turns <- traverse (turnItems itemsAt) ids
+    pure (assembleLineage budget (concat turns))
+  where
+    turnItems m tid =
+        maybe
+            (Left ("no items for turn " <> tid))
+            Right
+            (Map.lookup tid m)
 
 -- | Keep the newest suffix of @items@ whose estimated token count fits within
 -- @limit@. The newest item is kept even if it alone exceeds the limit, so the
