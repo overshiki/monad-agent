@@ -373,6 +373,20 @@ data ResponseStreamEvent
         , sequenceNumber    :: !(Maybe Int)
 
         }
+    | ResponseReasoningTextDeltaEvent
+        { delta             :: !(Maybe Text)
+        , streamItemId      :: !(Maybe Text)
+        , streamOutputIndex :: !(Maybe Int)
+        , sequenceNumber    :: !(Maybe Int)
+
+        }
+    | ResponseReasoningTextDoneEvent
+        { text              :: !(Maybe Text)
+        , streamItemId      :: !(Maybe Text)
+        , streamOutputIndex :: !(Maybe Int)
+        , sequenceNumber    :: !(Maybe Int)
+
+        }
     | ResponseErrorEvent
         { streamError       :: !ResponseStreamError
         , sequenceNumber    :: !(Maybe Int)
@@ -417,6 +431,8 @@ responseStreamEventType = \case
     ResponseCustomToolInputDoneEvent{} -> EventCustomToolInputDone
     ResponseReasoningSummaryPartAddedEvent{} -> EventReasoningSummaryPartAdded
     ResponseReasoningSummaryTextDoneEvent{} -> EventReasoningSummaryTextDone
+    ResponseReasoningTextDeltaEvent{} -> EventReasoningTextDelta
+    ResponseReasoningTextDoneEvent{} -> EventReasoningTextDone
     ResponseErrorEvent{} -> EventError
     ResponseNestedErrorEvent{} -> EventError
     ResponseCodexRateLimitsEvent{} -> EventCodexRateLimits
@@ -479,6 +495,14 @@ instance ToJSON ResponseStreamEvent where
                 [ optionalField "summary_index" summaryIndex
                 , optionalField "text" text
                 ]
+        ResponseReasoningTextDeltaEvent { delta, streamItemId, streamOutputIndex, sequenceNumber } ->
+            indexedItemEvent "response.reasoning_text.delta"
+                streamItemId (Nothing :: Maybe Text) streamOutputIndex sequenceNumber
+                [optionalField "delta" delta]
+        ResponseReasoningTextDoneEvent { text, streamItemId, streamOutputIndex, sequenceNumber } ->
+            indexedItemEvent "response.reasoning_text.done"
+                streamItemId (Nothing :: Maybe Text) streamOutputIndex sequenceNumber
+                [optionalField "text" text]
         ResponseErrorEvent { streamError, sequenceNumber } ->
             topLevelErrorEvent streamError sequenceNumber
         ResponseNestedErrorEvent { streamError, sequenceNumber } ->
@@ -628,6 +652,18 @@ eventDecoder wireType = Hermes.object do
                 <*> optionalAtKey "output_index" Hermes.int
                 <*> optionalAtKey "summary_index" Hermes.int
                 <*> optionalAtKey "text" Hermes.text
+                <*> pure sequenceNumber
+        EventReasoningTextDelta ->
+            ResponseReasoningTextDeltaEvent
+                <$> optionalAtKey "delta" Hermes.text
+                <*> optionalAtKey "item_id" Hermes.text
+                <*> optionalAtKey "output_index" Hermes.int
+                <*> pure sequenceNumber
+        EventReasoningTextDone ->
+            ResponseReasoningTextDoneEvent
+                <$> optionalAtKey "text" Hermes.text
+                <*> optionalAtKey "item_id" Hermes.text
+                <*> optionalAtKey "output_index" Hermes.int
                 <*> pure sequenceNumber
         EventError -> do
             nested <- optionalAtKey "error" responseStreamErrorDecoder

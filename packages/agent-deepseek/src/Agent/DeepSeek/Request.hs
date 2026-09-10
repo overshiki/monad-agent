@@ -56,7 +56,7 @@ echoReasoningContent ResponseCreateParams{..} =
                 }
     echoItem item = item
     summaryText (ReasoningSummaryPart _ text) =
-        OutputTextPart <$> text <*> Just Nothing <*> Just Nothing
+        ReasoningTextPart <$> text
 
 deepSeekTool :: ResponseTool -> Maybe ResponseTool
 deepSeekTool tool = case tool of

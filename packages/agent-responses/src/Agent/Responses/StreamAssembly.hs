@@ -43,6 +43,7 @@ import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import Data.Map.Strict (Map)
 import Data.Maybe (fromMaybe)
+
 import Data.Text (Text)
 import qualified Data.Text as Text
 
@@ -72,6 +73,7 @@ data ItemProgress = ItemProgress
     , functionArgumentChunks :: !(Maybe TextBuffer)
     , customInputChunks      :: !(Maybe TextBuffer)
     , reasoningTextChunks    :: !(IntMap TextBuffer)
+    , reasoningContentChunks :: !(Maybe TextBuffer)
     }
 
 -- | Provider item ids and tool call ids occupy separate namespaces, as do
@@ -203,6 +205,26 @@ applyStreamEvent state = \case
                             . fromMaybe emptyTextBuffer)
                         index
                         progress.reasoningTextChunks
+                    })
+                state
+    ResponseReasoningTextDeltaEvent
+        { delta = Just value, streamItemId, streamOutputIndex } ->
+            updateResolvedProgress streamOutputIndex
+                [streamItemIdentity "reasoning" streamItemId]
+                (\progress -> progress
+                    { reasoningContentChunks = Just
+                        (appendTextBuffer value
+                            (fromMaybe emptyTextBuffer
+                                progress.reasoningContentChunks))
+                    })
+                state
+    ResponseReasoningTextDoneEvent
+        { text = Just value, streamItemId, streamOutputIndex } ->
+            updateResolvedProgress streamOutputIndex
+                [streamItemIdentity "reasoning" streamItemId]
+                (\progress -> progress
+                    { itemValue = mapReasoningContent value progress.itemValue
+                    , reasoningContentChunks = Nothing
                     })
                 state
     _ -> state
@@ -401,6 +423,7 @@ updateItem explicitIndex done item state =
                 Nothing
                 Nothing
                 IntMap.empty
+                Nothing
             Just old ->
                 old
                     { itemValue = mergeResponseItem old.itemValue
@@ -414,6 +437,8 @@ updateItem explicitIndex done item state =
                         if done then Nothing else old.customInputChunks
                     , reasoningTextChunks =
                         if done then IntMap.empty else old.reasoningTextChunks
+                    , reasoningContentChunks =
+                        if done then Nothing else old.reasoningContentChunks
                     }
 
 mergeResponseItem :: ResponseItem -> ResponseItem -> ResponseItem
@@ -460,6 +485,18 @@ setReasoningSummary value reasoning =
     let ReasoningItem {..} = reasoning
     in ReasoningItem {summary = value, ..}
 
+setReasoningContent :: [ResponseContentPart] -> ReasoningItem -> ReasoningItem
+setReasoningContent value reasoning =
+    let ReasoningItem {..} = reasoning
+    in ReasoningItem {content = Just value, ..}
+
+mapReasoningContent :: Text -> ResponseItem -> ResponseItem
+mapReasoningContent value = \case
+    ReasoningItemValue reasoning ->
+        ReasoningItemValue
+            (setReasoningContent [ReasoningTextPart value] reasoning)
+    item -> item
+
 setReasoningPartText :: Maybe Text -> ReasoningSummaryPart -> ReasoningSummaryPart
 setReasoningPartText value part =
     let ReasoningSummaryPart {..} = part
@@ -490,6 +527,13 @@ preserveBufferedProgress progress = \case
                     (mergeReasoningSummary
                         (materializedReasoningSummary progress)
                         reasoning.summary)
+                    reasoning)
+    ReasoningItemValue reasoning
+        | Just chunks <- progress.reasoningContentChunks
+        , reasoning.content == Nothing ->
+            ReasoningItemValue
+                (setReasoningContent
+                    [ReasoningTextPart (textBufferToText chunks)]
                     reasoning)
     item -> item
 
@@ -792,3 +836,4 @@ setResponseOutput :: [ResponseItem] -> Response -> Response
 setResponseOutput value response =
     let Response {..} = response
     in Response {output = value, ..}
+

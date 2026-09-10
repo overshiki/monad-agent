@@ -1,0 +1,33 @@
+# Example task-suite: compare deepseek-v4-flash with and without GHCi tools
+# on two small tasks. Adjust models/effort to your catalog.
+name: flash-shell-comparison
+runs:
+  trials: 3
+  timeout_seconds: 180
+  max_concurrency: 4
+
+matrix:
+  - id: flash-default
+    model: deepseek-v4-flash
+    shell: default
+  - id: flash-ghci
+    model: deepseek-v4-flash
+    shell: ghci
+
+tasks:
+  - id: hello
+    prompt: "Reply with exactly: ok"
+    validator:
+      type: exact
+      expect: ok
+
+  - id: explain-prefix-sum
+    prompt: |
+      Explain what a prefix-sum array is, name one real use case, and give
+      the one-line recurrence for building it.
+    validator:
+      type: judge
+      rubric: >
+        Correct definition, names a real use case, and gives the recurrence
+        prefix[i] = prefix[i-1] + a[i]. Minor wording variation is fine.
+      scale: 3

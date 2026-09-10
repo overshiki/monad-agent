@@ -1,0 +1,56 @@
+# Coding task ladder (easy -> hard), graded deterministically via a per-task
+# grader.sh. Run with monad-bench:
+#
+#   cabal build agent-cli:exe:monad-cli agent-cli:exe:monad-bench
+#   monad-bench --suite benchmarks/coding/tasks.yaml \
+#     --agent-bin "$(cabal list-bin agent-cli:exe:monad-cli)"
+name: coding-ladder
+runs:
+  trials: 2
+  timeout_seconds: 240
+  max_concurrency: 3
+
+matrix:
+  - { id: deepseek-flash-default, model: deepseek-v4-flash }
+  - { id: deepseek-flash-ghci, model: deepseek-v4-flash, shell: ghci }
+  - { id: kimi-k3-default, model: kimi-k3 }
+
+tasks:
+  - id: hello
+    prompt: |
+      Create a file hello.py that, when run with python3, prints exactly:
+      hello, benchmark
+      (one line, no trailing spaces). Do not print anything else.
+    files: [tasks/01-hello/grader.sh]
+    validator:
+      type: script
+      command: [bash, grader.sh]
+
+  - id: fix-typo
+    prompt: |
+      The file message.txt contains a typo ("quik" should be "quick").
+      Fix the file in place so it reads exactly:
+      The quick brown fox jumps over the lazy dog.
+    files: [tasks/02-fix-typo/grader.sh, tasks/02-fix-typo/files/message.txt]
+    validator:
+      type: script
+      command: [bash, grader.sh]
+
+  - id: unit-fn
+    prompt: |
+      Implement sum_even.py defining sum_even(a, b) that returns the sum of
+      all even integers from a to b inclusive. test_sum_even.py must pass.
+    files: [tasks/03-unit-fn/grader.sh, tasks/03-unit-fn/files/test_sum_even.py]
+    validator:
+      type: script
+      command: [bash, grader.sh]
+
+  - id: small-feature
+    prompt: |
+      Add a --shout flag to cli.py that prints the greeting in uppercase
+      (e.g. `python3 cli.py --name ada --shout` prints "HELLO, ADA").
+      Keep the existing behavior otherwise.
+    files: [tasks/04-small-feature/grader.sh, tasks/04-small-feature/files/cli.py]
+    validator:
+      type: script
+      command: [bash, grader.sh]

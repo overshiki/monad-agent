@@ -12,14 +12,22 @@ module Agent.CLI.Bench.Run
 import Agent.CLI.Bench.Suite
 import Agent.Concurrent (mapConcurrentlyBounded)
 import Control.Exception.Safe (tryIO)
+import Control.Monad (forM_, when)
 import Data.Aeson (ToJSON(..), object, (.=))
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as Text
+import System.Directory
+    ( copyFile
+    , createDirectoryIfMissing
+    , doesFileExist
+    )
 import System.Exit (ExitCode(..))
+import System.FilePath (takeFileName, (</>))
 import System.Process
-    ( proc
+    ( CreateProcess(..)
+    , proc
     , readCreateProcessWithExitCode
     )
 import System.Timeout (timeout)
@@ -51,8 +59,8 @@ instance ToJSON BenchResult where
         ]
 
 -- | Run every (combo, task) cell @trials@ times with bounded concurrency.
-runSuite :: FilePath -> FilePath -> Suite -> IO [BenchResult]
-runSuite agentBin _resultsDir suite = do
+runSuite :: FilePath -> FilePath -> FilePath -> Suite -> IO [BenchResult]
+runSuite agentBin suiteDir resultsDir suite = do
     resultsRef <- newIORef []
     let cells =
             [ (combo, task, trial)
@@ -62,23 +70,27 @@ runSuite agentBin _resultsDir suite = do
             ]
     mapConcurrentlyBounded
         (runMaxConcurrency (suiteRuns suite))
-        (runCell agentBin suite resultsRef)
+        (runCell agentBin suiteDir resultsDir suite resultsRef)
         cells
     reverse <$> readIORef resultsRef
 
 runCell
     :: FilePath
+    -> FilePath
+    -> FilePath
     -> Suite
     -> IORef [BenchResult]
     -> (Combo, Task, Int)
     -> IO ()
-runCell agentBin suite resultsRef (combo, task, trial) = do
+runCell agentBin suiteDir resultsDir suite resultsRef (combo, task, trial) = do
+    workspace <- prepareWorkspace resultsDir suiteDir task combo trial
     let args = ["-p", Text.unpack (taskPrompt task)] <> comboFlags combo
+        agentProc = (proc agentBin args) { cwd = Just workspace }
     started <- getCurrentTime
     outcome <-
         timeout
             (runTimeoutSeconds (suiteRuns suite) * 1_000_000)
-            (tryIO (readCreateProcessWithExitCode (proc agentBin args) ""))
+            (tryIO (readCreateProcessWithExitCode agentProc ""))
     finished <- getCurrentTime
     let latencyMs = floor (realToFrac (diffUTCTime finished started) * 1000) :: Int
     (output, pass, score, errText) <-
@@ -93,7 +105,7 @@ runCell agentBin suite resultsRef (combo, task, trial) = do
                     pure ("", False, 0, Text.pack (trim stdoutText <> trim stderrText))
                 | otherwise -> do
                     let answer = Text.pack (trim stdoutText)
-                    (pass', score') <- validateAnswer agentBin combo task answer
+                    (pass', score') <- validateAnswer agentBin workspace combo task answer
                     pure (answer, pass', score', "")
     let result = BenchResult
             { resultCombo = comboId combo
@@ -106,6 +118,30 @@ runCell agentBin suite resultsRef (combo, task, trial) = do
             , resultError = errText
             }
     modifyIORef resultsRef (result :)
+
+-- | A fresh per-(task, combo, trial) workspace, seeded with the task's
+-- fixture files, in which the agent runs and the grader checks the result.
+prepareWorkspace
+    :: FilePath
+    -> FilePath
+    -> Task
+    -> Combo
+    -> Int
+    -> IO FilePath
+prepareWorkspace resultsDir suiteDir task combo trial = do
+    let workspace =
+            resultsDir
+                </> "tasks"
+                </> Text.unpack (taskId task)
+                </> Text.unpack (comboId combo)
+                </> show trial
+    createDirectoryIfMissing True workspace
+    forM_ (taskFiles task) \fixture -> do
+        let source = suiteDir </> fixture
+        exists <- doesFileExist source
+        when exists $
+            copyFile source (workspace </> takeFileName fixture)
+    pure workspace
 
 comboFlags :: Combo -> [String]
 comboFlags combo =
@@ -125,11 +161,12 @@ comboFlags combo =
 
 validateAnswer
     :: FilePath
+    -> FilePath
     -> Combo
     -> Task
     -> Text
     -> IO (Bool, Int)
-validateAnswer agentBin combo task answer =
+validateAnswer agentBin workspace combo task answer =
     case taskValidator task of
         ValidatorExact expected ->
             let matches = Text.strip answer == Text.strip expected
@@ -144,6 +181,7 @@ validateAnswer agentBin combo task answer =
                         (proc
                             (Text.unpack (head command))
                             (map Text.unpack (tail command)))
+                            { cwd = Just workspace }
                         "")
             let passed = case exitResult of
                     Right (ExitSuccess, _, _) -> True

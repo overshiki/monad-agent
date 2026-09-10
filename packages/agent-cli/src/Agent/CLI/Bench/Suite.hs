@@ -57,6 +57,7 @@ data Combo = Combo
 data Task = Task
     { taskId :: !Text
     , taskPrompt :: !Text
+    , taskFiles :: ![FilePath]
     , taskValidator :: !Validator
     }
     deriving (Eq, Show)
@@ -160,9 +161,11 @@ instance FromJSON Task where
             then fail ("task " <> Text.unpack identifier <> " has an empty prompt")
             else pure ()
         validator <- object .: "validator"
+        files <- object .:? "files" .!= []
         pure Task
             { taskId = identifier
             , taskPrompt = prompt
+            , taskFiles = files
             , taskValidator = validator
             }
 

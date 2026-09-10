@@ -11,6 +11,7 @@ import Control.Monad (unless)
 import System.Directory (doesFileExist)
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
+import System.FilePath (takeDirectory)
 
 main :: IO ()
 main = do
@@ -26,7 +27,7 @@ main = do
                     suite <- loadSuite suitePath >>= either
                         (\err -> putStrLn ("invalid suite: " <> show err) >> exitFailure)
                         pure
-                    results <- runSuite agentBin resultsDir suite
+                    results <- runSuite agentBin (takeDirectory suitePath) resultsDir suite
                     writeReport resultsDir suite results
                     putStrLn
                         ( "benchmark complete: "
