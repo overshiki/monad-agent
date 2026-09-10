@@ -45,6 +45,7 @@ module Agent.CLI.Session
     , loadSessionMeta
     , loadQuestTree
     , switchSessionFocus
+    , loadFocusedTranscript
     , loadRecentSessionTurns
     , loadSessionTurnsBefore
     , loadSessionTurnsAfter
@@ -131,7 +132,7 @@ import Agent.Loop (TokenUsage(..))
 import Agent.OpenAI.Compaction (rewindSessionUserText)
 import Agent.OsPath (toText, unsafeToFilePath)
 import Agent.Provider (Provider)
-import Agent.Responses.Types (ResponseCreateParams(model))
+import Agent.Responses.Types (ResponseCreateParams(model), ResponseItem)
 import Agent.Store.Postgres (normalizePostgresTimestamp)
 import Agent.Store.Postgres.Connection (StorePool)
 import qualified Agent.Store.Postgres.Session as Store
@@ -1170,6 +1171,38 @@ switchSessionFocus pool root sessionId turnIndex = runExceptT do
             >>= either (throwE . renderStoreError) pure
     unless ok (throwE "could not switch session focus")
     pure turnId
+
+-- | The active transcript restricted to a focus turn, plus the previous
+-- response id for the next request. Reconstructs items from every turn up to
+-- and including the given index, applying compaction and reset effects (the
+-- same fold as 'Agent.CLI.Session.History.foldSessionItems').
+loadFocusedTranscript
+    :: StorePool
+    -> OsPath
+    -> Text
+    -> Int64
+    -> IO (Either Text (Maybe Text, [ResponseItem]))
+loadFocusedTranscript pool root sessionId focusIndex = runExceptT do
+    _ <- except (sessionDirForId root sessionId)
+    stored <-
+        lift (Store.loadSession pool sessionId)
+            >>= either (throwE . renderStoreError) (maybe (throwE "session not found") pure)
+    let focused =
+            [ turn
+            | turn <- Vector.toList stored.storedTurns
+            , turn.storedTurnIndex <= focusIndex
+            ]
+    turns <- traverse (except . fromStoredTurn . (.storedTurn)) focused
+    let previous = case reverse turns of
+            latest : _ -> latest.turnResponseId
+            [] -> Nothing
+    pure (previous, foldFocusedItems turns)
+  where
+    foldFocusedItems = concat . reverse . foldl' addTurn []
+    addTurn chunks turn = case turn.turnEffect of
+        TranscriptAppend -> turn.turnItems : chunks
+        TranscriptReplace -> [turn.turnItems]
+        TranscriptReset -> [turn.turnItems]
 
 loadStoredPromptEpoch
     :: StorePool

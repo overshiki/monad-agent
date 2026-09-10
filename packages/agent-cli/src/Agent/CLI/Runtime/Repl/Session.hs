@@ -83,6 +83,7 @@ import Agent.CLI.Session
       sessionsRoot,
       setManualSessionTitle,
       switchSessionFocus,
+      loadFocusedTranscript,
       Persistence(PersistenceEnabled, PersistenceDisabled),
       PersistenceState(PersistenceActive, PersistencePending),
       SessionCreate(createCwd, SessionCreate, createPool, createEffort,
@@ -99,7 +100,7 @@ import Agent.CLI.Session
                   turnItems, turnProviderTelemetry) )
 import Agent.CLI.Session.Attachments ()
 import Agent.CLI.Session.Choices ()
-import Agent.CLI.Session.History ()
+import Agent.CLI.Session.History (replaceLiveConversation)
 import Agent.CLI.Session.Interaction ()
 import Agent.CLI.Session.Lifecycle ()
 import Agent.CLI.Session.Runtime.Types ()
@@ -226,6 +227,7 @@ handleSessionAction
             , sessionFullscreen = fullscreen
             , sessionPersist = persist
             , sessionReset = sessionReset
+            , sessionConversation = conversationRef
             , sessionParams = paramsRef
             , sessionProvider = provider
             , sessionConnection = connectionId
@@ -613,14 +615,28 @@ handleSessionAction
                         case result of
                             Left err -> failSwitch err
                             Right _ -> do
-                                let message =
-                                        "focused on turn "
-                                            <> Text.pack (show index)
-                                displayInfo message $
-                                    putTextLn stderr
-                                        (roleMuted color
-                                            (glyphOk <> message))
-                                continue
+                                transcript <-
+                                    loadFocusedTranscript
+                                        databasePool
+                                        root
+                                        source.sessionMeta.metaId
+                                        index
+                                case transcript of
+                                    Left err -> failSwitch err
+                                    Right (previous, items) -> do
+                                        void $
+                                            replaceLiveConversation
+                                                conversationRef
+                                                previous
+                                                items
+                                        let message =
+                                                "focused on turn "
+                                                    <> Text.pack (show index)
+                                        displayInfo message $
+                                            putTextLn stderr
+                                                (roleMuted color
+                                                    (glyphOk <> message))
+                                        continue
     ReplShowSession -> do
         color <- resolveColor stdout
         case persist of

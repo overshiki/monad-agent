@@ -13,6 +13,7 @@ import Agent.Dialect (DialectId(..))
 import Agent.Json (RawJson, rawJsonFromEncoding)
 import Agent.Json.Decode qualified as Hermes
 import Agent.Loop (TokenUsage(..))
+import Agent.OpenAI.Compaction (userTextItem)
 import Agent.Telemetry (TurnTelemetry(..))
 import Agent.Provider (Provider(..))
 import Agent.Responses.Types
@@ -988,6 +989,41 @@ spec = describe "Agent.CLI.Session" do
                                     ( forkedFinal.sessionMeta
                                     , [sourceTurn, forkOnlyTurn]
                                     )
+
+        it "reconstructs the focused transcript up to a turn index" $
+            withTempStore \store root -> do
+                let pool = trustedPool store
+                handle0 <- createSession (testCreate pool root)
+                let turn1 = SessionTurn
+                        { turnAt = fixedTime
+                        , turnUserText = "one"
+                        , turnAssistantText = Just "uno"
+                        , turnError = Nothing
+                        , turnResponseId = Just "response-1"
+                        , turnItems = [userTextItem "one"]
+                        , turnUsage = Nothing
+                        , turnEffect = TranscriptAppend
+                        , turnProviderTelemetry = []
+                        }
+                    turn2 = turn1
+                        { turnUserText = "two"
+                        , turnAssistantText = Just "dos"
+                        , turnResponseId = Just "response-2"
+                        , turnItems = [userTextItem "two"]
+                        }
+                handle1 <- appendTurnWithMetaUpdate handle0 turn1 id
+                _ <- appendTurnWithMetaUpdate handle1 turn2 id
+                let sessionId = handle0.sessionMeta.metaId
+                (prev0, items0) <-
+                    loadFocusedTranscript pool root sessionId 0
+                        >>= either (fail . Text.unpack) pure
+                prev0 `shouldBe` Just "response-1"
+                items0 `shouldBe` [userTextItem "one"]
+                (prev1, items1) <-
+                    loadFocusedTranscript pool root sessionId 1
+                        >>= either (fail . Text.unpack) pure
+                prev1 `shouldBe` Just "response-2"
+                items1 `shouldBe` [userTextItem "one", userTextItem "two"]
 
         it "rejects symlinked fork artifacts and cleans reserved state" $
             withTempStore \store root -> do

@@ -31,8 +31,11 @@ no schema or code changes are implied by this file.
   path.
 - **P5 partial**: the store exposes `loadSessionFocus` / `setSessionFocus`,
   `loadQuestTree` returns the current focus, and the `/switch <turn-index>`
-  command moves it. The live request path does not yet rebuild its context
-  from the focus, and `/quest` (creating a branch) is not implemented.
+  command moves it and rebuilds the live conversation from the focused branch
+  (`loadFocusedTranscript` applies the same effect-aware fold as resume), so
+  the next turn actually uses the truncated context. `/quest` (creating a
+  branch) is not implemented, and the assembler's budget is not yet applied
+  to the focused transcript.
 - **P3–P4 pending**: no relevance, hierarchical compaction, or tree UX yet.
 
 ## Goals and non-goals
