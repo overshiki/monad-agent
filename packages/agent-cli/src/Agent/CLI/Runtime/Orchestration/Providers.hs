@@ -1131,16 +1131,47 @@ runAgentProviders
                                     (pure childParams)
                                     (makeBackend
                                         (pure childParams)))
-                        let backend =
+                        let deepSeekCompactThreshold = do
+                                currentParams <- readIORef paramsRef
+                                let contextWindow =
+                                        deepSeekContextWindow currentParams
+                                pure $
+                                    max 1 $
+                                        min contextWindow $
+                                            fromMaybe
+                                                (contextWindow * 4 `div` 5)
+                                                options.optCompactThreshold
+                            btwBackend privateParams =
+                                makeBackend (pure privateParams)
+                            compactDeepSeekHistory history _inputs = do
+                                currentParams <- readIORef paramsRef
+                                runBackendCompactHistoryWithContextWindow
+                                    (deepSeekContextWindow currentParams)
+                                    btwBackend
+                                    recordCompactionUsage
+                                    currentParams
+                                    history
+                                    Nothing
+                            compactingBackend =
+                                autoCompactBackendWith
+                                    deepSeekCompactThreshold
+                                    compactDeepSeekHistory
+                                    (\outcome inputs ->
+                                        readIORef
+                                            automaticCompactionHookRef
+                                            >>= \hook ->
+                                                hook outcome inputs)
+                                    (readIORef paramsRef)
+                                    deepSeekOccupancy
+                                    (makeBackend
+                                        (readIORef paramsRef))
+                            backend =
                                 withPendingInputs pendingNotices $
                                     withConnectionRecovery $
                                         protectDeepSeekOverflow
                                             deepSeekOccupancy
                                             (readIORef paramsRef)
-                                            (makeBackend
-                                                (readIORef paramsRef))
-                            btwBackend privateParams =
-                                makeBackend (pure privateParams)
+                                            compactingBackend
                             compactRunner focus = do
                                 contextWindow <-
                                     currentModelContextWindow id
@@ -1206,16 +1237,47 @@ runAgentProviders
                                     (pure childParams)
                                     (makeBackend
                                         (pure childParams)))
-                        let backend =
+                        let kimiCompactThreshold = do
+                                currentParams <- readIORef paramsRef
+                                let contextWindow =
+                                        kimiContextWindow currentParams
+                                pure $
+                                    max 1 $
+                                        min contextWindow $
+                                            fromMaybe
+                                                (contextWindow * 4 `div` 5)
+                                                options.optCompactThreshold
+                            btwBackend privateParams =
+                                makeBackend (pure privateParams)
+                            compactKimiHistory history _inputs = do
+                                currentParams <- readIORef paramsRef
+                                runBackendCompactHistoryWithContextWindow
+                                    (kimiContextWindow currentParams)
+                                    btwBackend
+                                    recordCompactionUsage
+                                    currentParams
+                                    history
+                                    Nothing
+                            compactingBackend =
+                                autoCompactBackendWith
+                                    kimiCompactThreshold
+                                    compactKimiHistory
+                                    (\outcome inputs ->
+                                        readIORef
+                                            automaticCompactionHookRef
+                                            >>= \hook ->
+                                                hook outcome inputs)
+                                    (readIORef paramsRef)
+                                    kimiOccupancy
+                                    (makeBackend
+                                        (readIORef paramsRef))
+                            backend =
                                 withPendingInputs pendingNotices $
                                     withConnectionRecovery $
                                         protectKimiOverflow
                                             kimiOccupancy
                                             (readIORef paramsRef)
-                                            (makeBackend
-                                                (readIORef paramsRef))
-                            btwBackend privateParams =
-                                makeBackend (pure privateParams)
+                                            compactingBackend
                             compactRunner focus = do
                                 contextWindow <-
                                     currentModelContextWindow id

@@ -110,7 +110,7 @@
       "id": "deepseek-v4-flash",
       "connection": "deepseek",
       "dialect": "generic-responses",
-      "context_window": 1048576,
+      "context_window": 1000000,
       "label": "default · reasoning · 1M context",
       "default": true,
       "fallback_priority": 20
@@ -119,21 +119,21 @@
       "id": "deepseek-v4-pro",
       "connection": "deepseek",
       "dialect": "generic-responses",
-      "context_window": 1048576,
+      "context_window": 1000000,
       "label": "reasoning · 1M context"
     },
     {
       "id": "deepseek-v4-flash-vision-exp",
       "connection": "deepseek",
       "dialect": "generic-responses",
-      "context_window": 1048576,
+      "context_window": 1000000,
       "label": "vision · 1M context"
     },
     {
       "id": "kimi-k3",
       "connection": "kimi",
       "dialect": "generic-responses",
-      "context_window": 1048576,
+      "context_window": 1000000,
       "label": "default · 1M context",
       "default": true,
       "fallback_priority": 20
