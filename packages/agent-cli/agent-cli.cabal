@@ -200,6 +200,9 @@ library
                     , Agent.CLI.ModelConfig
                     , Agent.CLI.Models
                     , Agent.CLI.ModelTest
+                    , Agent.CLI.Bench.Report
+                    , Agent.CLI.Bench.Run
+                    , Agent.CLI.Bench.Suite
                     , Agent.CLI.NativeAgents
                     , Agent.CLI.Notification
                     , Agent.CLI.Options
@@ -316,6 +319,7 @@ library
                     , vector
                     , vty >= 6.4 && < 7
                     , vty-crossplatform >= 0.4 && < 0.5
+                    , yaml
 
 executable monad-cli
     import:           common-options
@@ -348,6 +352,24 @@ executable eval-ghci-vs-bash
                     , text >= 2.0 && < 2.2
                     , time
                     , unix
+
+executable monad-bench
+    import:           common-options
+    hs-source-dirs:   app
+    main-is:          MonadBench.hs
+    ghc-options:      -threaded -rtsopts
+    build-depends:    agent-cli
+                    , aeson >= 2.0
+                    , base >= 4.17 && < 5
+                    , bytestring
+                    , containers
+                    , directory
+                    , filepath
+                    , process >= 1.6.26
+                    , safe-exceptions
+                    , text >= 2.0 && < 2.2
+                    , time
+                    , yaml
 
 benchmark subagent-retention-bench
     import:           common-options
