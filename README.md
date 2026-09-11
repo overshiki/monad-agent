@@ -208,6 +208,41 @@ remote is selected from the current branch's configured remote, then
 fetch failure aborts worktree creation rather than falling back to a stale
 commit.
 
+### Session forks and git branches
+
+Fork the current chat into a new session paired with a git branch, work on the
+branch, then merge it back — chat and code stay in step.
+
+```console
+/fork --branch my-feature
+```
+
+`/fork --branch <name>` creates `my-feature` in the current checkout (from
+`HEAD`) and links the new session to it, recording the branch so the session
+and the branch move together. Work normally; the agent's edits and commits
+land on `my-feature`.
+
+```console
+/checkout le
+/merge my-feature
+```
+
+`/checkout <branch>` switches the git branch and resumes the session linked to
+it; `/merge <branch>` merges the branch and appends a turn to the current
+session with a model-generated summary of the fork's conversation.
+
+- `/fork` — fork, asking whether to isolate in a worktree or share the checkout.
+- `/fork --worktree` / `/fork --no-worktree` — choose the isolation directly.
+- `/switch <turn-index>` — rewind the session focus to an earlier turn.
+- `/checkout <branch>` — switch branch and resume the chat linked to it.
+- `/merge <branch>` — merge the branch and record the fork's conversation.
+
+Sessions record the branch they were created on, so `/checkout` round-trips to
+your original session even when the base branch is not `main`. A merge that
+conflicts aborts and surfaces git's error for you to resolve in the shell.
+See the [forks and checkout guide](docs/session-fork.md) and the
+[session tree design](docs/session-tree.md) for the full command surface.
+
 Use `--provider openai`, `--provider xai`, `--provider openrouter`,
 `--provider gemini`, or `--provider claude-code` to override automatic
 provider detection. Claude Code is selected explicitly rather than by
