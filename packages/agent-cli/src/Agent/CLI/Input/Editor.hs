@@ -28,6 +28,7 @@ import Agent.TUI.TextWidth
     , previousGraphemeBoundary
     )
 import Data.Char (isSpace)
+import Data.Maybe (isJust)
 import Data.Text (Text)
 import qualified Data.Text as Text
 
@@ -59,11 +60,15 @@ reduceEditorKey entries state@EditorState{..} key =
             | otherwise ->
                 redraw (deleteAtCursor state)
         EditorUp
+            | isJust editorHistoryIndex ->
+                redraw (historyMove (-1) entries state)
             | menuHasRows menu ->
                 redraw (moveMenuSelection (-1) menu state)
             | otherwise ->
                 redraw (historyMove (-1) entries state)
         EditorDown
+            | isJust editorHistoryIndex ->
+                redraw (historyMove 1 entries state)
             | menuHasRows menu ->
                 redraw (moveMenuSelection 1 menu state)
             | otherwise ->

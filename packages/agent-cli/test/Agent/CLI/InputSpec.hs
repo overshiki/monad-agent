@@ -294,6 +294,33 @@ spec = do
             restored.editorStepState.editorText `shouldBe` "draft"
             restored.editorStepState.editorHistoryIndex `shouldBe` Nothing
 
+        it "keeps Up/Down in history mode when a loaded entry opens the slash menu" do
+            let history = ["/model", "older"]
+                initial = editorState "draft" 5
+                loaded = reduceEditorKey history initial EditorUp
+                -- The loaded text is a slash command, so a menu exists, but
+                -- we are now in history-browsing mode and should continue up.
+                older = reduceEditorKey history loaded.editorStepState EditorUp
+                -- Down should move forward through history, not the menu.
+                back = reduceEditorKey history older.editorStepState EditorDown
+            loaded.editorStepState.editorText `shouldBe` "/model"
+            loaded.editorStepState.editorHistoryIndex `shouldBe` Just 0
+            older.editorStepState.editorText `shouldBe` "older"
+            older.editorStepState.editorHistoryIndex `shouldBe` Just 1
+            back.editorStepState.editorText `shouldBe` "/model"
+            back.editorStepState.editorHistoryIndex `shouldBe` Just 0
+
+        it "uses Up/Down for slash-menu navigation when not browsing history" do
+            let initial =
+                    (initialEditorState defaultSlashCatalog True "/m")
+                        { editorHistoryIndex = Nothing
+                        }
+                down = reduceEditorKey [] initial EditorDown
+            -- /m matches several commands; Down moves the menu selection
+            -- rather than history (there is no history here).
+            down.editorStepState.editorSelected `shouldSatisfy` (> 0)
+            down.editorStepState.editorText `shouldBe` "/m"
+
         it "turns effectful keys into explicit requests" do
             let initial = editorState "draft" 5
                 eofStep =
