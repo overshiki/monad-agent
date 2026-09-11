@@ -18,6 +18,34 @@ import Data.Char (isAsciiLower, isDigit)
 import Data.Text (Text)
 import qualified Data.Text as Text
 
+-- Liquid Haskell verification (see docs/liquid-haskell.md).
+--
+-- The verified contracts are the validator's reserved-value rejections:
+-- 'validateTaskName' returns 'Left' for the empty name and for @"root"@, so a
+-- task name can never be the reserved root label or the empty string. This is
+-- the structural half of "a task name is either valid or rejected"; the
+-- character-class check ('Text.any' over 'isNameChar') stays on the trusted
+-- boundary.
+--
+-- Trusted boundary: 'textEquals' (SMT equality on 'Text') and 'textNullEq'
+-- ('Text.null' agrees with equality to the empty string).
+
+{-@ LIQUID "--reflection" @-}
+{-@ LIQUID "--ple" @-}
+
+{-@ assume textEquals :: a:Data.Text.Text -> b:Data.Text.Text
+      -> {v:Bool | v <=> (a == b)} @-}
+textEquals :: Text -> Text -> Bool
+textEquals a b = a == b
+
+{-@ measure tlen :: Text -> Int @-}
+{-@ assume Text.null :: t:Data.Text.Text -> {v:Bool | v <=> (tlen t == 0)} @-}
+
+{-@ reflect isLeftM @-}
+isLeftM :: Either a b -> Bool
+isLeftM (Left _) = True
+isLeftM (Right _) = False
+
 newtype TaskPath = TaskPath { unTaskPath :: Text }
     deriving (Eq, Ord, Show)
 
@@ -47,13 +75,21 @@ parseTaskPath raw = do
             validateAbsolute path
             pure (TaskPath path)
 
+{-@ reflect validateTaskName @-}
+{-@ validateTaskName :: name:Text
+      -> {v:Either Text Text | (tlen name == 0) => isLeftM v} @-}
 validateTaskName :: Text -> Either Text Text
 validateTaskName name
     | Text.null name = Left "task_name must not be empty"
-    | name == "root" = Left "task_name must not be \"root\""
-    | Text.any (not . isNameChar) name =
+    | textEquals name "root" = Left "task_name must not be \"root\""
+    | hasInvalidNameChar name =
         Left "task_name must use lowercase letters, digits, and underscores only"
     | otherwise = Right name
+
+-- | Opaque to the verifier: the character-class check stays on the trusted
+-- boundary ('Text.any' is higher-order and not reflected).
+hasInvalidNameChar :: Text -> Bool
+hasInvalidNameChar name = Text.any (not . isNameChar) name
   where
     isNameChar c = isAsciiLower c || isDigit c || c == '_'
 

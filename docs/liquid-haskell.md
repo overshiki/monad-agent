@@ -269,6 +269,24 @@ Note: the PLE `--interpreter` engine crashes on string literals
 (with `--prune-unsorted`); `agent-tui-liquid` still uses the interpreter
 engine, which its modules' proofs were developed against.
 
+### `Agent.Subagents.TaskPath`
+
+Codex multi-agent v2 task paths (`/root/...`). `TaskPath` is an abstract
+`newtype`, so every value is already a valid path by construction; the
+verified contract is the validator's **reserved-value rejection**:
+`validateTaskName` returns `Left` for the empty name, so a task name can
+never be empty.
+
+- The empty-rejection postcondition is discharged by case analysis over
+  the guards, using `Text.null` (assumed to agree with a `tlen` length
+  measure, mirroring `Agent.TextBuffer`).
+- **Trusted boundary**: the character-class check (`Text.any` over a
+  name-character predicate) is extracted into the opaque
+  `hasInvalidNameChar` helper — `Text.any` is higher-order and not
+  reflected, and `Text` is opaque to the verifier. The `"root"` reserved
+  value is likewise not in the verified contract because a `Text` literal
+  in a refinement triggers a fixpoint sort error.
+
 ### `Agent.OsPath`
 
 The second security property, with `OsPath` fully opaque to the verifier:

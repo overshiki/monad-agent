@@ -19,6 +19,7 @@ library
     exposed-modules:    Agent.TextBuffer
                       , Agent.InterAgentMessage
                       , Agent.OsPath
+                      , Agent.Subagents.TaskPath
     build-depends:      base
                       , filepath
                       , liquidhaskell == 0.9.14.1.1
