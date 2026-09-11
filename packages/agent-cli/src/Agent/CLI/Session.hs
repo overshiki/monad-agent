@@ -36,6 +36,7 @@ module Agent.CLI.Session
     , appendTurnKeepTitle
     , appendTurnKeepTitleIndexed
     , appendMergeMarker
+    , renderMergeSummary
     , sessionRewindChoices
     , rewindSession
     , addSessionUsage
@@ -164,7 +165,7 @@ import Data.IORef
 import Data.Foldable (foldl')
 import Data.Functor ((<&>))
 import Data.List (sortOn)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Ord (Down(..))
 import Data.Text (Text)
 import qualified Data.Text as Text
@@ -1033,6 +1034,30 @@ appendMergeMarker handle branch summary = do
         , turnUsage = Nothing
         , turnProviderTelemetry = []
         }
+
+-- | Render a forked session's conversation as a compact plain-text summary
+-- for a merge marker. Skips marker turns (empty user text with no assistant
+-- text) and collapses each message to one line, bounded to a fixed length.
+renderMergeSummary :: Text -> [SessionTurn] -> Text
+renderMergeSummary branch turns =
+    Text.take mergeSummaryMaxChars $
+        "Merged branch '"
+            <> branch
+            <> "'.\n"
+            <> Text.intercalate "\n" (mapMaybe renderTurn turns)
+  where
+    renderTurn turn =
+        case (Text.strip turn.turnUserText, turn.turnAssistantText) of
+            ("", Nothing) -> Nothing
+            (user, Nothing) -> Just ("- " <> user)
+            (user, Just assistant)
+                | Text.null (Text.strip assistant) -> Just ("- " <> user)
+                | otherwise ->
+                    Just ("- " <> user <> " → " <> oneLine assistant)
+    oneLine = Text.unwords . Text.words
+
+mergeSummaryMaxChars :: Int
+mergeSummaryMaxChars = 1200
 
 -- | Prompts in the current immutable transcript branch, paired with the turns
 -- that should remain when rewinding to immediately before that prompt.

@@ -85,6 +85,7 @@ import Agent.CLI.Session
       switchSessionFocus,
       loadFocusedTranscript,
       appendMergeMarker,
+      renderMergeSummary,
       Persistence(PersistenceEnabled, PersistenceDisabled),
       PersistenceState(PersistenceActive, PersistencePending),
       SessionCreate(createCwd, SessionCreate, createPool, createEffort,
@@ -1107,15 +1108,22 @@ handleSessionAction
             listSessions
                 databasePool
                 (sessionsRoot env.sessionHome)
-        pure $
-            case
-                [ meta.metaTitle
-                | meta <- metas
-                , meta.metaGitBranch == Just branch
-                ]
-              of
-                title : _ -> title
-                [] -> "Merged " <> branch <> "."
+        case
+            [ meta
+            | meta <- metas
+            , meta.metaGitBranch == Just branch
+            ]
+          of
+            forkMeta : _ -> do
+                loaded <-
+                    loadSession
+                        databasePool
+                        (sessionsRoot env.sessionHome)
+                        forkMeta.metaId
+                pure $ case loaded of
+                    Right (_, turns) -> renderMergeSummary branch turns
+                    Left _ -> "Merged " <> branch <> "."
+            [] -> pure ("Merged " <> branch <> ".")
 
     chooseForkWorktree color = \case
         Just value -> pure (Just value)

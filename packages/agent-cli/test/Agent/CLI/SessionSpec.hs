@@ -898,6 +898,27 @@ spec = describe "Agent.CLI.Session" do
             prop "round-trips every generated response content part" $
                 storedContentPartRoundTrip
 
+    describe "renderMergeSummary" do
+        it "renders the fork conversation compactly, skipping marker turns" do
+            let turn =
+                    SessionTurn
+                        { turnAt = fixedTime
+                        , turnUserText = "fix the UI"
+                        , turnAssistantText = Just "updated button styles"
+                        , turnError = Nothing
+                        , turnResponseId = Nothing
+                        , turnEffect = TranscriptAppend
+                        , turnItems = []
+                        , turnUsage = Nothing
+                        , turnProviderTelemetry = []
+                        }
+                marker = turn { turnUserText = "", turnAssistantText = Nothing }
+            renderMergeSummary "feature" [turn, marker]
+                `shouldBe`
+                    "Merged branch 'feature'.\n- fix the UI → updated button styles"
+            renderMergeSummary "feature" []
+                `shouldBe` "Merged branch 'feature'.\n"
+
     describe "PostgreSQL session persistence" do
         it "forks turns, metadata, and only allowlisted durable artifacts" $
             withTempStore \store root -> do
