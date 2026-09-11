@@ -459,6 +459,27 @@ spec = describe "buildStreamResponse" do
             | ReasoningItemValue ReasoningItem { content } <- response.output
             ] `shouldBe` [Just [ReasoningTextPart "Let me think."]]
 
+    it "keeps reasoning_text content when a sparse output_item.done follows reasoning_text.done" do
+        events <- expectRight $ parseSseEvents $ Text.intercalate ""
+            [ sseBlock "response.created"
+                "{\"type\":\"response.created\",\"response\":{\"id\":\"resp-reasoning-done-then-done\"}}"
+            , sseBlock "response.output_item.added"
+                "{\"type\":\"response.output_item.added\",\"output_index\":0,\"item\":{\"type\":\"reasoning\",\"id\":\"rs-1\",\"content\":[]}}"
+            , sseBlock "response.reasoning_text.delta"
+                "{\"type\":\"response.reasoning_text.delta\",\"item_id\":\"rs-1\",\"output_index\":0,\"delta\":\"Let me think.\"}"
+            , sseBlock "response.reasoning_text.done"
+                "{\"type\":\"response.reasoning_text.done\",\"item_id\":\"rs-1\",\"output_index\":0,\"text\":\"Let me think.\"}"
+            , sseBlock "response.output_item.done"
+                "{\"type\":\"response.output_item.done\",\"output_index\":0,\"item\":{\"type\":\"reasoning\",\"id\":\"rs-1\",\"content\":[]}}"
+            , sseBlock "response.completed"
+                "{\"type\":\"response.completed\",\"response\":{\"id\":\"resp-reasoning-done-then-done\",\"output\":[]}}"
+            ]
+        response <- expectRight
+            (buildStreamResponseWithModel config (Just "request-model") events)
+        [content
+            | ReasoningItemValue ReasoningItem { content } <- response.output
+            ] `shouldBe` [Just [ReasoningTextPart "Let me think."]]
+
     it "uses provider classifiers when no terminal response is present" do
         streamEvents <- expectRight $ parseSseEvents $ sseBlock "error"
             "{\"type\":\"error\",\"error\":{\"message\":\"stream broke\"}}"

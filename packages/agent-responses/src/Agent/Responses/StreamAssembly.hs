@@ -448,6 +448,8 @@ mergeResponseItem old new =
             FunctionCallItem (mergeFunctionCall previous next)
         (CustomToolCallItem previous, CustomToolCallItem next) ->
             CustomToolCallItem (mergeCustomToolCall previous next)
+        (ReasoningItemValue previous, ReasoningItemValue next) ->
+            ReasoningItemValue (mergeReasoning previous next)
         _ -> new
 
 mergeFunctionCall :: FunctionCall -> FunctionCall -> FunctionCall
@@ -468,6 +470,26 @@ mergeCustomToolCall previous next =
         , namespace = namespace <|> previous.namespace
         , status = status <|> previous.status
         , ..
+        }
+
+-- | Merge a sparse reasoning @output_item.done@ over an already-materialized
+-- reasoning item. Reasoning text arrives as @content@ (DeepSeek
+-- @reasoning_text.done@) or @summary@ (OpenAI summary deltas); a later sparse
+-- done item can carry @content: []@ / empty @summary@, and the generic
+-- @_ -> new@ fallback would erase what the earlier events set. Prefer the
+-- non-empty side per field so captured reasoning survives while a fully
+-- populated done still wins.
+mergeReasoning :: ReasoningItem -> ReasoningItem -> ReasoningItem
+mergeReasoning previous next =
+    ReasoningItem
+        { itemId = next.itemId <|> previous.itemId
+        , summary = mergeReasoningSummary previous.summary next.summary
+        , content =
+            if hasNoReasoningContent next.content
+                then previous.content
+                else next.content
+        , encryptedContent = next.encryptedContent <|> previous.encryptedContent
+        , status = next.status <|> previous.status
         }
 
 setFunctionArguments :: Text -> FunctionCall -> FunctionCall
