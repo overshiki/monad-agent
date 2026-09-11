@@ -177,6 +177,7 @@ library
                     , Agent.CLI.ImagePreview
                     , Agent.CLI.GatewayBridge
                     , Agent.CLI.GatewayClient
+                    , Agent.CLI.Git
                     , Agent.CLI.GitDiff
                     , Agent.CLI.Input
                     , Agent.CLI.Input.Types

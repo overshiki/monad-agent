@@ -1132,7 +1132,6 @@ handleSessionAction
                                 id
                                 summary
             [] -> pure ("Merged " <> branch <> ".")
-            [] -> pure ("Merged " <> branch <> ".")
 
     chooseForkWorktree color = \case
         Just value -> pure (Just value)

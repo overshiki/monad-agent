@@ -91,6 +91,7 @@ import Agent.CLI.SessionLock
     ( acquireSessionLock
     , releaseSessionLock
     )
+import Agent.CLI.Git (detectGitBranch)
 import Agent.CLI.Json (decodeLazy)
 import Agent.CLI.Request
     ( requestPromptParts
@@ -654,9 +655,14 @@ createReservedSession spec sessionId tempDir promptSnapshot = do
     createDirectory dir
     setFileMode (unsafeToFilePath dir) 0o700
     now <- normalizePostgresTimestamp <$> getCurrentTime
+    branch <- detectGitBranch spec.createCwd
     let title = case spec.createTitleHint of
             Just hint | not (Text.null hint) -> hint
             _ -> "untitled"
+        metaGitBranch = case branch of
+            "" -> Nothing
+            "detached" -> Nothing
+            name -> Just name
         meta = SessionMeta
             { metaVersion = sessionSchemaVersion
             , metaId = sessionId
@@ -675,7 +681,7 @@ createReservedSession spec sessionId tempDir promptSnapshot = do
                 , legacyTargetDialect = spec.createTarget.targetDialect
                 }
             , metaCwd = spec.createCwd
-            , metaGitBranch = Nothing
+            , metaGitBranch = metaGitBranch
             , metaEffort = spec.createEffort
             , metaTitle = title
             , metaTitleIsManual = spec.createTitleIsManual

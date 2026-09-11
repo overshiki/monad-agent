@@ -25,6 +25,7 @@ module Agent.CLI.Session.History
     , writeLiveTranscript
     ) where
 
+import Agent.CLI.Git (detectGitBranch)
 import Agent.CLI.Session
     ( SessionTurn(..)
     , TranscriptEffect(..)
@@ -52,11 +53,8 @@ import Agent.TUI.Model
     , initialUiState
     , reduceUi
     )
-import Agent.OsPath (unsafeToFilePath)
 import Control.Exception.Safe
-    ( SomeException
-    , throwString
-    , try
+    ( throwString
     )
 import Control.Monad (void)
 import Data.Foldable (foldl')
@@ -66,9 +64,7 @@ import Data.IORef
     )
 import Data.Text (Text)
 import qualified Data.Text as Text
-import System.Exit (ExitCode(..))
 import System.OsPath (OsPath)
-import System.Process (readProcessWithExitCode)
 import Agent.Store.Postgres.Connection (StorePool)
 
 -- | The pieces of conversation state that must change together when a live
@@ -221,23 +217,6 @@ resetLiveConversationWith resetBackend conversationRef planMode = do
     resetBackend
     readIORef conversationRef >>= resetLiveConversationState
     deactivatePlanMode planMode
-
-detectGitBranch :: OsPath -> IO Text
-detectGitBranch cwd = do
-    result <-
-        (try $
-            readProcessWithExitCode
-                "git"
-                ["-C", unsafeToFilePath cwd, "rev-parse", "--abbrev-ref", "HEAD"]
-                "")
-            :: IO (Either SomeException (ExitCode, String, String))
-    pure $ case result of
-        Right (ExitSuccess, output, _) ->
-            let branch = Text.strip (Text.pack output)
-            in if Text.null branch
-                then ""
-                else if branch == "HEAD" then "detached" else branch
-        _ -> ""
 
 -- | Apply compact turns as full transcript replacements when resuming.
 foldSessionItems :: [SessionTurn] -> [ResponseItem]
