@@ -9,6 +9,21 @@ we will support cli, native macos desktop, windows, ios, android and web.
 
 while we are starting out as a coding harness, we plan to expand the harness to deal with all kinds of digital work.
 
+# temporarily banned
+
+Grok (xAI) models are temporarily banned from this project — we have no grok
+resources/access right now (2026-09-11).
+
+- Ignore grok-specific feature work: do not add, expand, or depend on grok/xAI
+  paths (`agent-xai`, `grok-*` model slugs, Grok Build dialect specifics,
+  `grokAllowedChildModels`, the xAI child runner, etc.).
+- Do not add grok models to benchmarks, subagent catalogs, task suites, CI, or
+  any new feature surface.
+- Keep existing grok code compiling and its tests passing, but do not spend
+  development effort on it and do not treat grok as an available provider.
+- Temporary: restore deliberately by removing this section once grok access
+  returns.
+
 # architecture
 
 we are using haskell and ghc as the primary runtime system for the agent.
