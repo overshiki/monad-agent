@@ -443,6 +443,7 @@ initialFullscreenAppState
         , appTextReply = Nothing
         , appMetaConsole = Nothing
         , appSlashDismissed = False
+        , appComposerMark = Nothing
         , appPasted = False
         , appHistory = Bridge.trimHistory history
         , appHistoryIndex = Nothing

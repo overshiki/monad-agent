@@ -4,11 +4,13 @@ module Agent.CLI.TUI.Composer.Edit
     , draftCursorLocation
     , verticalCursorMove
     , wrapDraft
+    , wrapDraftCells
     , wrapDraftWindow
+    , wrapDraftWindowCells
     ) where
 
 import Agent.CLI.Input (terminalTextWidth)
-import Agent.CLI.Input.Display (displayCells)
+import Agent.CLI.Input.Display (displayCells, renderCells)
 import Agent.CLI.Input.Types (DisplayCell(..))
 import Agent.TUI.TextWidth (clampGraphemeCursor)
 import Data.ByteString (ByteString)
@@ -24,8 +26,8 @@ import Data.Text.Encoding.Error (lenientDecode)
 -- | Accumulator for 'wrapDraft'. Rows are collected in reverse, and the
 -- current row is a reversed list of grapheme-cell texts.
 data WrapState = WrapState
-    { wrapRowsRev :: ![Text]
-    , wrapCellsRev :: ![Text]
+    { wrapRowsRev :: ![[(DisplayCell, Int)]]
+    , wrapCellsRev :: ![(DisplayCell, Int)]
     , wrapColumn :: !Int
     , wrapRow :: !Int
     , wrapIndex :: !Int
@@ -36,8 +38,8 @@ data WrapState = WrapState
 -- cursor offset is measured in the original text and returned in wrapped
 -- row/column coordinates. Long unbroken text is split at terminal cell
 -- boundaries; a glyph wider than the entire viewport is shown as an ellipsis.
-wrapDraft :: Int -> Text -> Int -> ([Text], (Int, Int))
-wrapDraft requestedWidth text requestedCursor =
+wrapDraftCells :: Int -> Text -> Int -> ([[(DisplayCell, Int)]], (Int, Int))
+wrapDraftCells requestedWidth text requestedCursor =
     let width = max 1 requestedWidth
         cursor = clampGraphemeCursor text requestedCursor
         initial = WrapState
@@ -67,11 +69,13 @@ wrapDraft requestedWidth text requestedCursor =
                 )
         rows =
             reverse
-                (Text.concat (reverse finalCellsRev) : finalRowsRev)
+                (reverse finalCellsRev : finalRowsRev)
         location =
             fromMaybe (finalRow, finalColumn) final.wrapCursor
     in (rows, location)
   where
+
+
     stepToken :: Int -> Int -> WrapState -> DraftToken -> WrapState
     stepToken width cursor state = \case
         DraftLineBreak ->
@@ -98,6 +102,11 @@ wrapDraft requestedWidth text requestedCursor =
                 displayWidth
                     | cell.displayCellWidth > width = 1
                     | otherwise = cell.displayCellWidth
+                cell' =
+                    cell
+                        { displayCellText = displayText
+                        , displayCellWidth = displayWidth
+                        }
                 shouldWrap =
                     displayWidth > 0
                         && ( state.wrapColumn >= width
@@ -113,7 +122,7 @@ wrapDraft requestedWidth text requestedCursor =
                 row = if shouldWrap then state.wrapRow + 1 else state.wrapRow
             in WrapState
                 { wrapRowsRev = rowsRev
-                , wrapCellsRev = displayText : cellsRev
+                , wrapCellsRev = (cell', state.wrapIndex) : cellsRev
                 , wrapColumn = column + displayWidth
                 , wrapRow = row
                 , wrapIndex = state.wrapIndex + cell.displayCellSourceLength
@@ -126,18 +135,23 @@ wrapDraft requestedWidth text requestedCursor =
                 }
 
     finishRow rowsRev cellsRev =
-        Text.concat (reverse cellsRev) : rowsRev
+        reverse cellsRev : rowsRev
 
     recordCursor cursor index location = \case
         Nothing
             | cursor == index -> Just location
         previous -> previous
 
+wrapDraft :: Int -> Text -> Int -> ([Text], (Int, Int))
+wrapDraft requestedWidth text requestedCursor =
+    let (rows, location) = wrapDraftCells requestedWidth text requestedCursor
+    in (map (renderCells . map fst) rows, location)
+
 -- | Lay out only the logical lines that can contribute to a bounded composer
 -- viewport around the cursor. Starting at newline boundaries preserves visual
 -- wrapping, while avoiding a full-draft grapheme pass for large pastes.
-wrapDraftWindow :: Int -> Int -> Text -> Int -> ([Text], (Int, Int))
-wrapDraftWindow requestedRows requestedWidth text requestedCursor =
+wrapDraftWindowCells :: Int -> Int -> Text -> Int -> ([[(DisplayCell, Int)]], (Int, Int))
+wrapDraftWindowCells requestedRows requestedWidth text requestedCursor =
     let rows = max 1 requestedRows
         cursor = max 0 (min (Text.length text) requestedCursor)
         before = Text.take cursor text
@@ -145,7 +159,14 @@ wrapDraftWindow requestedRows requestedWidth text requestedCursor =
         after = Text.drop cursor text
         end = cursor + followingLinesLength rows after
         window = Text.take (end - start) (Text.drop start text)
-    in wrapDraft requestedWidth window (cursor - start)
+    in wrapDraftCells requestedWidth window (cursor - start)
+
+wrapDraftWindow :: Int -> Int -> Text -> Int -> ([Text], (Int, Int))
+wrapDraftWindow requestedRows requestedWidth text requestedCursor =
+    let (rows, location) =
+            wrapDraftWindowCells
+                requestedRows requestedWidth text requestedCursor
+    in (map (renderCells . map fst) rows, location)
 
 precedingLineStart :: Int -> Text -> Int
 precedingLineStart lineCount text =

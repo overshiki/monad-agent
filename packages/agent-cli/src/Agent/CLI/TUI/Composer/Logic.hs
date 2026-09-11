@@ -6,6 +6,9 @@ module Agent.CLI.TUI.Composer.Logic
     , applyComposerUiEvent
     , combineKill
     , composerEscapeAction
+    , composerDeleteSelection
+    , composerReplaceSelection
+    , composerSelectionRange
     , currentSlashMenu
     , immediateBtwQuestion
     , isKillKey
@@ -24,6 +27,7 @@ import Agent.CLI.Command
 import Agent.CLI.Input (ReplLine(..))
 import Agent.CLI.TUI.Types (AppState(..))
 import Agent.TUI.Model (UiEvent(..), UiState(..))
+import Control.Monad (guard)
 import Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Graphics.Vty as V
@@ -71,6 +75,8 @@ applyComposerUiEvent uiEvent state =
             if isDraft then Nothing else state.appHistoryIndex
         , appHistoryDraft =
             if isDraft then draftText else state.appHistoryDraft
+        , appComposerMark =
+            if isDraft then Nothing else state.appComposerMark
         }
   where
     isDraft = case uiEvent of
@@ -112,3 +118,30 @@ slashReplacement draft menu suggestion =
     Text.take menu.slashMenuReplaceStart draft
         <> suggestion.slashSuggestionReplacement
         <> Text.drop menu.slashMenuReplaceEnd draft
+
+composerSelectionRange :: Maybe Int -> Int -> Maybe (Int, Int)
+composerSelectionRange mark cursor = do
+    anchor <- mark
+    let start = min anchor cursor
+        end = max anchor cursor
+    guard (start < end)
+    pure (start, end)
+
+composerDeleteSelection :: Text -> Int -> Maybe Int -> (Text, Int)
+composerDeleteSelection text cursor mark =
+    case composerSelectionRange mark cursor of
+        Nothing -> (text, cursor)
+        Just (start, end) ->
+            (Text.take start text <> Text.drop end text, start)
+
+composerReplaceSelection :: Text -> Int -> Maybe Int -> Text -> (Text, Int)
+composerReplaceSelection text cursor mark inserted =
+    case composerSelectionRange mark cursor of
+        Nothing ->
+            let before = Text.take cursor text
+                after = Text.drop cursor text
+            in (before <> inserted <> after, cursor + Text.length inserted)
+        Just (start, end) ->
+            let before = Text.take start text
+                after = Text.drop end text
+            in (before <> inserted <> after, start + Text.length inserted)

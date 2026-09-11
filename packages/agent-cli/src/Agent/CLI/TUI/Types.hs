@@ -322,6 +322,7 @@ data AppState = AppState
     , appTextReply :: !(Maybe (TMVar (Maybe Text)))
     , appMetaConsole :: !(Maybe MetaConsoleOverlay)
     , appSlashDismissed :: !Bool
+    , appComposerMark :: !(Maybe Int)
     , appPasted :: !Bool
     , appHistory :: ![Text]
     , appHistoryIndex :: !(Maybe Int)

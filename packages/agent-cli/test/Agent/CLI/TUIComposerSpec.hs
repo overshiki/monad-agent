@@ -251,6 +251,36 @@ spec = describe "fullscreen composer" do
         dictationKeyAction (V.EvKey (V.KChar 'x') [])
             `shouldBe` Nothing
 
+    it "reports no selection when the mark is absent or coincides with the cursor" do
+        composerSelectionRange Nothing 5 `shouldBe` Nothing
+        composerSelectionRange (Just 5) 5 `shouldBe` Nothing
+
+    it "orders selection endpoints regardless of mark direction" do
+        composerSelectionRange (Just 2) 7 `shouldBe` Just (2, 7)
+        composerSelectionRange (Just 7) 2 `shouldBe` Just (2, 7)
+
+    it "deletes the selected region and places the cursor at its start" do
+        composerDeleteSelection "hello world" 7 (Just 2)
+            `shouldBe` ("heorld", 2)
+        composerDeleteSelection "hello world" 2 (Just 7)
+            `shouldBe` ("heorld", 2)
+
+    it "deletes nothing when there is no active selection" do
+        composerDeleteSelection "hello" 3 Nothing `shouldBe` ("hello", 3)
+        composerDeleteSelection "hello" 3 (Just 3) `shouldBe` ("hello", 3)
+
+    it "replaces the selected region with inserted text" do
+        composerReplaceSelection "hello world" 7 (Just 2) "HI"
+            `shouldBe` ("heHIorld", 4)
+        composerReplaceSelection "hello world" 2 (Just 7) "HI"
+            `shouldBe` ("heHIorld", 4)
+
+    it "inserts at the cursor when no region is selected" do
+        composerReplaceSelection "abc" 1 Nothing "XY"
+            `shouldBe` ("aXYbc", 3)
+        composerReplaceSelection "abc" 1 (Just 1) "XY"
+            `shouldBe` ("aXYbc", 3)
+
     it "renders a non-transient listening notice for live transcripts" do
         let idle = dictationProgressNotice ""
             live = dictationProgressNotice "hello from the mic"

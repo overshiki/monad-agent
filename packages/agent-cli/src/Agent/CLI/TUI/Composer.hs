@@ -6,7 +6,10 @@ module Agent.CLI.TUI.Composer
     , appendFullscreenInput
     , applyComposerUiEvent
     , combineKill
+    , composerDeleteSelection
     , composerEscapeAction
+    , composerReplaceSelection
+    , composerSelectionRange
     , composerScrollbackAvailable
     , controlAttr
     , controlInteractionAttr
@@ -66,7 +69,8 @@ import Agent.CLI.TUI.Composer.Render
 import Agent.CLI.TUI.Types
 import Agent.TUI.Model
 import Agent.TUI.TextWidth
-    ( nextGraphemeBoundary
+    ( clampGraphemeCursor
+    , nextGraphemeBoundary
     , previousGraphemeBoundary
     )
 import Brick
@@ -77,7 +81,7 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State.Strict (modify')
 import Data.IORef (newIORef, writeIORef)
 import Data.List (elemIndex)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isJust)
 import qualified Data.Sequence as Seq
 import Data.Text (Text)
 import qualified Data.Text as Text
@@ -321,10 +325,28 @@ handleComposerKey
     event = do
     state <- get
     let ui = state.appUi
+        selectionActive = isJust state.appComposerMark
         slashMenu = currentSlashMenu state
     case event of
         _ | Bridge.isSendNowKey event ->
             sendNow
+        V.EvKey (V.KChar ' ') modifiers
+            | V.MCtrl `elem` modifiers ->
+                toggleMark
+        V.EvKey (V.KChar '\NUL') modifiers
+            | V.MCtrl `elem` modifiers ->
+                toggleMark
+        V.EvKey (V.KChar '\NUL') [] ->
+            toggleMark
+        V.EvKey (V.KChar '@') modifiers
+            | V.MCtrl `elem` modifiers ->
+                toggleMark
+        V.EvKey (V.KChar 'g') modifiers
+            | V.MCtrl `elem` modifiers ->
+                clearSelection
+        V.EvKey (V.KChar 'l') modifiers
+            | V.MCtrl `elem` modifiers ->
+                selectAll
         V.EvKey (V.KChar 'q') modifiers
             | V.MCtrl `elem` modifiers ->
                 submitRaw ReplEof
@@ -342,10 +364,13 @@ handleComposerKey
         V.EvKey (V.KChar 'c') modifiers
             | V.MCtrl `elem` modifiers ->
                 void handleCtrlC
-        V.EvKey V.KEsc [] ->
-            case composerEscapeAction
-                ui.uiAwaitingInput
-                (maybe False (const True) slashMenu) of
+        V.EvKey V.KEsc []
+            | selectionActive ->
+                clearSelection
+            | otherwise ->
+                case composerEscapeAction
+                    ui.uiAwaitingInput
+                    (maybe False (const True) slashMenu) of
                 EscapeCancelTurn ->
                     cancelOrClear
                 EscapeDismissSlashMenu ->
@@ -360,6 +385,9 @@ handleComposerKey
             | Just menu <- slashMenu
             , not (null menu.slashMenuSuggestions) ->
                 moveSlash (-1) (length menu.slashMenuSuggestions)
+        V.EvKey V.KUp []
+            | selectionActive ->
+                extendSelectionMaybe (verticalCursorMove (-1))
         V.EvKey V.KUp [] ->
             case verticalCursorMove (-1) ui.uiDraft ui.uiCursor of
                 Just cursor -> setCursor cursor
@@ -368,6 +396,9 @@ handleComposerKey
             | Just menu <- slashMenu
             , not (null menu.slashMenuSuggestions) ->
                 moveSlash 1 (length menu.slashMenuSuggestions)
+        V.EvKey V.KDown []
+            | selectionActive ->
+                extendSelectionMaybe (verticalCursorMove 1)
         V.EvKey V.KDown [] ->
             case verticalCursorMove 1 ui.uiDraft ui.uiCursor of
                 Just cursor -> setCursor cursor
@@ -405,9 +436,6 @@ handleComposerKey
         V.EvKey (V.KChar 'y') modifiers
             | V.MCtrl `elem` modifiers ->
                 insertKillBuffer
-        V.EvKey (V.KChar 'l') modifiers
-            | V.MCtrl `elem` modifiers ->
-                invalidateCache
         V.EvKey (V.KChar 'r') modifiers
             | V.MCtrl `elem` modifiers ->
                 startDictation
@@ -415,24 +443,36 @@ handleComposerKey
             startDictation
         V.EvKey (V.KChar 'a') modifiers
             | V.MCtrl `elem` modifiers ->
-                setCursor (lineStartCursor ui.uiDraft ui.uiCursor)
+                if selectionActive
+                    then extendSelection lineStartCursor
+                    else setCursor (lineStartCursor ui.uiDraft ui.uiCursor)
         V.EvKey (V.KChar 'e') modifiers
             | V.MCtrl `elem` modifiers ->
-                setCursor (lineEndCursor ui.uiDraft ui.uiCursor)
+                if selectionActive
+                    then extendSelection lineEndCursor
+                    else setCursor (lineEndCursor ui.uiDraft ui.uiCursor)
         V.EvKey (V.KChar 'b') modifiers
             | V.MCtrl `elem` modifiers ->
-                moveCursor (-1)
+                if selectionActive
+                    then extendSelection previousGraphemeBoundary
+                    else moveCursor (-1)
         V.EvKey (V.KChar 'b') modifiers
             | V.MMeta `elem` modifiers
                 || V.MAlt `elem` modifiers ->
-                setCursor (moveWordLeft ui.uiDraft ui.uiCursor)
+                if selectionActive
+                    then extendSelection moveWordLeft
+                    else setCursor (moveWordLeft ui.uiDraft ui.uiCursor)
         V.EvKey (V.KChar 'f') modifiers
             | V.MCtrl `elem` modifiers ->
-                moveCursor 1
+                if selectionActive
+                    then extendSelection nextGraphemeBoundary
+                    else moveCursor 1
         V.EvKey (V.KChar 'f') modifiers
             | V.MMeta `elem` modifiers
                 || V.MAlt `elem` modifiers ->
-                setCursor (moveWordRight ui.uiDraft ui.uiCursor)
+                if selectionActive
+                    then extendSelection moveWordRight
+                    else setCursor (moveWordRight ui.uiDraft ui.uiCursor)
         V.EvKey (V.KChar '_') modifiers
             | V.MCtrl `elem` modifiers ->
                 undoEdit
@@ -456,14 +496,26 @@ handleComposerKey
             | V.MMeta `elem` modifiers
                 || V.MAlt `elem` modifiers ->
                 setCursor (moveWordRight ui.uiDraft ui.uiCursor)
-        V.EvKey V.KLeft [] ->
-            moveCursor (-1)
-        V.EvKey V.KRight [] ->
-            moveCursor 1
-        V.EvKey V.KHome [] ->
-            setCursor (lineStartCursor ui.uiDraft ui.uiCursor)
-        V.EvKey V.KEnd [] ->
-            setCursor (lineEndCursor ui.uiDraft ui.uiCursor)
+        V.EvKey V.KLeft []
+            | selectionActive ->
+                extendSelection previousGraphemeBoundary
+            | otherwise ->
+                moveCursor (-1)
+        V.EvKey V.KRight []
+            | selectionActive ->
+                extendSelection nextGraphemeBoundary
+            | otherwise ->
+                moveCursor 1
+        V.EvKey V.KHome []
+            | selectionActive ->
+                extendSelection lineStartCursor
+            | otherwise ->
+                setCursor (lineStartCursor ui.uiDraft ui.uiCursor)
+        V.EvKey V.KEnd []
+            | selectionActive ->
+                extendSelection lineEndCursor
+            | otherwise ->
+                setCursor (lineEndCursor ui.uiDraft ui.uiCursor)
         V.EvKey V.KPageUp [] ->
             scrollConversationPage Up
         V.EvKey V.KPageDown [] ->
@@ -472,11 +524,21 @@ handleComposerKey
             insertText (Text.singleton character)
         V.EvPaste bytes -> do
             let pasted = decodePaste bytes
+                (draftAfterSelection, cursorAfterSelection) =
+                    case composerSelectionRange
+                            state.appComposerMark
+                            ui.uiCursor of
+                        Nothing -> (ui.uiDraft, ui.uiCursor)
+                        Just (selStart, selEnd) ->
+                            ( Text.take selStart ui.uiDraft
+                                <> Text.drop selEnd ui.uiDraft
+                            , selStart
+                            )
                 (pastedDraft, pastedCursor, clipboardInput) =
                     prepareBracketedPaste
                         ui.uiAwaitingInput
-                        ui.uiDraft
-                        ui.uiCursor
+                        draftAfterSelection
+                        cursorAfterSelection
                         pasted
             case clipboardInput of
                 Nothing -> do
@@ -495,6 +557,7 @@ handleComposerKey
     modify' \current -> current { appKillChain = isKillKey event }
   where
     startDictation = do
+        clearSelection
         current <- get
         case current.appDictation of
             Just session ->
@@ -652,6 +715,7 @@ handleComposerKey
                 current
                     { appSlashIndex = 0
                     , appSlashDismissed = False
+                    , appComposerMark = Nothing
                     , appUndo =
                         -- A submitted prompt leaves an empty composer; its
                         -- edit steps are no longer undoable.
@@ -698,12 +762,13 @@ handleComposerKey
     insertText inserted = do
         state <- get
         let ui = state.appUi
-            before = Text.take ui.uiCursor ui.uiDraft
-            after = Text.drop ui.uiCursor ui.uiDraft
-        modifyUiResetSlash $
-            UiSetDraft
-                (before <> inserted <> after)
-                (ui.uiCursor + Text.length inserted)
+            (next, cursor) =
+                composerReplaceSelection
+                    ui.uiDraft
+                    ui.uiCursor
+                    state.appComposerMark
+                    inserted
+        modifyUiResetSlash (UiSetDraft next cursor)
 
     insertPastedText inserted = do
         insertText inserted
@@ -712,67 +777,133 @@ handleComposerKey
     deleteBefore = do
         state <- get
         let ui = state.appUi
-        when (ui.uiCursor > 0) do
-            let start =
-                    previousGraphemeBoundary
-                        ui.uiDraft
-                        ui.uiCursor
-                before = Text.take start ui.uiDraft
-                after = Text.drop ui.uiCursor ui.uiDraft
-            modifyUiResetSlash
-                (UiSetDraft (before <> after) start)
+        case composerSelectionRange state.appComposerMark ui.uiCursor of
+            Just _ -> do
+                let (next, cursor) =
+                        composerDeleteSelection
+                            ui.uiDraft
+                            ui.uiCursor
+                            state.appComposerMark
+                modifyUiResetSlash (UiSetDraft next cursor)
+            Nothing ->
+                when (ui.uiCursor > 0) do
+                    let start =
+                            previousGraphemeBoundary
+                                ui.uiDraft
+                                ui.uiCursor
+                        before = Text.take start ui.uiDraft
+                        after = Text.drop ui.uiCursor ui.uiDraft
+                    modifyUiResetSlash
+                        (UiSetDraft (before <> after) start)
 
     deleteAfter = do
         state <- get
         let ui = state.appUi
-        when (ui.uiCursor < Text.length ui.uiDraft) do
-            let before = Text.take ui.uiCursor ui.uiDraft
-                after =
-                    Text.drop
-                        (nextGraphemeBoundary ui.uiDraft ui.uiCursor)
-                        ui.uiDraft
-            modifyUiResetSlash
-                (UiSetDraft (before <> after) ui.uiCursor)
+        case composerSelectionRange state.appComposerMark ui.uiCursor of
+            Just _ -> do
+                let (next, cursor) =
+                        composerDeleteSelection
+                            ui.uiDraft
+                            ui.uiCursor
+                            state.appComposerMark
+                modifyUiResetSlash (UiSetDraft next cursor)
+            Nothing ->
+                when (ui.uiCursor < Text.length ui.uiDraft) do
+                    let before = Text.take ui.uiCursor ui.uiDraft
+                        after =
+                            Text.drop
+                                (nextGraphemeBoundary ui.uiDraft ui.uiCursor)
+                                ui.uiDraft
+                    modifyUiResetSlash
+                        (UiSetDraft (before <> after) ui.uiCursor)
 
     killPreviousWord = do
         state <- get
         let old = state.appUi.uiDraft
             oldCursor = state.appUi.uiCursor
-            (next, cursor) =
-                deleteWordBefore state.appUi.uiDraft state.appUi.uiCursor
-            killed =
-                Text.take (oldCursor - cursor) (Text.drop cursor old)
-        modifyUiWithKill KillBackward killed (UiSetDraft next cursor)
+        case composerSelectionRange state.appComposerMark oldCursor of
+            Just (selStart, selEnd) -> do
+                let killed = Text.take (selEnd - selStart) (Text.drop selStart old)
+                    direction =
+                        if oldCursor >= selStart then KillForward else KillBackward
+                modifyUiWithKill
+                    direction
+                    killed
+                    (UiSetDraft
+                        (Text.take selStart old <> Text.drop selEnd old)
+                        selStart)
+            Nothing -> do
+                let (next, cursor) =
+                        deleteWordBefore state.appUi.uiDraft state.appUi.uiCursor
+                    killed =
+                        Text.take (oldCursor - cursor) (Text.drop cursor old)
+                modifyUiWithKill KillBackward killed (UiSetDraft next cursor)
 
     killWordAfter = do
         state <- get
         let old = state.appUi.uiDraft
             oldCursor = state.appUi.uiCursor
-            (next, cursor) =
-                deleteWordAfter state.appUi.uiDraft state.appUi.uiCursor
-            killedLength = Text.length old - Text.length next
-            killed = Text.take killedLength (Text.drop oldCursor old)
-        modifyUiWithKill KillForward killed (UiSetDraft next cursor)
+        case composerSelectionRange state.appComposerMark oldCursor of
+            Just (selStart, selEnd) -> do
+                let killed = Text.take (selEnd - selStart) (Text.drop selStart old)
+                    direction =
+                        if oldCursor >= selStart then KillForward else KillBackward
+                modifyUiWithKill
+                    direction
+                    killed
+                    (UiSetDraft
+                        (Text.take selStart old <> Text.drop selEnd old)
+                        selStart)
+            Nothing -> do
+                let (next, cursor) =
+                        deleteWordAfter state.appUi.uiDraft state.appUi.uiCursor
+                    killedLength = Text.length old - Text.length next
+                    killed = Text.take killedLength (Text.drop oldCursor old)
+                modifyUiWithKill KillForward killed (UiSetDraft next cursor)
 
     killLineEnd = do
         state <- get
         let old = state.appUi.uiDraft
             oldCursor = state.appUi.uiCursor
-            (next, cursor) =
-                deleteToLineEnd state.appUi.uiDraft state.appUi.uiCursor
-            killedLength = Text.length old - Text.length next
-            killed = Text.take killedLength (Text.drop oldCursor old)
-        modifyUiWithKill KillForward killed (UiSetDraft next cursor)
+        case composerSelectionRange state.appComposerMark oldCursor of
+            Just (selStart, selEnd) -> do
+                let killed = Text.take (selEnd - selStart) (Text.drop selStart old)
+                    direction =
+                        if oldCursor >= selStart then KillForward else KillBackward
+                modifyUiWithKill
+                    direction
+                    killed
+                    (UiSetDraft
+                        (Text.take selStart old <> Text.drop selEnd old)
+                        selStart)
+            Nothing -> do
+                let (next, cursor) =
+                        deleteToLineEnd state.appUi.uiDraft state.appUi.uiCursor
+                    killedLength = Text.length old - Text.length next
+                    killed = Text.take killedLength (Text.drop oldCursor old)
+                modifyUiWithKill KillForward killed (UiSetDraft next cursor)
 
     killLineStart = do
         state <- get
         let old = state.appUi.uiDraft
             oldCursor = state.appUi.uiCursor
-            (next, cursor) =
-                deleteToLineStart state.appUi.uiDraft state.appUi.uiCursor
-            killed =
-                Text.take (oldCursor - cursor) (Text.drop cursor old)
-        modifyUiWithKill KillBackward killed (UiSetDraft next cursor)
+        case composerSelectionRange state.appComposerMark oldCursor of
+            Just (selStart, selEnd) -> do
+                let killed = Text.take (selEnd - selStart) (Text.drop selStart old)
+                    direction =
+                        if oldCursor >= selStart then KillForward else KillBackward
+                modifyUiWithKill
+                    direction
+                    killed
+                    (UiSetDraft
+                        (Text.take selStart old <> Text.drop selEnd old)
+                        selStart)
+            Nothing -> do
+                let (next, cursor) =
+                        deleteToLineStart state.appUi.uiDraft state.appUi.uiCursor
+                    killed =
+                        Text.take (oldCursor - cursor) (Text.drop cursor old)
+                modifyUiWithKill KillBackward killed (UiSetDraft next cursor)
 
     undoEdit = do
         state <- get
@@ -810,6 +941,59 @@ handleComposerKey
             applyUiEvent
                 (UiSetDraft current.appUi.uiDraft cursor)
                 \state -> state { appSlashIndex = 0 }
+
+    clearSelection =
+        modify' \current -> current { appComposerMark = Nothing }
+
+    toggleMark = do
+        current <- get
+        let cursor = current.appUi.uiCursor
+        case current.appComposerMark of
+            Just mark
+                | mark == cursor -> clearSelection
+            _ -> modify' \s ->
+                s
+                    { appComposerMark = Just cursor
+                    , appSlashIndex = 0
+                    , appSlashDismissed = False
+                    }
+
+    selectAll = do
+        current <- get
+        let ui = current.appUi
+            end = Text.length ui.uiDraft
+        applyUiEvent
+            (UiSetDraft ui.uiDraft end)
+            \s ->
+                s
+                    { appComposerMark = Just 0
+                    , appSlashIndex = 0
+                    , appSlashDismissed = False
+                    }
+
+    extendSelection move = do
+        current <- get
+        let ui = current.appUi
+            cursor = clampGraphemeCursor ui.uiDraft (move ui.uiDraft ui.uiCursor)
+        modify' \s ->
+            s
+                { appUi = ui { uiCursor = cursor }
+                , appSlashIndex = 0
+                , appSlashDismissed = False
+                }
+
+    extendSelectionMaybe move = do
+        current <- get
+        let ui = current.appUi
+        case move ui.uiDraft ui.uiCursor of
+            Nothing -> pure ()
+            Just cursor ->
+                modify' \s ->
+                    s
+                        { appUi = ui { uiCursor = cursor }
+                        , appSlashIndex = 0
+                        , appSlashDismissed = False
+                        }
 
     modifyUi uiEvent =
         applyUiEvent uiEvent id

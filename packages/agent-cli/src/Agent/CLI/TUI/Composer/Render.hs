@@ -13,9 +13,10 @@ import Agent.CLI.Command
     ( SlashMenu(..)
     , SlashSuggestion(..)
     )
-import Agent.CLI.Input (truncateDisplayText, displayEditorText)
-import Agent.CLI.TUI.Composer.Edit (wrapDraftWindow)
-import Agent.CLI.TUI.Composer.Logic (currentSlashMenu)
+import Agent.CLI.Input (truncateDisplayText)
+import Agent.CLI.Input.Types (DisplayCell(..))
+import Agent.CLI.TUI.Composer.Edit (wrapDraftWindowCells)
+import Agent.CLI.TUI.Composer.Logic (composerSelectionRange, currentSlashMenu)
 import Agent.CLI.TUI.History (HistoryWindow, historyWindowHasBlocks)
 import Agent.CLI.TUI.Types
 import Agent.TUI.Model
@@ -126,12 +127,13 @@ drawComposer appState =
         let focused = state.uiFocus == FocusComposer
             attr = if focused then Theme.borderActiveAttr else Theme.borderAttr
             draftWidth = max 1 (context.availWidth - composerDraftChromeWidth)
-            draftLayout@(draftRows, _) =
-                wrapDraftWindow
+            (draftRows, draftCursor) =
+                wrapDraftWindowCells
                     maxComposerRows
                     draftWidth
                     state.uiDraft
                     state.uiCursor
+            selection = composerSelectionRange appState.appComposerMark state.uiCursor
             bodyHeight = min maxComposerRows (length draftRows)
             leading =
                 filter (not . Text.null)
@@ -168,7 +170,9 @@ drawComposer appState =
                                     focused
                                     bodyHeight
                                     state
-                                    draftLayout)
+                                    draftRows
+                                    draftCursor
+                                    selection)
                             ]
             composer =
                 withBorderStyle unicodeRounded $
@@ -256,9 +260,11 @@ renderDraft
     :: Bool
     -> Int
     -> UiState
-    -> ([Text], (Int, Int))
+    -> [[(DisplayCell, Int)]]
+    -> (Int, Int)
+    -> Maybe (Int, Int)
     -> Widget Name
-renderDraft focused height state (rows, (row, column)) =
+renderDraft focused height state rows (row, column) selection =
     padRight Max cursorContent
   where
     firstVisibleRow = max 0 (row - height + 1)
@@ -272,7 +278,7 @@ renderDraft focused height state (rows, (row, column)) =
                         then "Type guidance…"
                         else " ")
         | otherwise =
-            vBox (map renderRow visibleRows)
+            vBox (map (renderAnnotatedRow selection) visibleRows)
     cursorContent
         | focused =
             showCursor
@@ -281,11 +287,30 @@ renderDraft focused height state (rows, (row, column)) =
                 content
         | otherwise = content
 
-    -- Empty visual rows still need one cell so Brick preserves their height
-    -- and can place the insertion cursor on them.
-    renderRow row
-        | Text.null row = txt " "
-        | otherwise = terminalTxt (displayEditorText row)
+renderAnnotatedRow :: Maybe (Int, Int) -> [(DisplayCell, Int)] -> Widget Name
+renderAnnotatedRow selection cells
+    | null cells = txt " "
+    | otherwise = hBox (map renderSegment (groupBySelection cells))
+  where
+    isSelected (cell, start) =
+        case selection of
+            Nothing -> False
+            Just (selStart, selEnd) ->
+                start < selEnd
+                    && start + cell.displayCellSourceLength > selStart
+
+    groupBySelection [] = []
+    groupBySelection (c : cs) =
+        let selected = isSelected c
+            (same, rest) = span ((== selected) . isSelected) (c : cs)
+            text = Text.concat (map (\(cell, _) -> cell.displayCellText) same)
+        in (selected, text) : groupBySelection rest
+
+    renderSegment (_, text)
+        | Text.null text = emptyWidget
+    renderSegment (True, text) =
+        withAttr Theme.selectedAttr (terminalTxt text)
+    renderSegment (False, text) = terminalTxt text
 
 terminalTxt :: Text -> Widget n
 terminalTxt text =
