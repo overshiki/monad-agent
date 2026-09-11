@@ -109,6 +109,7 @@ import Agent.CLI.TUI.App
     , emitUiEvent
     , requestFullscreenChoiceWithBody
     , requestFullscreenSecret
+    , requestFullscreenText
     )
 import Agent.FileRetry (retryOnFileBusy)
 import qualified Agent.OpenAI.Auth as OpenAI
@@ -1006,6 +1007,11 @@ noticeFromResult = \case
     Left err -> LoginNotice False err
     Right message -> LoginNotice True message
 
+noticeFromCredentialResult :: Either Text CredentialConnection -> LoginNotice
+noticeFromCredentialResult = \case
+    Left err -> LoginNotice False err
+    Right CredentialConnection { ccMessage } -> LoginNotice True ccMessage
+
 refreshOneNotice :: LoginAccount -> LoginNotice
 refreshOneNotice account = case account.loginUsage of
     UsageUnavailable err -> LoginNotice False err
@@ -1488,7 +1494,7 @@ connectFullscreenAccount runtime = do
     case choice >>= (`accountAt` providers) of
         Nothing -> pure Nothing
         Just (provider, _) ->
-            fmap noticeFromResult
+            fmap noticeFromCredentialResult
                 <$> connectFullscreenProvider runtime provider
   where
     providers =
@@ -1518,7 +1524,7 @@ connectFullscreenAccount runtime = do
 connectFullscreenProvider
     :: FullscreenRuntime
     -> Provider
-    -> IO (Maybe (Either Text Text))
+    -> IO (Maybe (Either Text CredentialConnection))
 connectFullscreenProvider runtime = \case
     OpenAIProvider -> connectOpenAIFullscreen runtime
     XAIProvider -> connectXAIFullscreen runtime
@@ -1534,7 +1540,7 @@ connectFullscreenProvider runtime = \case
 
 connectOpenAIFullscreen
     :: FullscreenRuntime
-    -> IO (Maybe (Either Text Text))
+    -> IO (Maybe (Either Text CredentialConnection))
 connectOpenAIFullscreen runtime = do
     clientId <-
         openAIOAuthClientId <$> lookupNonEmpty "OPENAI_OAUTH_CLIENT_ID"
@@ -1634,7 +1640,7 @@ connectOpenAIFullscreen runtime = do
 
 connectXAIFullscreen
     :: FullscreenRuntime
-    -> IO (Maybe (Either Text Text))
+    -> IO (Maybe (Either Text CredentialConnection))
 connectXAIFullscreen runtime = do
     clientId <-
         xaiOAuthClientId <$> lookupNonEmpty "XAI_OAUTH_CLIENT_ID"
@@ -1777,7 +1783,7 @@ connectXAIFullscreen runtime = do
 
 connectOpenRouterFullscreen
     :: FullscreenRuntime
-    -> IO (Maybe (Either Text Text))
+    -> IO (Maybe (Either Text CredentialConnection))
 connectOpenRouterFullscreen runtime =
     requestFullscreenSecret
         runtime
@@ -1799,10 +1805,18 @@ connectOpenRouterFullscreen runtime =
                                 Just $
                                     Left ("OpenRouter rejected the key: " <> err)
                         Right usage -> do
+                            nickname <-
+                                requestFullscreenText
+                                    runtime
+                                    "Connect OpenRouter"
+                                    "Nickname for this key (optional):"
+                                    ""
                             let accountId =
                                     fromMaybe "openrouter" usage.keyLabel
                                 label =
-                                    fromMaybe "OpenRouter" usage.keyLabel
+                                    fromMaybe
+                                        (fromMaybe "OpenRouter" usage.keyLabel)
+                                        nickname
                             Just <$> storeConnectedCredentialResult
                                 OpenRouterProvider
                                 accountId
@@ -1815,7 +1829,7 @@ connectOpenRouterFullscreen runtime =
 
 connectDeepSeekFullscreen
     :: FullscreenRuntime
-    -> IO (Maybe (Either Text Text))
+    -> IO (Maybe (Either Text CredentialConnection))
 connectDeepSeekFullscreen runtime =
     requestFullscreenSecret
         runtime
@@ -1837,10 +1851,18 @@ connectDeepSeekFullscreen runtime =
                                 Just $
                                     Left ("DeepSeek rejected the key: " <> err)
                         Right usage -> do
+                            nickname <-
+                                requestFullscreenText
+                                    runtime
+                                    "Connect DeepSeek"
+                                    "Nickname for this key (optional):"
+                                    ""
                             let accountId =
                                     fromMaybe "deepseek" usage.keyLabel
                                 label =
-                                    fromMaybe "DeepSeek" usage.keyLabel
+                                    fromMaybe
+                                        (fromMaybe "DeepSeek" usage.keyLabel)
+                                        nickname
                             Just <$> storeConnectedCredentialResult
                                 DeepSeekProvider
                                 accountId
@@ -1853,7 +1875,7 @@ connectDeepSeekFullscreen runtime =
 
 connectKimiFullscreen
     :: FullscreenRuntime
-    -> IO (Maybe (Either Text Text))
+    -> IO (Maybe (Either Text CredentialConnection))
 connectKimiFullscreen runtime =
     requestFullscreenSecret
         runtime
@@ -1875,10 +1897,18 @@ connectKimiFullscreen runtime =
                                 Just $
                                     Left ("Kimi rejected the key: " <> err)
                         Right usage -> do
+                            nickname <-
+                                requestFullscreenText
+                                    runtime
+                                    "Connect Kimi (Moonshot)"
+                                    "Nickname for this key (optional):"
+                                    ""
                             let accountId =
                                     fromMaybe "kimi" usage.keyLabel
                                 label =
-                                    fromMaybe "Kimi" usage.keyLabel
+                                    fromMaybe
+                                        (fromMaybe "Kimi" usage.keyLabel)
+                                        nickname
                             Just <$> storeConnectedCredentialResult
                                 KimiProvider
                                 accountId
@@ -1891,7 +1921,7 @@ connectKimiFullscreen runtime =
 
 connectGeminiFullscreen
     :: FullscreenRuntime
-    -> IO (Maybe (Either Text Text))
+    -> IO (Maybe (Either Text CredentialConnection))
 connectGeminiFullscreen runtime = do
     oauthOptions <- GeminiAuth.oauthOptionsFromEnv
     codeAssistOptions <- GeminiAuth.codeAssistOptionsFromEnv
@@ -2028,11 +2058,6 @@ connectOpenAI color = do
                                     ManagedOpenAIAuthJson
                                     (Text.decodeUtf8
                                         (LBS.toStrict (Aeson.encode authJson)))
-                                    >>= \stored ->
-                                        pure $
-                                            if stored
-                                                then Just auth.accountId
-                                                else Nothing
 
 connectXAI :: Bool -> IO (Maybe Text)
 connectXAI color = do
@@ -2084,11 +2109,6 @@ connectXAI color = do
                             ManagedGrokAuthJson
                             (Text.decodeUtf8
                                 (LBS.toStrict (Aeson.encode authJson)))
-                            >>= \stored ->
-                                pure $
-                                    if stored
-                                        then Just accountId
-                                        else Nothing
 
 connectOpenRouter :: Bool -> IO (Maybe Text)
 connectOpenRouter color =
@@ -2101,10 +2121,14 @@ connectOpenRouter color =
                         ("OpenRouter rejected the key: " <> err)
                         >> pure Nothing
                 Right usage -> do
+                    nickname <- readOptionalNickname
+                        "Nickname for this OpenRouter key (optional): "
                     let accountId =
                             fromMaybe "openrouter" usage.keyLabel
                         label =
-                            fromMaybe "OpenRouter" usage.keyLabel
+                            fromMaybe
+                                (fromMaybe "OpenRouter" usage.keyLabel)
+                                nickname
                     storeConnectedCredential color
                         OpenRouterProvider
                         accountId
@@ -2112,11 +2136,6 @@ connectOpenRouter color =
                         ApiBilled
                         ManagedBearerToken
                         apiKey
-                        >>= \stored ->
-                            pure $
-                                if stored
-                                    then Just accountId
-                                    else Nothing
 
 connectDeepSeek :: Bool -> IO (Maybe Text)
 connectDeepSeek color =
@@ -2129,10 +2148,14 @@ connectDeepSeek color =
                         ("DeepSeek rejected the key: " <> err)
                         >> pure Nothing
                 Right usage -> do
+                    nickname <- readOptionalNickname
+                        "Nickname for this DeepSeek key (optional): "
                     let accountId =
                             fromMaybe "deepseek" usage.keyLabel
                         label =
-                            fromMaybe "DeepSeek" usage.keyLabel
+                            fromMaybe
+                                (fromMaybe "DeepSeek" usage.keyLabel)
+                                nickname
                     storeConnectedCredential color
                         DeepSeekProvider
                         accountId
@@ -2140,11 +2163,6 @@ connectDeepSeek color =
                         ApiBilled
                         ManagedBearerToken
                         apiKey
-                        >>= \stored ->
-                            pure $
-                                if stored
-                                    then Just accountId
-                                    else Nothing
 
 connectKimi :: Bool -> IO (Maybe Text)
 connectKimi color =
@@ -2157,10 +2175,14 @@ connectKimi color =
                         ("Kimi rejected the key: " <> err)
                         >> pure Nothing
                 Right usage -> do
+                    nickname <- readOptionalNickname
+                        "Nickname for this Kimi key (optional): "
                     let accountId =
                             fromMaybe "kimi" usage.keyLabel
                         label =
-                            fromMaybe "Kimi" usage.keyLabel
+                            fromMaybe
+                                (fromMaybe "Kimi" usage.keyLabel)
+                                nickname
                     storeConnectedCredential color
                         KimiProvider
                         accountId
@@ -2168,11 +2190,6 @@ connectKimi color =
                         ApiBilled
                         ManagedBearerToken
                         apiKey
-                        >>= \stored ->
-                            pure $
-                                if stored
-                                    then Just accountId
-                                    else Nothing
 
 connectGemini :: Bool -> IO (Maybe Text)
 connectGemini color = do
@@ -2201,7 +2218,6 @@ connectGemini color = do
                         SubscriptionBilled
                         ManagedGeminiAuthJson
                         (geminiAuthStateToJson auth)
-                        >>= \stored -> pure (if stored then Just auth.email else Nothing)
 
 presentGoogleLogin :: Bool -> Text -> IO ()
 presentGoogleLogin color url = do
@@ -2247,6 +2263,13 @@ launchBrowserCommand command url =
         Right _ -> pure True
         Left _ -> pure False
 
+-- | A credential that was just persisted, with the stable selection id that
+-- should be used to switch to it later.
+data CredentialConnection = CredentialConnection
+    { ccSelectionId :: !Text
+    , ccMessage :: !Text
+    }
+
 storeConnectedCredential
     :: Bool
     -> Provider
@@ -2255,7 +2278,7 @@ storeConnectedCredential
     -> BillingMode
     -> ManagedAuthKind
     -> Text
-    -> IO Bool
+    -> IO (Maybe Text)
 storeConnectedCredential color provider accountId label billing authKind payload = do
     result <-
         storeConnectedCredentialResult
@@ -2265,8 +2288,13 @@ storeConnectedCredential color provider accountId label billing authKind payload
             billing
             authKind
             payload
-    printLoginResult color result
-    pure (either (const False) (const True) result)
+    case result of
+        Left err -> do
+            printLoginMessage color False err
+            pure Nothing
+        Right CredentialConnection { ccSelectionId, ccMessage } -> do
+            printLoginMessage color True ccMessage
+            pure (Just ccSelectionId)
 
 storeConnectedCredentialResult
     :: Provider
@@ -2275,10 +2303,10 @@ storeConnectedCredentialResult
     -> BillingMode
     -> ManagedAuthKind
     -> Text
-    -> IO (Either Text Text)
+    -> IO (Either Text CredentialConnection)
 storeConnectedCredentialResult provider accountId label billing authKind payload = do
     credentialId <- newManagedCredentialId provider accountId
-    fmap (fmap (const "Credential connected.")) $
+    result <-
         upsertManagedCredential
             ManagedCredential
                 { managedId = credentialId
@@ -2293,6 +2321,25 @@ storeConnectedCredentialResult provider accountId label billing authKind payload
                 { secretManagedId = credentialId
                 , secretPayload = payload
                 }
+    pure $ case result of
+        Left err -> Left err
+        Right () ->
+            Right
+                CredentialConnection
+                    { ccSelectionId = managedAuthSelectionId credentialId
+                    , ccMessage = "Credential connected."
+                    }
+
+readOptionalNickname :: Text -> IO (Maybe Text)
+readOptionalNickname prompt = do
+    Text.hPutStr stderr prompt
+    hFlush stderr
+    value <- Text.getLine
+    pure (nonEmpty (Text.strip value))
+  where
+    nonEmpty text
+        | Text.null text = Nothing
+        | otherwise = Just text
 
 readSecretLine :: Text -> IO (Maybe Text)
 readSecretLine prompt = do

@@ -29,7 +29,9 @@ import Agent.Provider
     , providerSlug
     )
 import Control.Concurrent.Async (mapConcurrently)
-import Data.List (sortOn)
+import Data.List (mapAccumL, sortOn)
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Time.Clock (UTCTime, diffUTCTime, getCurrentTime)
@@ -44,6 +46,31 @@ data AccountPickerOption
         !Text
     | AccountPickerConnect !Provider
 
+-- | Append a numeric suffix to labels that appear more than once for the
+-- same provider, so the picker remains distinguishable when no nickname was
+-- supplied or the same nickname was reused.
+disambiguateAccountLabels :: [AccountPickerOption] -> [AccountPickerOption]
+disambiguateAccountLabels options =
+    let counts :: Map (Provider, Text) Int
+        counts =
+            Map.fromListWith (+)
+                [ ((provider, label), 1)
+                | AccountPickerAccount provider _ _ _ label _ <- options
+                ]
+        update seen opt = case opt of
+            AccountPickerConnect _ -> (seen, opt)
+            AccountPickerAccount provider billing selectionId accountId label usage ->
+                let key = (provider, label)
+                    index = Map.findWithDefault 0 key seen
+                    seen' = Map.insertWith (+) key 1 seen
+                    label' =
+                        case Map.lookup key counts of
+                            Just n | n > 1 ->
+                                label <> " (" <> Text.pack (show (index + 1)) <> ")"
+                            _ -> label
+                in (seen', AccountPickerAccount provider billing selectionId accountId label' usage)
+    in snd (mapAccumL update (Map.empty :: Map (Provider, Text) Int) options)
+
 loadAllAccountPickerOptions :: Provider -> IO [AccountPickerOption]
 loadAllAccountPickerOptions currentProvider = do
     discovered <- discoverSelectableLoginAccounts
@@ -51,16 +78,17 @@ loadAllAccountPickerOptions currentProvider = do
     claudeAuth <- loadClaudeCodeAuth
     now <- getCurrentTime
     let providerAccounts =
-            [ AccountPickerAccount
-                account.loginProvider
-                (accountBillingMode account.loginProvider account.loginBilling)
-                (loginAccountSelectionId account)
-                account.loginAccountId
-                account.loginLabel
-                (formatLoginUsageSummary account.loginProvider now account)
-            | account <- deduplicateAccounts refreshed
-            , account.loginProvider /= ClaudeCodeProvider
-            ]
+            disambiguateAccountLabels
+                [ AccountPickerAccount
+                    account.loginProvider
+                    (accountBillingMode account.loginProvider account.loginBilling)
+                    (loginAccountSelectionId account)
+                    account.loginAccountId
+                    account.loginLabel
+                    (formatLoginUsageSummary account.loginProvider now account)
+                | account <- deduplicateAccounts refreshed
+                , account.loginProvider /= ClaudeCodeProvider
+                ]
         claudeAccounts = case claudeAuth of
             Left _ -> []
             Right auth ->
