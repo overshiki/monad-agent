@@ -12,7 +12,7 @@ import Agent.Responses.Request
     )
 import Agent.Responses.Types
 import Agent.DeepSeek.Options (ClientOptions(..))
-import Data.Maybe (fromMaybe, isNothing, mapMaybe)
+import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as Text
 
@@ -41,11 +41,12 @@ buildRequest options request =
 -- back on tool follow-ups ("The reasoning_text in the thinking mode must be
 -- passed back to the API"). The stream assembly stores that text either as the
 -- reasoning item's 'summary' or as raw @reasoning_text@ 'content'. When a
--- replay is missing the content (including an empty content list, which
+-- replay is missing plaintext content (including an empty content list, which
 -- DeepSeek sends for turns with no reasoning and still requires to be echoed),
 -- re-emit it from the summary so the wire encoder carries the reasoning text.
--- An empty summary becomes an empty @reasoning_text@ part so the follow-up
--- still reports the reasoning it consumed.
+-- A reasoning item with no summary text becomes a placeholder @reasoning_text@
+-- part (DeepSeek rejects empty text as "not passed back"), and any OpenAI-style
+-- encrypted payload is dropped because DeepSeek only accepts plaintext.
 echoReasoningContent :: ResponseCreateParams -> ResponseCreateParams
 echoReasoningContent ResponseCreateParams{..} =
     ResponseCreateParams { input = echoInput <$> input, .. }
@@ -54,25 +55,27 @@ echoReasoningContent ResponseCreateParams{..} =
         ResponseInputItems items -> ResponseInputItems (map echoItem items)
         other -> other
     echoItem (ReasoningItemValue reasoning)
-        | needsContentEcho reasoning =
-            ReasoningItemValue (setReasoningContent
-                (Just (echoedContent reasoning.summary))
-                reasoning)
+        | hasNoContent reasoning.content =
+            ReasoningItemValue
+                (setReasoningContent
+                    (Just (echoedContent reasoning.summary))
+                    reasoning { encryptedContent = Nothing })
     echoItem item = item
     echoedContent summary =
         case mapMaybe summaryText summary of
-            [] -> [ReasoningTextPart ""]
+            [] -> [ReasoningTextPart unavailableReasoningPlaceholder]
             parts -> parts
     summaryText (ReasoningSummaryPart _ text) =
         ReasoningTextPart <$> text
 
--- | Only synthesize @reasoning_text@ content when the item has no content yet
--- and no encrypted reasoning payload. If the provider returned encrypted
--- reasoning, pass it back unchanged; inventing an empty @reasoning_text@ part
--- on top of it can make DeepSeek reject the replay.
-needsContentEcho :: ReasoningItem -> Bool
-needsContentEcho reasoning =
-    hasNoContent reasoning.content && isNothing reasoning.encryptedContent
+-- | DeepSeek's thinking-mode contract accepts only plaintext @reasoning_text@
+-- content — not OpenAI-style @encrypted_content@ blobs, which it rejects even
+-- as a leftover. A reasoning item replayed without plaintext content therefore
+-- needs content echoed from its summary (or a placeholder when no summary text
+-- exists) and its encrypted payload dropped so the follow-up carries echoable
+-- text. (Codex workaround for the same 400: inject a placeholder text part.)
+unavailableReasoningPlaceholder :: Text
+unavailableReasoningPlaceholder = "(thinking unavailable)"
 
 -- | Nothing or an empty list both mean "no reasoning_text carried yet".
 hasNoContent :: Maybe [ResponseContentPart] -> Bool

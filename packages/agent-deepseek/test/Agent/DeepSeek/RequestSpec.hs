@@ -129,13 +129,13 @@ spec = do
             content <- reasoningContentOf object
             content `shouldBe` [reasoningTextPart "Checked repo"]
 
-        it "emits an empty reasoning_text marker when both are empty" do
+        it "emits a placeholder reasoning_text marker when both are empty" do
             let request = withInput
                     [reasoningItem (Just []) []]
                     sampleRequest
             object <- expectObject (requestValue defaultClientOptions request)
             content <- reasoningContentOf object
-            content `shouldBe` [reasoningTextPart ""]
+            content `shouldBe` [reasoningTextPart "(thinking unavailable)"]
 
         it "leaves existing reasoning_text content untouched" do
             let request = withInput
@@ -145,7 +145,7 @@ spec = do
             content <- reasoningContentOf object
             content `shouldBe` [reasoningTextPart "raw"]
 
-        it "does not synthesize empty reasoning_text over an encrypted payload" do
+        it "synthesizes reasoning_text over an encrypted payload and drops it" do
             let request = withInput
                     [ reasoningItemWithEncrypted
                         (Just [])
@@ -154,13 +154,13 @@ spec = do
                     ]
                     sampleRequest
             object <- expectObject (requestValue defaultClientOptions request)
-            -- The item is present, but content should stay empty because the
-            -- encrypted reasoning payload is already passed back unchanged.
+            -- DeepSeek rejects OpenAI-style encrypted reasoning blobs, so the
+            -- replay must carry echoable plaintext and drop the payload.
             input <- expectArray (KeyMap.lookup "input" object)
             firstItem <- case input of (item : _) -> expectObject item; [] -> expectationFailure "input is empty" >> fail "unreachable"
             content <- expectArray (KeyMap.lookup "content" firstItem)
-            content `shouldBe` []
-            KeyMap.lookup "encrypted_content" firstItem `shouldBe` Just (Aeson.String "encrypted-payload")
+            content `shouldBe` [reasoningTextPart "(thinking unavailable)"]
+            KeyMap.lookup "encrypted_content" firstItem `shouldBe` Nothing
 
         it "preserves non-empty reasoning_text content even with encrypted_content" do
             let request = withInput
