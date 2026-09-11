@@ -530,12 +530,18 @@ preserveBufferedProgress progress = \case
                     reasoning)
     ReasoningItemValue reasoning
         | Just chunks <- progress.reasoningContentChunks
-        , reasoning.content == Nothing ->
+        , hasNoReasoningContent reasoning.content ->
             ReasoningItemValue
                 (setReasoningContent
                     [ReasoningTextPart (textBufferToText chunks)]
                     reasoning)
     item -> item
+
+-- | A reasoning item seeded with an empty @content@ list (some providers emit
+-- @\"content\": []@ for turns with no reasoning) still needs its buffered raw
+-- reasoning text materialized; treat Nothing and the empty list alike.
+hasNoReasoningContent :: Maybe [ResponseContentPart] -> Bool
+hasNoReasoningContent = maybe True null
 
 materializedReasoningSummary :: ItemProgress -> [ReasoningSummaryPart]
 materializedReasoningSummary progress =

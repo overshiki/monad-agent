@@ -731,6 +731,8 @@ decoderForType wireType =
         EventCustomToolInputDone -> eventDecoder wireType
         EventReasoningSummaryPartAdded -> eventDecoder wireType
         EventReasoningSummaryTextDone -> eventDecoder wireType
+        EventReasoningTextDelta -> eventDecoder wireType
+        EventReasoningTextDone -> eventDecoder wireType
         EventError -> eventDecoder wireType
         EventCodexRateLimits -> Hermes.object $
             ResponseCodexRateLimitsEvent

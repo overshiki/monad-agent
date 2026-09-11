@@ -211,6 +211,27 @@ backendSpec = describe "tokenProviderStatelessResponsesBackend" do
         readIORef events `shouldReturn`
             [ReasoningDelta "checking the implementation"]
 
+    it "forwards typed reasoning_text deltas to the UI loop" do
+        events <- newIORef []
+        let send _params onStreamEvent = do
+                onStreamEvent ResponseReasoningTextDeltaEvent
+                    { delta = Just "checking the implementation"
+                    , streamItemId = Nothing
+                    , streamOutputIndex = Nothing
+                    , sequenceNumber = Just 1
+                    }
+                pure (Left (ConnectionError "stop after reasoning"))
+            backend =
+                statelessResponsesBackend send
+                    (pure defaultResponseCreateParams)
+
+        result <- backend.submitTurn emptyBackendSnapshot Nothing [UserMessage "hello"]
+            (\event -> modifyIORef' events (<> [event]))
+
+        result `shouldBe` Left (ConnectionError "stop after reasoning")
+        readIORef events `shouldReturn`
+            [ReasoningDelta "checking the implementation"]
+
     it "can hide raw reasoning while retaining reasoning summaries" do
         events <- newIORef []
         let send _params onStreamEvent = do

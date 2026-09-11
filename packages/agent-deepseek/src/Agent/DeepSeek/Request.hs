@@ -38,9 +38,13 @@ buildRequest options request =
 
 -- | DeepSeek's thinking mode requires the assistant's reasoning to be passed
 -- back on tool follow-ups ("The reasoning_text in the thinking mode must be
--- passed back to the API"). The stream assembly stores that text as the
--- reasoning item's 'summary'; re-emit it as the item's 'content' so the wire
--- encoder carries the full text rather than only the summary shape.
+-- passed back to the API"). The stream assembly stores that text either as the
+-- reasoning item's 'summary' or as raw @reasoning_text@ 'content'. When a
+-- replay is missing the content (including an empty content list, which
+-- DeepSeek sends for turns with no reasoning and still requires to be echoed),
+-- re-emit it from the summary so the wire encoder carries the reasoning text.
+-- An empty summary becomes an empty @reasoning_text@ part so the follow-up
+-- still reports the reasoning it consumed.
 echoReasoningContent :: ResponseCreateParams -> ResponseCreateParams
 echoReasoningContent ResponseCreateParams{..} =
     ResponseCreateParams { input = echoInput <$> input, .. }
@@ -49,14 +53,21 @@ echoReasoningContent ResponseCreateParams{..} =
         ResponseInputItems items -> ResponseInputItems (map echoItem items)
         other -> other
     echoItem (ReasoningItemValue reasoning)
-        | reasoning.content == Nothing
-        , not (null reasoning.summary) =
+        | hasNoContent reasoning.content =
             ReasoningItemValue reasoning
-                { content = Just (mapMaybe summaryText reasoning.summary)
+                { content = Just (echoedContent reasoning.summary)
                 }
     echoItem item = item
+    echoedContent summary =
+        case mapMaybe summaryText summary of
+            [] -> [ReasoningTextPart ""]
+            parts -> parts
     summaryText (ReasoningSummaryPart _ text) =
         ReasoningTextPart <$> text
+
+-- | Nothing or an empty list both mean "no reasoning_text carried yet".
+hasNoContent :: Maybe [ResponseContentPart] -> Bool
+hasNoContent = maybe True null
 
 deepSeekTool :: ResponseTool -> Maybe ResponseTool
 deepSeekTool tool = case tool of

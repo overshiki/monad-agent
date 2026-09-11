@@ -761,6 +761,11 @@ streamEventToLoopEventWithRawReasoning showRawReasoning = \case
         { summaryIndex = Just index }
         | index > 0 ->
             Just (ReasoningDelta "\n\n")
+    ResponseReasoningTextDeltaEvent { delta }
+        | showRawReasoning ->
+            case delta of
+                Just text | not (Text.null text) -> Just (ReasoningDelta text)
+                _ -> Nothing
     ResponseCodexRateLimitsEvent { rateLimits = limits } ->
             codexRateLimitsWarning limits
     OtherResponseStreamEvent

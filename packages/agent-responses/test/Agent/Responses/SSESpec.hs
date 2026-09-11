@@ -84,8 +84,8 @@ spec = describe "Responses SSE decoder" do
                 "{\"type\":\"response.output_text.delta\",\"x-codex-turn-state\":\"direct\"}"
             , sseBlock "response.output_text.done"
                 "{\"type\":\"response.output_text.done\",\"turn_state\":\"alias\"}"
-            , sseBlock "response.reasoning_text.done"
-                "{\"type\":\"response.reasoning_text.done\",\"headers\":{\"x-codex-turn-state\":\"nested\"}}"
+            , sseBlock "response.refusal.done"
+                "{\"type\":\"response.refusal.done\",\"headers\":{\"x-codex-turn-state\":\"nested\"}}"
             ]
         let states =
                 [ turnState
@@ -98,6 +98,29 @@ spec = describe "Responses SSE decoder" do
                     `shouldSatisfy`
                         Text.isInfixOf "\"x-codex-turn-state\":\"direct\""
             [] -> expectationFailure "expected turn-state events"
+
+    it "decodes reasoning_text delta and done into typed events" do
+        events <- expectRight $ parseSseEvents $ Text.intercalate ""
+            [ sseBlock "response.reasoning_text.delta"
+                "{\"type\":\"response.reasoning_text.delta\",\"item_id\":\"rs-1\",\"output_index\":0,\"delta\":\"Let me\"}"
+            , sseBlock "response.reasoning_text.done"
+                "{\"type\":\"response.reasoning_text.done\",\"item_id\":\"rs-1\",\"output_index\":0,\"text\":\"Let me think.\"}"
+            ]
+        case events of
+            [ ResponseReasoningTextDeltaEvent
+                    { delta = Just d
+                    , streamItemId = Just "rs-1"
+                    }
+                , ResponseReasoningTextDoneEvent
+                    { text = Just t
+                    , streamItemId = Just "rs-1"
+                    }
+                ] -> do
+                    d `shouldBe` "Let me"
+                    t `shouldBe` "Let me think."
+            other ->
+                expectationFailure
+                    ("expected typed reasoning_text events, got " <> show other)
 
     it "round-trips typed Codex rate limits through Aeson encoding" do
         let payload =

@@ -91,6 +91,58 @@ spec = do
                 [ "effort" .= ("high" :: Text)
                 ])
 
+    describe "echoReasoningContent" do
+        let reasoningItem content summary =
+                ReasoningItemValue ReasoningItem
+                    { itemId = Just "rs-1"
+                    , summary = summary
+                    , content = content
+                    , encryptedContent = Nothing
+                    , status = Just ItemCompleted
+                    }
+            summaryPart text =
+                ReasoningSummaryPart
+                    { partType = "summary_text"
+                    , text = Just text
+                    }
+            reasoningTextPart :: Text -> Aeson.Value
+            reasoningTextPart text = Aeson.object
+                [ "type" .= ("reasoning_text" :: Text)
+                , "text" .= text
+                ]
+
+        it "re-emits summary text as reasoning_text when content is absent" do
+            let request = withInput
+                    [reasoningItem Nothing [summaryPart "Checked repo"]]
+                    sampleRequest
+            object <- expectObject (requestValue defaultClientOptions request)
+            content <- reasoningContentOf object
+            content `shouldBe` [reasoningTextPart "Checked repo"]
+
+        it "re-emits summary text when content is an empty list" do
+            let request = withInput
+                    [reasoningItem (Just []) [summaryPart "Checked repo"]]
+                    sampleRequest
+            object <- expectObject (requestValue defaultClientOptions request)
+            content <- reasoningContentOf object
+            content `shouldBe` [reasoningTextPart "Checked repo"]
+
+        it "emits an empty reasoning_text marker when both are empty" do
+            let request = withInput
+                    [reasoningItem (Just []) []]
+                    sampleRequest
+            object <- expectObject (requestValue defaultClientOptions request)
+            content <- reasoningContentOf object
+            content `shouldBe` [reasoningTextPart ""]
+
+        it "leaves existing reasoning_text content untouched" do
+            let request = withInput
+                    [reasoningItem (Just [ReasoningTextPart "raw"]) [summaryPart "Checked repo"]]
+                    sampleRequest
+            object <- expectObject (requestValue defaultClientOptions request)
+            content <- reasoningContentOf object
+            content `shouldBe` [reasoningTextPart "raw"]
+
     describe "SSE assembly" do
         it "decodes typed event constructors and builds the merged final response" do
             let sse = Text.intercalate ""
@@ -173,6 +225,21 @@ withModel nextModel ResponseCreateParams { model = _, .. } =
 withTools :: Maybe [ResponseTool] -> ResponseCreateParams -> ResponseCreateParams
 withTools nextTools ResponseCreateParams { tools = _, .. } =
     ResponseCreateParams { tools = nextTools, .. }
+
+withInput :: [ResponseItem] -> ResponseCreateParams -> ResponseCreateParams
+withInput items ResponseCreateParams { input = _, .. } =
+    ResponseCreateParams { input = Just (ResponseInputItems items), .. }
+
+-- | Pull the @content@ array out of the first (reasoning) input item.
+reasoningContentOf :: Aeson.Object -> IO [Aeson.Value]
+reasoningContentOf object = do
+    input <- expectArray (KeyMap.lookup "input" object)
+    firstItem <- case input of
+        (item : _) -> expectObject item
+        [] -> expectationFailure "input is empty" >> fail "unreachable"
+    case KeyMap.lookup "content" firstItem of
+        Just value -> expectArray (Just value)
+        Nothing -> pure []
 
 expectObject :: Aeson.Value -> IO Aeson.Object
 expectObject = \case

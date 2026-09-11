@@ -440,6 +440,25 @@ spec = describe "buildStreamResponse" do
             , ReasoningSummaryPart { text = Just partText } <- summary
             ] `shouldBe` ["Checked the repository."]
 
+    it "materializes buffered reasoning_text content seeded as an empty list" do
+        events <- expectRight $ parseSseEvents $ Text.intercalate ""
+            [ sseBlock "response.created"
+                "{\"type\":\"response.created\",\"response\":{\"id\":\"resp-reasoning-content\"}}"
+            , sseBlock "response.output_item.added"
+                "{\"type\":\"response.output_item.added\",\"output_index\":0,\"item\":{\"type\":\"reasoning\",\"id\":\"rs-1\",\"content\":[]}}"
+            , sseBlock "response.reasoning_text.delta"
+                "{\"type\":\"response.reasoning_text.delta\",\"item_id\":\"rs-1\",\"output_index\":0,\"delta\":\"Let me think.\"}"
+            , sseBlock "response.output_item.done"
+                "{\"type\":\"response.output_item.done\",\"output_index\":0,\"item\":{\"type\":\"reasoning\",\"id\":\"rs-1\",\"content\":[]}}"
+            , sseBlock "response.completed"
+                "{\"type\":\"response.completed\",\"response\":{\"id\":\"resp-reasoning-content\",\"output\":[]}}"
+            ]
+        response <- expectRight
+            (buildStreamResponseWithModel config (Just "request-model") events)
+        [content
+            | ReasoningItemValue ReasoningItem { content } <- response.output
+            ] `shouldBe` [Just [ReasoningTextPart "Let me think."]]
+
     it "uses provider classifiers when no terminal response is present" do
         streamEvents <- expectRight $ parseSseEvents $ sseBlock "error"
             "{\"type\":\"error\",\"error\":{\"message\":\"stream broke\"}}"
