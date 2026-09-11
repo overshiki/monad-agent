@@ -34,11 +34,12 @@ no schema or code changes are implied by this file.
   command moves it and rebuilds the live conversation from the focused branch
   (`loadFocusedTranscript` applies the same effect-aware fold as resume), so
   the next turn actually uses the truncated context. `/merge <branch>` performs
-  the git merge and appends a marker turn whose assistant text renders the
-  fork's conversation compactly (`renderMergeSummary`). It does not yet produce
-  an LLM-generated summary or a full tree-join of the fork's items. `/quest`
-  (creating a branch) is not implemented, and the assembler's budget is not
-  yet applied to the focused transcript.
+  the git merge and appends a marker turn whose assistant text is an
+  LLM-generated summary of the fork's conversation (falling back to a
+  deterministic `renderMergeSummary` when summarization fails). It does not yet
+  tree-join the fork's raw items into the main transcript. `/quest` (creating a
+  branch) is not implemented, and the assembler's budget is not yet applied to
+  the focused transcript.
 - **P3–P4 pending**: no relevance, hierarchical compaction, or tree UX yet.
 
 ## Goals and non-goals

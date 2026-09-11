@@ -102,7 +102,7 @@ import Agent.CLI.Session
                   turnItems, turnProviderTelemetry) )
 import Agent.CLI.Session.Attachments ()
 import Agent.CLI.Session.Choices ()
-import Agent.CLI.Session.History (replaceLiveConversation)
+import Agent.CLI.Session.History (foldSessionItems, replaceLiveConversation)
 import Agent.CLI.Session.Interaction ()
 import Agent.CLI.Session.Lifecycle ()
 import Agent.CLI.Session.Runtime.Types ()
@@ -230,6 +230,7 @@ handleSessionAction
             , sessionPersist = persist
             , sessionReset = sessionReset
             , sessionConversation = conversationRef
+            , sessionSummarizeTranscript = summarizeTranscript
             , sessionParams = paramsRef
             , sessionProvider = provider
             , sessionConnection = connectionId
@@ -1120,9 +1121,17 @@ handleSessionAction
                         databasePool
                         (sessionsRoot env.sessionHome)
                         forkMeta.metaId
-                pure $ case loaded of
-                    Right (_, turns) -> renderMergeSummary branch turns
-                    Left _ -> "Merged " <> branch <> "."
+                case loaded of
+                    Left _ -> pure ("Merged " <> branch <> ".")
+                    Right (_, turns) -> do
+                        summary <-
+                            summarizeTranscript (foldSessionItems turns)
+                        pure $
+                            either
+                                (const (renderMergeSummary branch turns))
+                                id
+                                summary
+            [] -> pure ("Merged " <> branch <> ".")
             [] -> pure ("Merged " <> branch <> ".")
 
     chooseForkWorktree color = \case

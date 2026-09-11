@@ -27,7 +27,7 @@ import Agent.GrokBuild.Dialect.Runtime (GrokRuntimeControl)
 import Agent.Loop (ImageAttachment, LoopConfig, TokenUsage)
 import Agent.MCP (McpFleet, McpToolRegistration)
 import qualified Agent.OpenAI.Auth as OpenAI
-import Agent.Responses.Types (ResponseCreateParams)
+import Agent.Responses.Types (ResponseCreateParams, ResponseItem)
 import Agent.OpenAI.Models.Types (ModelInfo)
 import System.OsPath (OsPath)
 import Agent.Provider (Credential, Provider, TokenProvider)
@@ -47,6 +47,7 @@ data SessionEnv = SessionEnv
     , sessionBtwBackend :: !BtwBackendFactory
     , sessionQueueRecap :: !(RecapRequest -> IO ())
     , sessionCompact :: !(Maybe Text -> IO (Either Text CompactOutcome))
+    , sessionSummarizeTranscript :: !([ResponseItem] -> IO (Either Text Text))
     , sessionRender :: !RenderConfig
     , sessionProvider :: !Provider
     , sessionConnection :: !Text

@@ -13,6 +13,7 @@ import Agent.CLI.Compaction
     ( AutomaticCompactionBoundary(..)
     , CompactOutcome(..)
     , CompactionInstall(CompactionInstalled)
+    , runBackendCompactHistoryWithContextWindow
     )
 import Agent.Responses.LoopBackend (turnInputsToItems)
 import Agent.CLI.Session.Runner.Types
@@ -82,7 +83,7 @@ import Control.Exception.Safe (catchAny, uninterruptibleMask_)
 import Control.Monad (forM_, unless, void, when)
 import Data.IORef
 import qualified Data.Map.Strict as Map
-import Data.Maybe (isJust, isNothing)
+import Data.Maybe (fromMaybe, isJust, isNothing)
 import qualified Data.Text as Text
 import qualified Data.Set as Set
 import Data.Time.Clock (getCurrentTime, utctDay)
@@ -754,12 +755,30 @@ runSession callbacks SessionRequest{..} SessionBackend{..} = do
                 Left _ -> pure ()
                 Right _ -> reloadGeneratedContextSafely
             pure result
+        -- Summarize an arbitrary transcript (not the live conversation) via
+        -- the same backend summarization used by /compact. Usage is not
+        -- recorded: the merge summary is advisory, not part of a turn.
+        summarizeTranscript items = do
+            params <- readIORef paramsRef
+            contextWindow <- fromMaybe defaultSummarizeWindow <$> currentContextWindow
+            result <-
+                runBackendCompactHistoryWithContextWindow
+                    contextWindow
+                    btwBackend
+                    (const (pure ()))
+                    params
+                    items
+                    Nothing
+            pure case result of
+                Left err -> Left (formatApiError err)
+                Right outcome -> Right outcome.compactSummary
         env = SessionEnv
             { sessionLoop = config
             , sessionModelInfo = modelInfo
             , sessionBtwBackend = btwBackend
             , sessionQueueRecap = writeChan recapRequests
             , sessionCompact = compactRunnerWithContext
+            , sessionSummarizeTranscript = summarizeTranscript
             , sessionRender = render
             , sessionProvider = provider
             , sessionConnection = connectionId
@@ -957,3 +976,8 @@ runSession callbacks SessionRequest{..} SessionBackend{..} = do
     _ <- waitForSessionTitleResults 5000000 titleManager
     applyPendingSessionTitles env
     pure result
+
+-- | Fallback context window for summarization when the transport model has no
+-- catalog context_window. A permissive bound; the summarizer trims to fit.
+defaultSummarizeWindow :: Int
+defaultSummarizeWindow = 200_000
