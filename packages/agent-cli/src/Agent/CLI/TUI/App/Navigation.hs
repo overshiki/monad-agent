@@ -193,6 +193,18 @@ handleNormalKey event = do
                         scrollConversationBy (-mouseScrollLines)
                     V.EvMouseDown _ _ V.BScrollDown _ ->
                         scrollConversationBy mouseScrollLines
+                    V.EvKey (V.KChar 'p') modifiers
+                        | V.MCtrl `elem` modifiers ->
+                            scrollConversationBy (-mouseScrollLines)
+                    V.EvKey (V.KChar 'n') modifiers
+                        | V.MCtrl `elem` modifiers ->
+                            scrollConversationBy mouseScrollLines
+                    V.EvKey V.KUp modifiers
+                        | V.MCtrl `elem` modifiers ->
+                            scrollConversationBy (-mouseScrollLines)
+                    V.EvKey V.KDown modifiers
+                        | V.MCtrl `elem` modifiers ->
+                            scrollConversationBy mouseScrollLines
                     _ ->
                         case state.appUi.uiFocus of
                             FocusScrollback -> handleScrollbackKey event

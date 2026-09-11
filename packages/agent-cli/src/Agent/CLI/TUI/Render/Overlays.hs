@@ -279,7 +279,7 @@ drawFooter state =
                         | not state.appUi.uiAwaitingInput ->
                             "Enter steer  │  Ctrl+R dictate  │  Ctrl+Enter/Ctrl+O send now  │  Esc/Ctrl+C cancel  │  Tab scrollback  │  ⌘K meta"
                         | otherwise ->
-                            "Enter send  │  Ctrl+R dictate  │  Shift+Enter newline  │  PgUp/PgDn scroll  │  Tab scrollback  │  ⌘K meta"
+                            "Enter send  │  Ctrl+R dictate  │  Shift+Enter newline  │  Ctrl+↑/↓ scroll  │  Tab scrollback  │  ⌘K meta"
 
 -- | Footer prefix shown while mouse capture is released. Native selection
 -- works again, but wheel scrolling and clickable controls are dead, so the
