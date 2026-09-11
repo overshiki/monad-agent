@@ -92,6 +92,7 @@ library
                     , Agent.CLI.Runtime.Repl.Commands
                     , Agent.CLI.Runtime.Repl.Selection
                     , Agent.CLI.Runtime.Repl.Session
+                    , Agent.CLI.Runtime.Repl.SubagentsConfig
                     , Agent.CLI.Runtime.Repl.Workflow
                     , Agent.CLI.Runtime.Types
                     , Agent.CLI.Render.MarkdownStream
@@ -515,6 +516,7 @@ test-suite agent-cli-test
                     , Agent.CLI.SessionStateSpec
                     , Agent.CLI.SessionTitleSpec
                     , Agent.CLI.SkillsSpec
+                    , Agent.CLI.SubagentCatalogConfigSpec
                     , Agent.CLI.SubagentStoreSpec
                     , Agent.CLI.ToolsSpec
                     , Agent.CLI.TUIAppSpec

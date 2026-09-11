@@ -32,6 +32,7 @@ import Agent.CLI.Command
                  ReplDesktop,
                  ReplShowTerminal, ReplShowEffort, ReplSetEffort, ReplShowModel,
                  ReplSetModel, ReplModelTest, ReplToggleFast, ReplEnableCodeMode,
+                 ReplSubagentsConfig,
                  ReplToggleAlwaysApprove, ReplMouseCapture, ReplCompact, ReplPlan,
                  ReplViewPlan, ReplQueue, ReplTranscript, ReplEditPrompt,
                  ReplContext, ReplHistory, ReplFind,
@@ -162,6 +163,7 @@ import Agent.CLI.Runtime.Repl.Attachments
 import Agent.CLI.Runtime.Repl.Selection
     ( handleSelectionAction, handleSelectionInput, selectRequestedAccount )
 import Agent.CLI.Runtime.Repl.Session ( handleSessionAction )
+import Agent.CLI.Runtime.Repl.SubagentsConfig ( handleSubagentsConfig )
 import Agent.CLI.Runtime.Repl.Workflow ( handleWorkflowAction )
 import Agent.CLI.Runtime.Types
     ( RunResult(RunEnableCodeMode, RunRestart, RunUpdateAndRestart,
@@ -855,6 +857,7 @@ handleReplLine
                     action@ReplToggleFast -> handleSelectionAction env continue action
                     action@ReplShowModel -> handleSelectionAction env continue action
                     action@ReplSetModel{} -> handleSelectionAction env continue action
+                    ReplSubagentsConfig -> handleSubagentsConfig env continue
                     ReplEnableCodeMode ->
                         requestCodeModeRestart fullscreen persist
                     ReplToggleAlwaysApprove

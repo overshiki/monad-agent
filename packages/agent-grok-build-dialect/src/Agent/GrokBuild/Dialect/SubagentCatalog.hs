@@ -23,8 +23,11 @@ module Agent.GrokBuild.Dialect.SubagentCatalog
 
 import Data.Aeson
     ( FromJSON(..)
+    , ToJSON(..)
     , (.:)
     , (.:?)
+    , (.=)
+    , object
     , withObject
     )
 import Data.Foldable (traverse_)
@@ -288,6 +291,28 @@ duplicatedIds entries =
         [ (entryIdOf entry, 1 :: Int)
         | entry <- entries
         ]
+
+-- | Encode an entry back to the @subagents.json@ shape. Optional fields are
+-- omitted, matching the decoder's @.:?@ expectations. This is the inverse of
+-- 'parseJSON' so a catalog can be persisted (e.g. by @/subagents-config@).
+instance ToJSON CatalogEntry where
+    toJSON (CatalogEntry eid description group rank model systemPrompt useWhen kind tools) =
+        object
+            [ "id" .= eid
+            , "description" .= description
+            , "group" .= group
+            , "rank" .= rank
+            , "model" .= model
+            , "system_prompt" .= systemPrompt
+            , "use_when" .= useWhen
+            , "kind" .= kind
+            , "tools" .= tools
+            ]
+
+-- | Encode a whole catalog as the @{ "subagents": [...] }@ wrapper.
+instance ToJSON SubagentCatalog where
+    toJSON (SubagentCatalog entries) =
+        object ["subagents" .= entries]
 
 -- | Per-id overlay: entries from the right catalog replace left entries with
 -- the same id wholesale; ids only present on the right are appended in the

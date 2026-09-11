@@ -485,6 +485,7 @@ spec = do
                     , "permissions"
                     , "model"
                     , "model-test"
+                    , "subagents-config"
                     , "effort"
                     , "fast"
                     , "plan"

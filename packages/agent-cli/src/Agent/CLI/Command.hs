@@ -272,6 +272,10 @@ parseSlash catalog raw line = case Text.words line of
                     else ReplCommandError "usage: /fast"
             "model" -> parseModelCommand args
             "model-test" -> ReplModelTest args
+            "subagents-config" ->
+                if null args
+                    then ReplSubagentsConfig
+                    else ReplCommandError "usage: /subagents-config"
             "plan" ->
                 let description =
                         Text.strip (Text.drop (Text.length command) line)

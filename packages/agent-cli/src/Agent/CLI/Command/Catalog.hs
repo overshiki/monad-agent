@@ -21,6 +21,7 @@ slashCommands =
     , cmd "permissions" [] "/permissions" "Choose the tool approval policy" False
     , cmd "model" ["m"] "/model [NAME]" "Open the model picker, or set a model" True
     , cmd "model-test" ["mt"] "/model-test [FILTERS...]" "Probe configured models on this connection and report which respond now" True
+    , cmd "subagents-config" [] "/subagents-config" "Tune each subagent type's default model" False
     , cmd "effort" [] "/effort [none|low|medium|high|xhigh|max]" "Show or set reasoning effort" True
     , codexCmd "fast" [] "/fast" "Toggle the Fast service tier" False
     , cmd "plan" [] "/plan [description]" "Enter plan mode (or Shift+Tab)" True

@@ -62,6 +62,8 @@ data ReplAction
       -- ^ Probe the session connection's configured models and report which
       -- respond right now (availability + latency). Arguments filter the
       -- probed set by model id or connection substring.
+    | ReplSubagentsConfig
+      -- ^ Open the subagent-catalog panel to tune each type's default model.
     | ReplEnableCodeMode
     | ReplToggleAlwaysApprove
     | ReplMouseCapture (Maybe Bool)

@@ -11,12 +11,14 @@ module Agent.CLI.SubagentCatalogConfig
     , loadSubagentCatalogAt
     , mergeSubagentCatalogFiles
     , packagedSubagentCatalogPath
+    , setSubagentTypeModel
     , subagentCatalogUserPath
+    , writeSubagentCatalog
     ) where
 
 import Agent.CLI.ModelConfig (ModelCatalog)
 import Agent.CLI.Models (resolveConfiguredModel)
-import Agent.FileRetry (retryOnFileBusy)
+import Agent.FileRetry (retryOnFileBusy, writeLazyFileAtomically)
 import Agent.GrokBuild.Dialect.SubagentCatalog
     ( CatalogEntry(..)
     , SubagentCatalog(..)
@@ -26,16 +28,17 @@ import Agent.GrokBuild.Dialect.SubagentCatalog
 import Agent.OsPath (toText, unsafeEncodeUtf, unsafeToFilePath)
 import Control.Exception.Safe (tryIO)
 import qualified Data.ByteString.Lazy as LBS
-import Data.Aeson (eitherDecode)
+import Data.Aeson (eitherDecode, encode)
 import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Paths_agent_cli (getDataFileName)
 import qualified System.Directory as Directory
-import System.Directory.OsPath (doesFileExist)
+import System.Directory.OsPath (createDirectoryIfMissing, doesFileExist)
 import qualified System.Environment as Environment
 import qualified System.FilePath as FilePath
 import System.OsPath (OsPath, (</>))
+import System.Posix.Files (setFileMode)
 
 subagentCatalogUserPath :: OsPath -> OsPath
 subagentCatalogUserPath home =
@@ -158,3 +161,57 @@ validateEntryModels warn modelCatalog (SubagentCatalog entries) = do
                         <> "'; dropping the entry"
                     )
                 pure Nothing
+
+-- | Persist a catalog as the user overlay (@~/.haskell-agent/subagents.json@),
+-- creating the directory and writing atomically. Returns 'Left' with a
+-- message when the write fails; never throws.
+writeSubagentCatalog :: OsPath -> SubagentCatalog -> IO (Either Text ())
+writeSubagentCatalog home catalog = do
+    let dir = home </> unsafeEncodeUtf ".haskell-agent"
+        path = subagentCatalogUserPath home
+    createDirectoryIfMissing True dir
+    _ <- tryIO (setFileMode (unsafeToFilePath dir) 0o700)
+    result <- tryIO (writeLazyFileAtomically path 0o600 (encode catalog))
+    pure case result of
+        Left exception ->
+            Left
+                ( "could not write subagent catalog "
+                    <> toText path
+                    <> ": "
+                    <> Text.pack (show exception)
+                )
+        Right () -> Right ()
+
+-- | Set (or clear) the default model bound to a subagent type. Existing
+-- entries are updated in place; a type with no entry gains a shadow entry
+-- when a model is chosen, and is left untouched when the model is cleared to
+-- "inherit parent".
+setSubagentTypeModel :: SubagentCatalog -> Text -> Maybe Text -> SubagentCatalog
+setSubagentTypeModel (SubagentCatalog entries) typeId model =
+    case any (\entry -> entry.entryId == typeId) entries of
+        True -> SubagentCatalog (map (updateEntry typeId model) entries)
+        False -> case model of
+            Nothing -> SubagentCatalog entries
+            Just m -> SubagentCatalog (entries <> [shadowEntry typeId m])
+
+updateEntry :: Text -> Maybe Text -> CatalogEntry -> CatalogEntry
+updateEntry typeId model entry
+    | entry.entryId == typeId = setEntryModel model entry
+    | otherwise = entry
+
+setEntryModel :: Maybe Text -> CatalogEntry -> CatalogEntry
+setEntryModel model (CatalogEntry i d g r _ sp uw k t) =
+    CatalogEntry i d g r model sp uw k t
+
+shadowEntry :: Text -> Text -> CatalogEntry
+shadowEntry typeId model =
+    CatalogEntry
+        typeId
+        ("Built-in " <> typeId <> ", routed to " <> model <> " by default.")
+        Nothing
+        Nothing
+        (Just model)
+        Nothing
+        Nothing
+        Nothing
+        Nothing

@@ -70,6 +70,7 @@ import qualified Agent.CLI.SessionHistorySpec as SessionHistorySpec
 import qualified Agent.CLI.SessionStateSpec as SessionStateSpec
 import qualified Agent.CLI.SessionTitleSpec as SessionTitleSpec
 import qualified Agent.CLI.SkillsSpec as SkillsSpec
+import qualified Agent.CLI.SubagentCatalogConfigSpec as SubagentCatalogConfigSpec
 import qualified Agent.CLI.SubagentStoreSpec as SubagentStoreSpec
 import qualified Agent.CLI.StyleSpec as StyleSpec
 import qualified Agent.CLI.TimestampSpec as TimestampSpec
@@ -168,6 +169,7 @@ main = hspec do
     SessionStateSpec.spec
     SessionTitleSpec.spec
     SkillsSpec.spec
+    SubagentCatalogConfigSpec.spec
     SubagentStoreSpec.spec
     ToolsSpec.spec
     TUIAppSpec.spec
