@@ -93,11 +93,13 @@ spec = do
 
     describe "echoReasoningContent" do
         let reasoningItem content summary =
+                reasoningItemWithEncrypted content summary Nothing
+            reasoningItemWithEncrypted content summary encrypted =
                 ReasoningItemValue ReasoningItem
                     { itemId = Just "rs-1"
                     , summary = summary
                     , content = content
-                    , encryptedContent = Nothing
+                    , encryptedContent = encrypted
                     , status = Just ItemCompleted
                     }
             summaryPart text =
@@ -142,6 +144,48 @@ spec = do
             object <- expectObject (requestValue defaultClientOptions request)
             content <- reasoningContentOf object
             content `shouldBe` [reasoningTextPart "raw"]
+
+        it "does not synthesize empty reasoning_text over an encrypted payload" do
+            let request = withInput
+                    [ reasoningItemWithEncrypted
+                        (Just [])
+                        []
+                        (Just "encrypted-payload")
+                    ]
+                    sampleRequest
+            object <- expectObject (requestValue defaultClientOptions request)
+            -- The item is present, but content should stay empty because the
+            -- encrypted reasoning payload is already passed back unchanged.
+            input <- expectArray (KeyMap.lookup "input" object)
+            firstItem <- case input of (item : _) -> expectObject item; [] -> expectationFailure "input is empty" >> fail "unreachable"
+            content <- expectArray (KeyMap.lookup "content" firstItem)
+            content `shouldBe` []
+            KeyMap.lookup "encrypted_content" firstItem `shouldBe` Just (Aeson.String "encrypted-payload")
+
+        it "preserves non-empty reasoning_text content even with encrypted_content" do
+            let request = withInput
+                    [ reasoningItemWithEncrypted
+                        (Just [ReasoningTextPart "raw"])
+                        [summaryPart "Checked repo"]
+                        (Just "encrypted-payload")
+                    ]
+                    sampleRequest
+            object <- expectObject (requestValue defaultClientOptions request)
+            content <- reasoningContentOf object
+            content `shouldBe` [reasoningTextPart "raw"]
+
+        it "drops reasoning.encrypted_content from the include list" do
+            let request = sampleRequest
+                    { include = Just
+                        [ ResponseInclude "reasoning.encrypted_content"
+                        , ResponseInclude "foo.bar"
+                        ]
+                    }
+            object <- expectObject (requestValue defaultClientOptions request)
+            includes <- expectArray (KeyMap.lookup "include" object)
+            includes `shouldBe`
+                [ Aeson.String "foo.bar"
+                ]
 
     describe "SSE assembly" do
         it "decodes typed event constructors and builds the merged final response" do
