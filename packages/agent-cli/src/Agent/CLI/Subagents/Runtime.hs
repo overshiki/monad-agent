@@ -57,6 +57,8 @@ import Agent.DeepSeek.LoopBackend (deepSeekBackend)
 import qualified Agent.DeepSeek.Options as DeepSeek (clientOptionsFromEnv)
 import Agent.Kimi.LoopBackend (kimiBackend)
 import qualified Agent.Kimi.Options as Kimi (clientOptionsFromEnv)
+import Agent.KimiCode.LoopBackend (kimiCodeBackend)
+import qualified Agent.KimiCode.Options as KimiCode (clientOptionsFromEnv)
 import Agent.CLI.Tools
     (hostedSearchToolNames, requireToolRegistry, schemasFromAppTools)
 import Agent.CLI.Dialects
@@ -971,7 +973,7 @@ dispatchForeignOrFail runtime dialect _provider sendToRoot env previous prompt o
                     onEvent
 
 foreignHttpKeyProviders :: [Provider]
-foreignHttpKeyProviders = [DeepSeekProvider, KimiProvider]
+foreignHttpKeyProviders = [DeepSeekProvider, KimiProvider, KimiCodeProvider]
 
 -- | Lazily build a one-shot backend for a foreign key-based HTTP provider
 -- (DeepSeek, Kimi), loading its credential non-interactively and its
@@ -1001,6 +1003,10 @@ foreignHttpBackend provider loaded = case provider of
         options <- Kimi.clientOptionsFromEnv
         pure $ \params ->
             kimiBackend options loaded.loadedTokenProvider (pure params)
+    KimiCodeProvider -> do
+        options <- KimiCode.clientOptionsFromEnv
+        pure $ \params ->
+            kimiCodeBackend options loaded.loadedTokenProvider (pure params)
     _ -> error "foreignHttpBackend: unsupported provider"
 
 resolveChildModelAndEffort
