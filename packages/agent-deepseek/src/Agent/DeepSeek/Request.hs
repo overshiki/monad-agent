@@ -40,13 +40,14 @@ buildRequest options request =
 -- | DeepSeek's thinking mode requires the assistant's reasoning to be passed
 -- back on tool follow-ups ("The reasoning_text in the thinking mode must be
 -- passed back to the API"). The stream assembly stores that text either as the
--- reasoning item's 'summary' or as raw @reasoning_text@ 'content'. When a
--- replay is missing plaintext content (including an empty content list, which
--- DeepSeek sends for turns with no reasoning and still requires to be echoed),
--- re-emit it from the summary so the wire encoder carries the reasoning text.
--- A reasoning item with no summary text becomes a placeholder @reasoning_text@
--- part (DeepSeek rejects empty text as "not passed back"), and any OpenAI-style
--- encrypted payload is dropped because DeepSeek only accepts plaintext.
+-- reasoning item's 'summary' or as raw @reasoning_text@ 'content'. The replay
+-- contract enforced here — and asserted end-to-end by
+-- @Agent.DeepSeek.ThinkingModeContractSpec@ — is that every reasoning item in
+-- @input@ carries non-empty plaintext @reasoning_text@ content, and never an
+-- OpenAI-style @encrypted_content@ blob (DeepSeek rejects those outright).
+-- When a replay is missing plaintext content, re-emit it from the summary, or
+-- from a non-empty placeholder ("(thinking unavailable)") when there is no
+-- summary text, because DeepSeek rejects an empty text part.
 echoReasoningContent :: ResponseCreateParams -> ResponseCreateParams
 echoReasoningContent ResponseCreateParams{..} =
     ResponseCreateParams { input = echoInput <$> input, .. }
@@ -54,12 +55,14 @@ echoReasoningContent ResponseCreateParams{..} =
     echoInput = \case
         ResponseInputItems items -> ResponseInputItems (map echoItem items)
         other -> other
-    echoItem (ReasoningItemValue reasoning)
-        | hasNoContent reasoning.content =
-            ReasoningItemValue
-                (setReasoningContent
+    echoItem (ReasoningItemValue reasoning) =
+        let withoutEncryption = clearReasoningEncryption reasoning
+        in ReasoningItemValue
+            (if hasNoContent reasoning.content
+                then setReasoningContent
                     (Just (echoedContent reasoning.summary))
-                    reasoning { encryptedContent = Nothing })
+                    withoutEncryption
+                else withoutEncryption)
     echoItem item = item
     echoedContent summary =
         case mapMaybe summaryText summary of
@@ -88,6 +91,18 @@ setReasoningContent newContent reasoning =
         , summary = reasoning.summary
         , content = newContent
         , encryptedContent = reasoning.encryptedContent
+        , status = reasoning.status
+        }
+
+-- | Drop any OpenAI-style encrypted reasoning payload. 'encryptedContent' is
+-- a field on several records, so the update rebuilds via the constructor.
+clearReasoningEncryption :: ReasoningItem -> ReasoningItem
+clearReasoningEncryption reasoning =
+    ReasoningItem
+        { itemId = reasoning.itemId
+        , summary = reasoning.summary
+        , content = reasoning.content
+        , encryptedContent = Nothing
         , status = reasoning.status
         }
 

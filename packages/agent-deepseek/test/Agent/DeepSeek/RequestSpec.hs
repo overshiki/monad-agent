@@ -162,7 +162,7 @@ spec = do
             content `shouldBe` [reasoningTextPart "(thinking unavailable)"]
             KeyMap.lookup "encrypted_content" firstItem `shouldBe` Nothing
 
-        it "preserves non-empty reasoning_text content even with encrypted_content" do
+        it "preserves plaintext content and always drops the encrypted payload" do
             let request = withInput
                     [ reasoningItemWithEncrypted
                         (Just [ReasoningTextPart "raw"])
@@ -173,6 +173,9 @@ spec = do
             object <- expectObject (requestValue defaultClientOptions request)
             content <- reasoningContentOf object
             content `shouldBe` [reasoningTextPart "raw"]
+            input <- expectArray (KeyMap.lookup "input" object)
+            firstItem <- case input of (item : _) -> expectObject item; [] -> expectationFailure "input is empty" >> fail "unreachable"
+            KeyMap.lookup "encrypted_content" firstItem `shouldBe` Nothing
 
         it "drops reasoning.encrypted_content from the include list" do
             let request = sampleRequest

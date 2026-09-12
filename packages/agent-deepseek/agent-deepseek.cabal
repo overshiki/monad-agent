@@ -72,6 +72,7 @@ test-suite agent-deepseek-test
                     , Agent.DeepSeek.CredentialSpec
                     , Agent.DeepSeek.ErrorSpec
                     , Agent.DeepSeek.RequestSpec
+                    , Agent.DeepSeek.ThinkingModeContractSpec
                     , Agent.DeepSeek.UsageSpec
     ghc-options:      -threaded
     build-depends:    base >= 4.14 && < 5
