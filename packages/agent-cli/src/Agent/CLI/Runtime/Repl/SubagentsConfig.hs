@@ -61,6 +61,7 @@ runnableProviders =
     , OpenRouterProvider
     , DeepSeekProvider
     , KimiProvider
+    , KimiCodeProvider
     ]
 
 -- | Model ids the panel offers, in catalog order, excluding providers that

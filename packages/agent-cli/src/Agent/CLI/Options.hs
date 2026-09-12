@@ -187,6 +187,7 @@ defaultEffortFor = \case
     OpenRouterProvider -> EffortMedium
     DeepSeekProvider -> EffortMedium
     KimiProvider -> EffortMedium
+    KimiCodeProvider -> EffortMedium
     GeminiProvider -> EffortMedium
     ClaudeCodeProvider -> EffortXHigh
 

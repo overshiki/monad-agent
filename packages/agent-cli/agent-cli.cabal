@@ -280,6 +280,7 @@ library
                     , agent-openrouter >= 0.1 && < 0.2
                     , agent-deepseek >= 0.1 && < 0.2
                     , agent-kimi >= 0.1 && < 0.2
+                    , agent-kimi-code >= 0.1 && < 0.2
                     , agent-gemini >= 0.1 && < 0.2
                     , agent-claude >= 0.1 && < 0.2
                     , agent-responses >= 0.1 && < 0.2
@@ -541,6 +542,7 @@ test-suite agent-cli-test
                     , agent-openai
                     , agent-openrouter
                     , agent-gemini
+                    , agent-kimi-code
                     , agent-claude
                     , agent-responses
                     , agent-responses-types

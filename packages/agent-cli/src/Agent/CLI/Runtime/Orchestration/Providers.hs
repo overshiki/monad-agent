@@ -168,7 +168,7 @@ import Agent.OsPath (unsafeToFilePath)
 import Agent.Provider
     ( Provider(OpenRouterProvider, OpenAIProvider, XAIProvider,
                GeminiProvider, ClaudeCodeProvider, DeepSeekProvider,
-               KimiProvider),
+               KimiProvider, KimiCodeProvider),
       Credential(accountId, Credential, accessToken, leaseId, provider),
       TokenProvider,
       runWithTokenProvider,
@@ -257,6 +257,11 @@ import Agent.Kimi.LoopBackend ( kimiBackend )
 import qualified Agent.Kimi.Client as KimiClient
     ( createResponseWith )
 import qualified Agent.Kimi.Options as Kimi
+    ( clientOptionsFromEnv )
+import Agent.KimiCode.LoopBackend ( kimiCodeBackend )
+import qualified Agent.KimiCode.Client as KimiCodeClient
+    ( createResponseWith )
+import qualified Agent.KimiCode.Options as KimiCode
     ( clientOptionsFromEnv )
 
 runAgentProviders
@@ -1308,6 +1313,112 @@ runAgentProviders
                                 loaded.loadedOpenAiPool
                                 (Just selectHttpAccount)
                                 (Just . kimiContextWindow
+                                    <$> readIORef paramsRef)
+                                compactRunner)
+                            SessionBackend
+                                { backend = activeBackend
+                                , btwBackend
+                                , interruptBackend = pure ()
+                                , resetBackendState = pure ()
+                                }
+                    KimiCodeProvider -> do
+                        kimiCodeOptions <- KimiCode.clientOptionsFromEnv
+                        kimiCodeOccupancy <- newIORef Nothing
+                        let kimiCodeContextWindow =
+                                contextWindowForParams id 1_048_576
+                            makeBackend getParams =
+                                kimiCodeBackend
+                                    kimiCodeOptions
+                                    tokenProvider
+                                    getParams
+                            protectKimiCodeOverflow occupancy getParams backend =
+                                boundCompletedToolContinuations
+                                    kimiCodeContextWindow
+                                    getParams
+                                    occupancy
+                                    backend
+                        installHttpSubagentRunner
+                            subagentRuntime
+                            dialect
+                            KimiCodeProvider
+                            multiCtx
+                            (\childParams ->
+                                protectKimiCodeOverflow
+                                    kimiCodeOccupancy
+                                    (pure childParams)
+                                    (makeBackend
+                                        (pure childParams)))
+                        let kimiCodeCompactThreshold = do
+                                currentParams <- readIORef paramsRef
+                                let contextWindow =
+                                        kimiCodeContextWindow currentParams
+                                pure $
+                                    max 1 $
+                                        min contextWindow $
+                                            fromMaybe
+                                                (contextWindow * 4 `div` 5)
+                                                options.optCompactThreshold
+                            btwBackend privateParams =
+                                makeBackend (pure privateParams)
+                            compactKimiCodeHistory history _inputs = do
+                                currentParams <- readIORef paramsRef
+                                runBackendCompactHistoryWithContextWindow
+                                    (kimiCodeContextWindow currentParams)
+                                    btwBackend
+                                    recordCompactionUsage
+                                    currentParams
+                                    history
+                                    Nothing
+                            compactingBackend =
+                                autoCompactBackendWith
+                                    kimiCodeCompactThreshold
+                                    compactKimiCodeHistory
+                                    (\outcome inputs ->
+                                        readIORef
+                                            automaticCompactionHookRef
+                                            >>= \hook ->
+                                                hook outcome inputs)
+                                    (readIORef paramsRef)
+                                    kimiCodeOccupancy
+                                    (makeBackend
+                                        (readIORef paramsRef))
+                            backend =
+                                withPendingInputs pendingNotices $
+                                    withConnectionRecovery $
+                                        protectKimiCodeOverflow
+                                            kimiCodeOccupancy
+                                            (readIORef paramsRef)
+                                            compactingBackend
+                            compactRunner focus = do
+                                contextWindow <-
+                                    currentModelContextWindow id
+                                historyRef <-
+                                    newIORef =<< readLiveTranscript conversationRef
+                                installLiveCompactOutcome conversationRef Nothing
+                                    (runResponsesCompactWithContextWindow
+                                        contextWindow
+                                        (\request ->
+                                            runWithTokenProvider tokenProvider
+                                                \credential ->
+                                                    KimiCodeClient.createResponseWith
+                                                        kimiCodeOptions
+                                                        credential
+                                                        request)
+                                        recordCompactionUsage
+                                        paramsRef
+                                        historyRef)
+                                    focus
+                        activeBackend <-
+                            prepareTransitionBackend
+                                modelSwitchScope home projectRoot
+                                transition persist backend
+                        runSession
+                            (sessionRequest
+                                startupUnavailable
+                                (Just tokenProvider)
+                                loaded.loadedOpenAiPool
+                                (Just selectHttpAccount)
+                                (Just . kimiCodeContextWindow
                                     <$> readIORef paramsRef)
                                 compactRunner)
                             SessionBackend

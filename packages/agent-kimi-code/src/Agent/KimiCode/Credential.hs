@@ -1,0 +1,54 @@
+-- | Static Kimi Code API-key credentials.
+module Agent.KimiCode.Credential
+    ( staticApiKeyProvider
+    , credentialFromApiKey
+    , credentialFromEnv
+    ) where
+
+import Agent.Error (ApiError(..), ErrorType(..))
+import Agent.Provider
+import Data.Maybe (fromMaybe)
+import Data.Text (Text)
+import qualified Data.Text as Text
+import Data.Time.Clock (addUTCTime, getCurrentTime)
+import System.Environment (lookupEnv)
+
+-- | A single Kimi Code API key with no OAuth refresh or account failover.
+staticApiKeyProvider :: Text -> TokenProvider
+staticApiKeyProvider apiKey = tokenProvider SubscriptionBilled \failed -> case failed of
+        Nothing ->
+            pure $ Right (credentialFromApiKey apiKey)
+        Just FailedCredential
+            { failure = AccountRateLimited { retryAfterSeconds }
+            , failureReason
+            } -> do
+            now <- getCurrentTime
+            let seconds = max 1
+                    (fromMaybe staticApiKeyRateLimitCooldownSeconds retryAfterSeconds)
+            pure $ Left $ CredentialsExhausted
+                { retryAt = addUTCTime (fromIntegral seconds) now
+                , exhaustionReasons = [failureReason]
+                }
+        Just FailedCredential { failure = AccountAuthenticationRejected } ->
+            pure $ Left $ ProviderError AuthenticationError
+                "static Kimi Code API key was rejected"
+                Nothing
+
+staticApiKeyRateLimitCooldownSeconds :: Int
+staticApiKeyRateLimitCooldownSeconds = 60
+
+credentialFromApiKey :: Text -> Credential
+credentialFromApiKey apiKey = Credential
+    { accessToken = apiKey
+    , accountId = ""
+    , leaseId = Nothing
+    , provider = KimiCodeProvider
+    }
+
+-- | Read @KIMI_CODE_API_KEY@. Empty or unset yields 'Nothing'.
+credentialFromEnv :: IO (Maybe Credential)
+credentialFromEnv = do
+    key <- lookupEnv "KIMI_CODE_API_KEY"
+    pure $ case key of
+        Just value | not (null value) -> Just (credentialFromApiKey (Text.pack value))
+        _ -> Nothing

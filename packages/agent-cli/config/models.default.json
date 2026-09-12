@@ -25,6 +25,10 @@
       "api": "builtin",
       "provider": "kimi"
     },
+    "kimi-code": {
+      "api": "builtin",
+      "provider": "kimi-code"
+    },
     "meta": {
       "api": "responses",
       "base_url": "https://api.meta.ai/v1",
@@ -158,6 +162,15 @@
       "dialect": "generic-responses",
       "context_window": 262144,
       "label": "reasoning"
+    },
+    {
+      "id": "kimi-for-coding",
+      "connection": "kimi-code",
+      "dialect": "generic-responses",
+      "context_window": 1000000,
+      "label": "default · coding · 1M context",
+      "default": true,
+      "fallback_priority": 25
     },
     {
       "id": "muse-spark-1.2",

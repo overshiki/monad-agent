@@ -135,7 +135,7 @@ import Agent.OpenRouter.LoopBackend ()
 import Agent.OsPath ()
 import Agent.Provider
     ( Provider(OpenRouterProvider, XAIProvider, OpenAIProvider,
-               DeepSeekProvider, KimiProvider),
+               DeepSeekProvider, KimiProvider, KimiCodeProvider),
       Credential(accessToken, accountId),
       getNextToken,
       tokenProviderBillingMode,
@@ -449,6 +449,7 @@ replWithDraft env@SessionEnv
                                 Right snapshot ->
                                     publish
                                         (formatKimiLimitStatus snapshot)
+            (KimiCodeProvider, Just _) -> pure ()
             _ -> pure ()
       where
         refreshWith tokens fetch formatStatus =

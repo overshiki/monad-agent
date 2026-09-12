@@ -93,6 +93,8 @@ credentialAccountLabel credential = case credential.provider of
         fallback "DeepSeek"
     KimiProvider ->
         fallback "Kimi"
+    KimiCodeProvider ->
+        fallback "Kimi Code"
     GeminiProvider ->
         fallback "Google Gemini"
     ClaudeCodeProvider ->
@@ -116,6 +118,7 @@ credentialEmail credential = case credential.provider of
     OpenRouterProvider -> Nothing
     DeepSeekProvider -> Nothing
     KimiProvider -> Nothing
+    KimiCodeProvider -> Nothing
     GeminiProvider -> Nothing
     ClaudeCodeProvider -> Nothing
 

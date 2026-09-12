@@ -94,6 +94,8 @@ import qualified Agent.DeepSeek.Client as DeepSeek
 import qualified Agent.DeepSeek.Options as DeepSeek
 import qualified Agent.Kimi.Client as Kimi
 import qualified Agent.Kimi.Options as Kimi
+import qualified Agent.KimiCode.Client as KimiCode
+import qualified Agent.KimiCode.Options as KimiCode
 import qualified Agent.XAI.Client as XAI
 import qualified Agent.XAI.Options as XAI
 import Control.Monad.Trans.Class (lift)
@@ -231,6 +233,21 @@ runProviderCompactWithContextWindow contextWindow openAiSender recordUsage
                         (\request ->
                             runWithTokenProvider tokens \credential ->
                                 Kimi.createResponseWith
+                                    options credential request)
+                        params
+                        history
+                        focus
+        KimiCodeProvider ->
+            case tokenProvider of
+                Nothing ->
+                    pure (compactTextFailure
+                        "kimi code compact requires a token provider")
+                Just tokens -> do
+                    options <- KimiCode.clientOptionsFromEnv
+                    summarizeTextAttempt
+                        (\request ->
+                            runWithTokenProvider tokens \credential ->
+                                KimiCode.createResponseWith
                                     options credential request)
                         params
                         history

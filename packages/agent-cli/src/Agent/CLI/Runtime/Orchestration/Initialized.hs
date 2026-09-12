@@ -155,7 +155,7 @@ import Agent.OpenRouter.LoopBackend ()
 import Agent.OsPath ()
 import Agent.Provider
     ( Provider(OpenAIProvider, XAIProvider, OpenRouterProvider,
-               DeepSeekProvider, KimiProvider, GeminiProvider,
+               DeepSeekProvider, KimiProvider, KimiCodeProvider, GeminiProvider,
                ClaudeCodeProvider),
       TokenProvider,
       Credential(..),
@@ -621,6 +621,7 @@ runAgentInitializedWithLock
                                 OpenRouterProvider -> "OpenRouter"
                                 DeepSeekProvider -> "DeepSeek"
                                 KimiProvider -> "Kimi"
+                                KimiCodeProvider -> "Kimi Code"
                                 GeminiProvider -> "Google Gemini"
                                 ClaudeCodeProvider -> "Claude Code"
                             selectionId = fromMaybe "" loaded.loadedSelectionId

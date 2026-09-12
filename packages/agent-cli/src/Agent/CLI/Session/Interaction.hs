@@ -340,6 +340,7 @@ runModelTest env filters = do
     providerName = \case
         DeepSeekProvider -> "deepseek"
         KimiProvider -> "kimi"
+        KimiCodeProvider -> "kimi-code"
         OpenRouterProvider -> "openrouter"
         OpenAIProvider -> "openai"
         XAIProvider -> "xai"

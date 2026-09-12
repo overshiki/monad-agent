@@ -16,6 +16,7 @@ packages:
     packages/agent-openrouter
     packages/agent-deepseek
     packages/agent-kimi
+    packages/agent-kimi-code
     packages/agent-gemini
     packages/agent-store
     packages/claude-agent-sdk-haskell

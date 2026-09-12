@@ -119,6 +119,7 @@ import qualified Agent.OpenAI.Usage as OpenAI
 import qualified Agent.OpenRouter.Usage as OpenRouter
 import qualified Agent.DeepSeek.Usage as DeepSeek
 import qualified Agent.Kimi.Usage as Kimi
+import qualified Agent.KimiCode.Usage as KimiCode
 import qualified Agent.Gemini.Auth as GeminiAuth
 import Agent.Provider
     ( BillingMode(..)
@@ -1152,6 +1153,7 @@ discoverLoginAccountSources = do
     openRouter <- discoverOpenRouter
     deepseek <- discoverDeepSeek
     kimi <- discoverKimi
+    kimiCode <- discoverKimiCode
     gemini <- discoverGemini
     managed <- loadManagedCredentials
     gateway <- loadGatewayLoginAccount
@@ -1168,6 +1170,7 @@ discoverLoginAccountSources = do
                 , openRouter
                 , deepseek
                 , kimi
+                , kimiCode
                 , gemini
                 ]
 
@@ -1237,6 +1240,7 @@ managedLoginAccount now (metadata, secret) =
         OpenRouterProvider -> Nothing
         DeepSeekProvider -> Nothing
         KimiProvider -> Nothing
+        KimiCodeProvider -> Nothing
         GeminiProvider -> case metadata.managedAuthKind of
             ManagedGeminiAuthJson ->
                 (.email) <$> geminiAuth
@@ -1442,6 +1446,7 @@ connectProviderAccount color = \case
     OpenRouterProvider -> connectOpenRouter color
     DeepSeekProvider -> connectDeepSeek color
     KimiProvider -> connectKimi color
+    KimiCodeProvider -> connectKimiCode color
     GeminiProvider -> connectGemini color
     ClaudeCodeProvider -> do
         printLoginMessage color False
@@ -1458,6 +1463,7 @@ pickConnectProvider color =
         , OpenRouterProvider
         , DeepSeekProvider
         , KimiProvider
+        , KimiCodeProvider
         , GeminiProvider
         , ClaudeCodeProvider
         ]
@@ -1513,6 +1519,9 @@ connectFullscreenAccount runtime = do
         , ( KimiProvider
           , ("Kimi (Moonshot)", "Add a masked API key")
           )
+        , ( KimiCodeProvider
+          , ("Kimi Code", "Add a masked API key from the Kimi Code Console")
+          )
         , ( GeminiProvider
           , ("Google Gemini", "Connect a Google account with OAuth")
           )
@@ -1531,6 +1540,7 @@ connectFullscreenProvider runtime = \case
     OpenRouterProvider -> connectOpenRouterFullscreen runtime
     DeepSeekProvider -> connectDeepSeekFullscreen runtime
     KimiProvider -> connectKimiFullscreen runtime
+    KimiCodeProvider -> connectKimiCodeFullscreen runtime
     GeminiProvider -> connectGeminiFullscreen runtime
     ClaudeCodeProvider ->
         pure $
@@ -1919,6 +1929,52 @@ connectKimiFullscreen runtime =
               where
                 apiKey = Text.strip rawKey
 
+connectKimiCodeFullscreen
+    :: FullscreenRuntime
+    -> IO (Maybe (Either Text CredentialConnection))
+connectKimiCodeFullscreen runtime =
+    requestFullscreenSecret
+        runtime
+        "Connect Kimi Code"
+        ( "Paste a Kimi Code API key (from the Kimi Code Console). Input is "
+            <> "masked and is never added to the conversation transcript."
+        )
+        >>= \case
+            Nothing -> pure Nothing
+            Just rawKey
+                | Text.null apiKey -> pure Nothing
+                | otherwise -> do
+                    fetched <-
+                        withLoginProgress runtime "Validating Kimi Code key…" $
+                            KimiCode.fetchKimiCodeUsage apiKey
+                    case fetched of
+                        Left err ->
+                            pure $
+                                Just $
+                                    Left ("Kimi Code rejected the key: " <> err)
+                        Right usage -> do
+                            nickname <-
+                                requestFullscreenText
+                                    runtime
+                                    "Connect Kimi Code"
+                                    "Nickname for this key (optional):"
+                                    ""
+                            let accountId =
+                                    fromMaybe "kimi-code" usage.keyLabel
+                                label =
+                                    fromMaybe
+                                        (fromMaybe "Kimi Code" usage.keyLabel)
+                                        nickname
+                            Just <$> storeConnectedCredentialResult
+                                KimiCodeProvider
+                                accountId
+                                label
+                                SubscriptionBilled
+                                ManagedBearerToken
+                                apiKey
+              where
+                apiKey = Text.strip rawKey
+
 connectGeminiFullscreen
     :: FullscreenRuntime
     -> IO (Maybe (Either Text CredentialConnection))
@@ -2188,6 +2244,33 @@ connectKimi color =
                         accountId
                         label
                         ApiBilled
+                        ManagedBearerToken
+                        apiKey
+
+connectKimiCode :: Bool -> IO (Maybe Text)
+connectKimiCode color =
+    readSecretLine "Kimi Code API key: " >>= \case
+        Nothing -> pure Nothing
+        Just apiKey ->
+            KimiCode.fetchKimiCodeUsage apiKey >>= \case
+                Left err ->
+                    printLoginMessage color False
+                        ("Kimi Code rejected the key: " <> err)
+                        >> pure Nothing
+                Right usage -> do
+                    nickname <- readOptionalNickname
+                        "Nickname for this Kimi Code key (optional): "
+                    let accountId =
+                            fromMaybe "kimi-code" usage.keyLabel
+                        label =
+                            fromMaybe
+                                (fromMaybe "Kimi Code" usage.keyLabel)
+                                nickname
+                    storeConnectedCredential color
+                        KimiCodeProvider
+                        accountId
+                        label
+                        SubscriptionBilled
                         ManagedBearerToken
                         apiKey
 
@@ -2494,6 +2577,25 @@ discoverKimi = do
             , loginEnabled = True
             }
 
+discoverKimiCode :: IO (Maybe LoginAccount)
+discoverKimiCode = do
+    token <- lookupNonEmpty "KIMI_CODE_API_KEY"
+    pure $ do
+        accessToken <- token
+        pure LoginAccount
+            { loginManagedId = Nothing
+            , loginProvider = KimiCodeProvider
+            , loginAccountId = "kimi-code"
+            , loginLabel = "Kimi Code"
+            , loginBilling = SubscriptionBilling Nothing
+            , loginSource = "environment"
+            , loginUsage = UsageNotChecked
+            , loginAccessToken = accessToken
+            , loginAuthKind = ManagedBearerToken
+            , loginSecretPayload = accessToken
+            , loginEnabled = True
+            }
+
 discoverGemini :: IO (Maybe LoginAccount)
 discoverGemini = do
     googleKey <- lookupNonEmpty "GOOGLE_API_KEY"
@@ -2703,6 +2805,23 @@ refreshLoginAccount account
                         }
         KimiProvider ->
             Kimi.fetchKimiUsage account.loginAccessToken >>= \case
+                Left err ->
+                    pure account
+                        { loginUsage = UsageUnavailable err }
+                Right snapshot ->
+                    pure account
+                        { loginLabel =
+                            fromMaybe account.loginLabel snapshot.keyLabel
+                        , loginUsage =
+                            UsageAvailable AccountUsage
+                                { usagePlan = Nothing
+                                , usageWindows = []
+                                , creditsRemaining = Nothing
+                                , creditsUsed = Nothing
+                                }
+                        }
+        KimiCodeProvider ->
+            KimiCode.fetchKimiCodeUsage account.loginAccessToken >>= \case
                 Left err ->
                     pure account
                         { loginUsage = UsageUnavailable err }

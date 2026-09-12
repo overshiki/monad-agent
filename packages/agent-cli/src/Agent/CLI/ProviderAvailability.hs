@@ -18,6 +18,7 @@ import Agent.CLI.Auth (LoadedAuth(..))
 import Agent.Error (ApiError(..), ErrorType(..))
 import qualified Agent.DeepSeek.Usage as DeepSeek
 import qualified Agent.Kimi.Usage as Kimi
+import qualified Agent.KimiCode.Usage as KimiCode
 import qualified Agent.OpenAI.Usage as OpenAI
 import qualified Agent.OpenRouter.Usage as OpenRouter
 import Agent.Provider
@@ -74,6 +75,11 @@ probeLoadedAvailability loaded =
         -- Kimi's key-validation endpoint likewise has no exhaustion signal.
         KimiProvider ->
             Kimi.fetchKimiUsage credential.accessToken >>= \case
+                Left _ -> pure Nothing
+                Right _ -> pure Nothing
+        -- Kimi Code's key-validation endpoint likewise has no exhaustion signal.
+        KimiCodeProvider ->
+            KimiCode.fetchKimiCodeUsage credential.accessToken >>= \case
                 Left _ -> pure Nothing
                 Right _ -> pure Nothing
         _ -> pure Nothing

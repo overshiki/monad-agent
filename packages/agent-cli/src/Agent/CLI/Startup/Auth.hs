@@ -200,6 +200,9 @@ runCredentialOnboarding startup runtime = do
         , ( KimiProvider
           , ("Add a Kimi (Moonshot) API key", "Use API credits")
           )
+        , ( KimiCodeProvider
+          , ("Add a Kimi Code API key", "Use your Kimi Code membership")
+          )
         , ( GeminiProvider
           , ("Sign in with Google", "Use Gemini with your Google account")
           )

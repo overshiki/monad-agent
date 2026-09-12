@@ -63,6 +63,7 @@ providerSupportsUsageAccountSelection = \case
     OpenRouterProvider -> True
     DeepSeekProvider -> True
     KimiProvider -> True
+    KimiCodeProvider -> True
     GeminiProvider -> False
     ClaudeCodeProvider -> False
 
