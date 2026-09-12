@@ -438,6 +438,18 @@ cabal build agent-cli:exe:monad-cli
 cabal test agent-core
 ```
 
+When touching the provider reasoning/replay path (stateless Responses
+transcripts, DeepSeek/Kimi thinking mode), also run the reasoning-replay
+contract tests — they guard the "reasoning_text must be passed back" rule that
+has regressed repeatedly:
+
+```console
+cabal test agent-deepseek --offline --test-options='--match thinking'
+```
+
+See [`docs/reasoning-replay-tests.md`](docs/reasoning-replay-tests.md) for what
+they cover and why.
+
 `scripts/repl` opens the agent under GHCi with automatic reload and session
 resume. Edit the harness, leave the running agent (`:q`), and the wrapper
 reloads the changed modules and resumes the same session without rebuilding
