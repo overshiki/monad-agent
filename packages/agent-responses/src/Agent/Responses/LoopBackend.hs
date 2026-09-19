@@ -147,11 +147,14 @@ withRequestInput ResponseCreateParams{..} items =
             | otherwise =
                 normalizedItems
         -- Providers validate call_id uniqueness per request; apply after
-        -- every other rewrite so the renames see the final item list.
+        -- every other rewrite so the renames see the final item list. Then
+        -- order call/output pairs and close any call whose output is missing,
+        -- so the wire always carries a well-formed pairing.
         requestItems =
-            orderToolPairs
-                (uniquifyRequestCallIds
-                    (ensureReasoningHasFollowingItem baseRequestItems))
+            closeDanglingToolCalls
+                (orderToolPairs
+                    (uniquifyRequestCallIds
+                        (ensureReasoningHasFollowingItem baseRequestItems)))
     in
     ResponseCreateParams
         { input = Just
@@ -183,10 +186,12 @@ orderToolPairs items = concatMap step items <> orphanOutputs
     step item = case item of
         FunctionCallItem c -> item : Map.findWithDefault [] c.callId outputsById
         CustomToolCallItem c -> item : Map.findWithDefault [] c.callId outputsById
-        FunctionCallOutputItem o
-            | o.callId `Set.member` callIds -> []
-        CustomToolCallOutputItem o
-            | o.callId `Set.member` callIds -> []
+        -- Outputs are re-emitted, never kept in place: a matched output rides
+        -- right after its call (via outputsById), an unmatched one is appended
+        -- once at the end via orphanOutputs. Keeping them here too would
+        -- duplicate orphan outputs.
+        FunctionCallOutputItem _ -> []
+        CustomToolCallOutputItem _ -> []
         _ -> [item]
     orphanOutputs =
         [ out
@@ -197,6 +202,45 @@ orderToolPairs items = concatMap step items <> orphanOutputs
                | out@(CustomToolCallOutputItem o) <- items
                , o.callId `Set.notMember` callIds
                ]
+
+-- | Every tool call a provider sees must be answered by a tool output with the
+-- same @call_id@; an unmatched call makes stateless Responses hosts reject the
+-- whole request ("an assistant message with 'tool_calls' must be followed by
+-- tool messages responding to each 'tool_call_id'"). Close any call whose
+-- output is missing from the replayed transcript with a synthetic
+-- "not executed" result, so an interrupted, retried, or partially-persisted
+-- turn stays replayable. Runs after 'orderToolPairs', so a call left bare by
+-- ordering, call-id dedup, or a lost result is closed regardless of which link
+-- dropped it. Wire-only: the transcript keeps the original items.
+closeDanglingToolCalls :: [ResponseItem] -> [ResponseItem]
+closeDanglingToolCalls items = concatMap close items
+  where
+    answered = Set.fromList (concatMap toolOutputCallId items)
+    close item = case responseItemToToolCall item of
+        Just call
+            | Set.notMember call.callId answered ->
+                [item, toolResultToItem (syntheticInterruptedResult call)]
+        _ -> [item]
+
+-- | The @call_id@s answered by tool outputs in an item list.
+toolOutputCallId :: ResponseItem -> [Text]
+toolOutputCallId = \case
+    FunctionCallOutputItem output -> [output.callId]
+    CustomToolCallOutputItem output -> [output.callId]
+    ComputerCallOutputItem output -> [output.computerOutputCallId]
+    _ -> []
+
+-- | A synthetic tool result reporting that a call was never executed, used to
+-- close a dangling call at the wire boundary.
+syntheticInterruptedResult :: ToolCall -> ToolCallResult
+syntheticInterruptedResult call = ToolCallResult
+    { callId = call.callId
+    , output =
+        "Tool `" <> call.name
+            <> "` was not executed: no result was recorded for this call."
+            <> " Treat it as not run."
+    , callKind = call.callKind
+    }
 
 requestInputPrefix :: Maybe ResponseInput -> [ResponseItem]
 requestInputPrefix = \case
