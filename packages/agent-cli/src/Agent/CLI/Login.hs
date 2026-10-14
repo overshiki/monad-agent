@@ -1437,16 +1437,183 @@ connectAccount color =
                 (fmap (\accountId -> (provider, accountId)))
                 (connectProviderAccount color provider)
 
+-- | Hooks for the four API-key connect flows (OpenRouter, DeepSeek, Kimi,
+-- Kimi Code). Terminal and fullscreen connect are the same pipeline — masked
+-- key entry, validation, optional nickname, credential store — differing only
+-- in these strings, the billing mode, and the provider's key-validation
+-- endpoint. A new API-key provider is one row of this record, not another
+-- copy of the connect flow.
+data ApiKeyConnect = ApiKeyConnect
+    { provider :: Provider
+    , terminalPrompt :: Text
+    , fullscreenTitle :: Text
+    , fullscreenHint :: Text
+    , validatingMessage :: Text
+    , rejectPrefix :: Text
+    , nicknamePrompt :: Text
+    , defaultAccount :: Text
+    , defaultLabel :: Text
+    , billing :: BillingMode
+    , validateKey :: Text -> IO (Either Text (Maybe Text))
+    }
+
+openRouterConnect :: ApiKeyConnect
+openRouterConnect = ApiKeyConnect
+    { provider = OpenRouterProvider
+    , terminalPrompt = "OpenRouter API key: "
+    , fullscreenTitle = "Connect OpenRouter"
+    , fullscreenHint =
+        "Paste an OpenRouter API key. Input is masked and is never added "
+            <> "to the conversation transcript."
+    , validatingMessage = "Validating OpenRouter key…"
+    , rejectPrefix = "OpenRouter rejected the key: "
+    , nicknamePrompt = "Nickname for this OpenRouter key (optional): "
+    , defaultAccount = "openrouter"
+    , defaultLabel = "OpenRouter"
+    , billing = ApiBilled
+    , validateKey = \key ->
+        fmap (\usage -> usage.keyLabel) <$> OpenRouter.fetchOpenRouterUsage key
+    }
+
+deepSeekConnect :: ApiKeyConnect
+deepSeekConnect = ApiKeyConnect
+    { provider = DeepSeekProvider
+    , terminalPrompt = "DeepSeek API key: "
+    , fullscreenTitle = "Connect DeepSeek"
+    , fullscreenHint =
+        "Paste a DeepSeek API key. Input is masked and is never added "
+            <> "to the conversation transcript."
+    , validatingMessage = "Validating DeepSeek key…"
+    , rejectPrefix = "DeepSeek rejected the key: "
+    , nicknamePrompt = "Nickname for this DeepSeek key (optional): "
+    , defaultAccount = "deepseek"
+    , defaultLabel = "DeepSeek"
+    , billing = ApiBilled
+    , validateKey = \key ->
+        fmap (\usage -> usage.keyLabel) <$> DeepSeek.fetchDeepSeekUsage key
+    }
+
+kimiConnect :: ApiKeyConnect
+kimiConnect = ApiKeyConnect
+    { provider = KimiProvider
+    , terminalPrompt = "Kimi (Moonshot) API key: "
+    , fullscreenTitle = "Connect Kimi (Moonshot)"
+    , fullscreenHint =
+        "Paste a Kimi (Moonshot) API key. Input is masked and is never "
+            <> "added to the conversation transcript."
+    , validatingMessage = "Validating Kimi key…"
+    , rejectPrefix = "Kimi rejected the key: "
+    , nicknamePrompt = "Nickname for this Kimi key (optional): "
+    , defaultAccount = "kimi"
+    , defaultLabel = "Kimi"
+    , billing = ApiBilled
+    , validateKey = \key ->
+        fmap (\usage -> usage.keyLabel) <$> Kimi.fetchKimiUsage key
+    }
+
+kimiCodeConnect :: ApiKeyConnect
+kimiCodeConnect = ApiKeyConnect
+    { provider = KimiCodeProvider
+    , terminalPrompt = "Kimi Code API key: "
+    , fullscreenTitle = "Connect Kimi Code"
+    , fullscreenHint =
+        "Paste a Kimi Code API key (from the Kimi Code Console). Input is "
+            <> "masked and is never added to the conversation transcript."
+    , validatingMessage = "Validating Kimi Code key…"
+    , rejectPrefix = "Kimi Code rejected the key: "
+    , nicknamePrompt = "Nickname for this Kimi Code key (optional): "
+    , defaultAccount = "kimi-code"
+    , defaultLabel = "Kimi Code"
+    , billing = SubscriptionBilled
+    , validateKey = \key ->
+        fmap (\usage -> usage.keyLabel) <$> KimiCode.fetchKimiCodeUsage key
+    }
+
+-- | Terminal (minimal-mode) API-key connect: read a masked key, validate it
+-- against the provider's usage endpoint, ask for an optional nickname, and
+-- store the credential.
+connectApiKey :: Bool -> ApiKeyConnect -> IO (Maybe Text)
+connectApiKey color hooks =
+    readSecretLine hooks.terminalPrompt >>= \case
+        Nothing -> pure Nothing
+        Just apiKey ->
+            hooks.validateKey apiKey >>= \case
+                Left err ->
+                    printLoginMessage color False
+                        (hooks.rejectPrefix <> err)
+                        >> pure Nothing
+                Right keyLabel -> do
+                    nickname <- readOptionalNickname hooks.nicknamePrompt
+                    let accountId = fromMaybe hooks.defaultAccount keyLabel
+                        label =
+                            fromMaybe
+                                (fromMaybe hooks.defaultLabel keyLabel)
+                                nickname
+                    storeConnectedCredential color
+                        hooks.provider
+                        accountId
+                        label
+                        hooks.billing
+                        ManagedBearerToken
+                        apiKey
+
+-- | Fullscreen API-key connect: same pipeline as 'connectApiKey' inside the
+-- Brick overlay, so keys never pass through the ordinary line editor.
+connectApiKeyFullscreen
+    :: FullscreenRuntime
+    -> ApiKeyConnect
+    -> IO (Maybe (Either Text CredentialConnection))
+connectApiKeyFullscreen runtime hooks =
+    requestFullscreenSecret
+        runtime
+        hooks.fullscreenTitle
+        hooks.fullscreenHint
+        >>= \case
+            Nothing -> pure Nothing
+            Just rawKey
+                | Text.null apiKey -> pure Nothing
+                | otherwise -> do
+                    fetched <-
+                        withLoginProgress runtime hooks.validatingMessage $
+                            hooks.validateKey apiKey
+                    case fetched of
+                        Left err ->
+                            pure $
+                                Just $
+                                    Left (hooks.rejectPrefix <> err)
+                        Right keyLabel -> do
+                            nickname <-
+                                requestFullscreenText
+                                    runtime
+                                    hooks.fullscreenTitle
+                                    "Nickname for this key (optional):"
+                                    ""
+                            let accountId =
+                                    fromMaybe hooks.defaultAccount keyLabel
+                                label =
+                                    fromMaybe
+                                        (fromMaybe hooks.defaultLabel keyLabel)
+                                        nickname
+                            Just <$> storeConnectedCredentialResult
+                                hooks.provider
+                                accountId
+                                label
+                                hooks.billing
+                                ManagedBearerToken
+                                apiKey
+              where
+                apiKey = Text.strip rawKey
+
 -- | Connect one account for the requested provider and return an identifier
 -- that selects the newly stored credential.
 connectProviderAccount :: Bool -> Provider -> IO (Maybe Text)
 connectProviderAccount color = \case
     OpenAIProvider -> connectOpenAI color
     XAIProvider -> connectXAI color
-    OpenRouterProvider -> connectOpenRouter color
-    DeepSeekProvider -> connectDeepSeek color
-    KimiProvider -> connectKimi color
-    KimiCodeProvider -> connectKimiCode color
+    OpenRouterProvider -> connectApiKey color openRouterConnect
+    DeepSeekProvider -> connectApiKey color deepSeekConnect
+    KimiProvider -> connectApiKey color kimiConnect
+    KimiCodeProvider -> connectApiKey color kimiCodeConnect
     GeminiProvider -> connectGemini color
     ClaudeCodeProvider -> do
         printLoginMessage color False
@@ -1537,10 +1704,10 @@ connectFullscreenProvider
 connectFullscreenProvider runtime = \case
     OpenAIProvider -> connectOpenAIFullscreen runtime
     XAIProvider -> connectXAIFullscreen runtime
-    OpenRouterProvider -> connectOpenRouterFullscreen runtime
-    DeepSeekProvider -> connectDeepSeekFullscreen runtime
-    KimiProvider -> connectKimiFullscreen runtime
-    KimiCodeProvider -> connectKimiCodeFullscreen runtime
+    OpenRouterProvider -> connectApiKeyFullscreen runtime openRouterConnect
+    DeepSeekProvider -> connectApiKeyFullscreen runtime deepSeekConnect
+    KimiProvider -> connectApiKeyFullscreen runtime kimiConnect
+    KimiCodeProvider -> connectApiKeyFullscreen runtime kimiCodeConnect
     GeminiProvider -> connectGeminiFullscreen runtime
     ClaudeCodeProvider ->
         pure $
@@ -1791,190 +1958,6 @@ connectXAIFullscreen runtime = do
                 (Text.decodeUtf8
                     (LBS.toStrict (Aeson.encode authJson)))
 
-connectOpenRouterFullscreen
-    :: FullscreenRuntime
-    -> IO (Maybe (Either Text CredentialConnection))
-connectOpenRouterFullscreen runtime =
-    requestFullscreenSecret
-        runtime
-        "Connect OpenRouter"
-        ( "Paste an OpenRouter API key. Input is masked and is never added "
-            <> "to the conversation transcript."
-        )
-        >>= \case
-            Nothing -> pure Nothing
-            Just rawKey
-                | Text.null apiKey -> pure Nothing
-                | otherwise -> do
-                    fetched <-
-                        withLoginProgress runtime "Validating OpenRouter key…" $
-                            OpenRouter.fetchOpenRouterUsage apiKey
-                    case fetched of
-                        Left err ->
-                            pure $
-                                Just $
-                                    Left ("OpenRouter rejected the key: " <> err)
-                        Right usage -> do
-                            nickname <-
-                                requestFullscreenText
-                                    runtime
-                                    "Connect OpenRouter"
-                                    "Nickname for this key (optional):"
-                                    ""
-                            let accountId =
-                                    fromMaybe "openrouter" usage.keyLabel
-                                label =
-                                    fromMaybe
-                                        (fromMaybe "OpenRouter" usage.keyLabel)
-                                        nickname
-                            Just <$> storeConnectedCredentialResult
-                                OpenRouterProvider
-                                accountId
-                                label
-                                ApiBilled
-                                ManagedBearerToken
-                                apiKey
-              where
-                apiKey = Text.strip rawKey
-
-connectDeepSeekFullscreen
-    :: FullscreenRuntime
-    -> IO (Maybe (Either Text CredentialConnection))
-connectDeepSeekFullscreen runtime =
-    requestFullscreenSecret
-        runtime
-        "Connect DeepSeek"
-        ( "Paste a DeepSeek API key. Input is masked and is never added "
-            <> "to the conversation transcript."
-        )
-        >>= \case
-            Nothing -> pure Nothing
-            Just rawKey
-                | Text.null apiKey -> pure Nothing
-                | otherwise -> do
-                    fetched <-
-                        withLoginProgress runtime "Validating DeepSeek key…" $
-                            DeepSeek.fetchDeepSeekUsage apiKey
-                    case fetched of
-                        Left err ->
-                            pure $
-                                Just $
-                                    Left ("DeepSeek rejected the key: " <> err)
-                        Right usage -> do
-                            nickname <-
-                                requestFullscreenText
-                                    runtime
-                                    "Connect DeepSeek"
-                                    "Nickname for this key (optional):"
-                                    ""
-                            let accountId =
-                                    fromMaybe "deepseek" usage.keyLabel
-                                label =
-                                    fromMaybe
-                                        (fromMaybe "DeepSeek" usage.keyLabel)
-                                        nickname
-                            Just <$> storeConnectedCredentialResult
-                                DeepSeekProvider
-                                accountId
-                                label
-                                ApiBilled
-                                ManagedBearerToken
-                                apiKey
-              where
-                apiKey = Text.strip rawKey
-
-connectKimiFullscreen
-    :: FullscreenRuntime
-    -> IO (Maybe (Either Text CredentialConnection))
-connectKimiFullscreen runtime =
-    requestFullscreenSecret
-        runtime
-        "Connect Kimi (Moonshot)"
-        ( "Paste a Kimi (Moonshot) API key. Input is masked and is never added "
-            <> "to the conversation transcript."
-        )
-        >>= \case
-            Nothing -> pure Nothing
-            Just rawKey
-                | Text.null apiKey -> pure Nothing
-                | otherwise -> do
-                    fetched <-
-                        withLoginProgress runtime "Validating Kimi key…" $
-                            Kimi.fetchKimiUsage apiKey
-                    case fetched of
-                        Left err ->
-                            pure $
-                                Just $
-                                    Left ("Kimi rejected the key: " <> err)
-                        Right usage -> do
-                            nickname <-
-                                requestFullscreenText
-                                    runtime
-                                    "Connect Kimi (Moonshot)"
-                                    "Nickname for this key (optional):"
-                                    ""
-                            let accountId =
-                                    fromMaybe "kimi" usage.keyLabel
-                                label =
-                                    fromMaybe
-                                        (fromMaybe "Kimi" usage.keyLabel)
-                                        nickname
-                            Just <$> storeConnectedCredentialResult
-                                KimiProvider
-                                accountId
-                                label
-                                ApiBilled
-                                ManagedBearerToken
-                                apiKey
-              where
-                apiKey = Text.strip rawKey
-
-connectKimiCodeFullscreen
-    :: FullscreenRuntime
-    -> IO (Maybe (Either Text CredentialConnection))
-connectKimiCodeFullscreen runtime =
-    requestFullscreenSecret
-        runtime
-        "Connect Kimi Code"
-        ( "Paste a Kimi Code API key (from the Kimi Code Console). Input is "
-            <> "masked and is never added to the conversation transcript."
-        )
-        >>= \case
-            Nothing -> pure Nothing
-            Just rawKey
-                | Text.null apiKey -> pure Nothing
-                | otherwise -> do
-                    fetched <-
-                        withLoginProgress runtime "Validating Kimi Code key…" $
-                            KimiCode.fetchKimiCodeUsage apiKey
-                    case fetched of
-                        Left err ->
-                            pure $
-                                Just $
-                                    Left ("Kimi Code rejected the key: " <> err)
-                        Right usage -> do
-                            nickname <-
-                                requestFullscreenText
-                                    runtime
-                                    "Connect Kimi Code"
-                                    "Nickname for this key (optional):"
-                                    ""
-                            let accountId =
-                                    fromMaybe "kimi-code" usage.keyLabel
-                                label =
-                                    fromMaybe
-                                        (fromMaybe "Kimi Code" usage.keyLabel)
-                                        nickname
-                            Just <$> storeConnectedCredentialResult
-                                KimiCodeProvider
-                                accountId
-                                label
-                                SubscriptionBilled
-                                ManagedBearerToken
-                                apiKey
-              where
-                apiKey = Text.strip rawKey
-
 connectGeminiFullscreen
     :: FullscreenRuntime
     -> IO (Maybe (Either Text CredentialConnection))
@@ -2165,114 +2148,6 @@ connectXAI color = do
                             ManagedGrokAuthJson
                             (Text.decodeUtf8
                                 (LBS.toStrict (Aeson.encode authJson)))
-
-connectOpenRouter :: Bool -> IO (Maybe Text)
-connectOpenRouter color =
-    readSecretLine "OpenRouter API key: " >>= \case
-        Nothing -> pure Nothing
-        Just apiKey ->
-            OpenRouter.fetchOpenRouterUsage apiKey >>= \case
-                Left err ->
-                    printLoginMessage color False
-                        ("OpenRouter rejected the key: " <> err)
-                        >> pure Nothing
-                Right usage -> do
-                    nickname <- readOptionalNickname
-                        "Nickname for this OpenRouter key (optional): "
-                    let accountId =
-                            fromMaybe "openrouter" usage.keyLabel
-                        label =
-                            fromMaybe
-                                (fromMaybe "OpenRouter" usage.keyLabel)
-                                nickname
-                    storeConnectedCredential color
-                        OpenRouterProvider
-                        accountId
-                        label
-                        ApiBilled
-                        ManagedBearerToken
-                        apiKey
-
-connectDeepSeek :: Bool -> IO (Maybe Text)
-connectDeepSeek color =
-    readSecretLine "DeepSeek API key: " >>= \case
-        Nothing -> pure Nothing
-        Just apiKey ->
-            DeepSeek.fetchDeepSeekUsage apiKey >>= \case
-                Left err ->
-                    printLoginMessage color False
-                        ("DeepSeek rejected the key: " <> err)
-                        >> pure Nothing
-                Right usage -> do
-                    nickname <- readOptionalNickname
-                        "Nickname for this DeepSeek key (optional): "
-                    let accountId =
-                            fromMaybe "deepseek" usage.keyLabel
-                        label =
-                            fromMaybe
-                                (fromMaybe "DeepSeek" usage.keyLabel)
-                                nickname
-                    storeConnectedCredential color
-                        DeepSeekProvider
-                        accountId
-                        label
-                        ApiBilled
-                        ManagedBearerToken
-                        apiKey
-
-connectKimi :: Bool -> IO (Maybe Text)
-connectKimi color =
-    readSecretLine "Kimi (Moonshot) API key: " >>= \case
-        Nothing -> pure Nothing
-        Just apiKey ->
-            Kimi.fetchKimiUsage apiKey >>= \case
-                Left err ->
-                    printLoginMessage color False
-                        ("Kimi rejected the key: " <> err)
-                        >> pure Nothing
-                Right usage -> do
-                    nickname <- readOptionalNickname
-                        "Nickname for this Kimi key (optional): "
-                    let accountId =
-                            fromMaybe "kimi" usage.keyLabel
-                        label =
-                            fromMaybe
-                                (fromMaybe "Kimi" usage.keyLabel)
-                                nickname
-                    storeConnectedCredential color
-                        KimiProvider
-                        accountId
-                        label
-                        ApiBilled
-                        ManagedBearerToken
-                        apiKey
-
-connectKimiCode :: Bool -> IO (Maybe Text)
-connectKimiCode color =
-    readSecretLine "Kimi Code API key: " >>= \case
-        Nothing -> pure Nothing
-        Just apiKey ->
-            KimiCode.fetchKimiCodeUsage apiKey >>= \case
-                Left err ->
-                    printLoginMessage color False
-                        ("Kimi Code rejected the key: " <> err)
-                        >> pure Nothing
-                Right usage -> do
-                    nickname <- readOptionalNickname
-                        "Nickname for this Kimi Code key (optional): "
-                    let accountId =
-                            fromMaybe "kimi-code" usage.keyLabel
-                        label =
-                            fromMaybe
-                                (fromMaybe "Kimi Code" usage.keyLabel)
-                                nickname
-                    storeConnectedCredential color
-                        KimiCodeProvider
-                        accountId
-                        label
-                        SubscriptionBilled
-                        ManagedBearerToken
-                        apiKey
 
 connectGemini :: Bool -> IO (Maybe Text)
 connectGemini color = do
