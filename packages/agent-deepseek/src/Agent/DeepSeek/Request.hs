@@ -8,9 +8,10 @@ module Agent.DeepSeek.Request
 import Agent.Responses.Request
     ( forceStatelessStreaming
     , mapResponseTools
-    , setResponseModel
+    , setRequestModel
     )
 import Agent.Responses.Types
+import Agent.Responses.Types.Setters
 import Agent.DeepSeek.Options (ClientOptions(..))
 import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Text (Text)
@@ -32,7 +33,7 @@ mapModel options model
 buildRequest :: ClientOptions -> ResponseCreateParams -> ResponseCreateParams
 buildRequest options request =
     mapResponseTools deepSeekTool $
-        setResponseModel (mapModel options (fromMaybe "" request.model)) $
+        setRequestModel (mapModel options (fromMaybe "" request.model)) $
             echoReasoningContent $
                 excludeEncryptedReasoningInclude $
                     forceStatelessStreaming request
@@ -56,10 +57,10 @@ echoReasoningContent ResponseCreateParams{..} =
         ResponseInputItems items -> ResponseInputItems (map echoItem items)
         other -> other
     echoItem (ReasoningItemValue reasoning) =
-        let withoutEncryption = clearReasoningEncryption reasoning
+        let withoutEncryption = setReasoningItemEncryptedContent Nothing reasoning
         in ReasoningItemValue
             (if hasNoContent reasoning.content
-                then setReasoningContent
+                then setReasoningItemContent
                     (Just (echoedContent reasoning.summary))
                     withoutEncryption
                 else withoutEncryption)
@@ -83,28 +84,6 @@ unavailableReasoningPlaceholder = "(thinking unavailable)"
 -- | Nothing or an empty list both mean "no reasoning_text carried yet".
 hasNoContent :: Maybe [ResponseContentPart] -> Bool
 hasNoContent = maybe True null
-
-setReasoningContent :: Maybe [ResponseContentPart] -> ReasoningItem -> ReasoningItem
-setReasoningContent newContent reasoning =
-    ReasoningItem
-        { itemId = reasoning.itemId
-        , summary = reasoning.summary
-        , content = newContent
-        , encryptedContent = reasoning.encryptedContent
-        , status = reasoning.status
-        }
-
--- | Drop any OpenAI-style encrypted reasoning payload. 'encryptedContent' is
--- a field on several records, so the update rebuilds via the constructor.
-clearReasoningEncryption :: ReasoningItem -> ReasoningItem
-clearReasoningEncryption reasoning =
-    ReasoningItem
-        { itemId = reasoning.itemId
-        , summary = reasoning.summary
-        , content = reasoning.content
-        , encryptedContent = Nothing
-        , status = reasoning.status
-        }
 
 -- | DeepSeek exposes thinking-mode reasoning as plain @reasoning_text@ content,
 -- not as OpenAI-style encrypted reasoning. Asking for

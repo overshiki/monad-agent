@@ -4,7 +4,7 @@ import Agent.Error (ApiError(..), ErrorType(..))
 import Agent.Json (rawJsonBytes, rawJsonFromEncoding)
 import qualified Agent.Responses.Codec as Codec
 import Agent.Responses.GenericClient
-import Agent.Responses.Request (setResponseModel)
+import Agent.Responses.Request (setRequestModel)
 import Agent.Responses.Types
 import Control.Retry (constantDelay, limitRetries)
 import qualified Data.Aeson as Aeson
@@ -186,7 +186,7 @@ providerHookConfig port = ProviderClientConfig
     { providerExceptionPrefix = "Provider hook request failed"
     , providerBaseUrl = "http://127.0.0.1:" <> show port <> "/v1"
     , providerRequestTimeoutSeconds = 10
-    , providerBuildRequest = setResponseModel "provider-model"
+    , providerBuildRequest = setRequestModel "provider-model"
     , providerConfigureRequest =
         setRequestHeader "X-Provider-Hook" ["enabled"]
     , providerClassifyFailure = \_status _retryAfter body ->

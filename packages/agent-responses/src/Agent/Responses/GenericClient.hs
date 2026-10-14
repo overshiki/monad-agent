@@ -33,7 +33,7 @@ import Agent.Responses.Error
 import qualified Agent.Responses.HttpSSE as HttpSSE
 import Agent.Responses.Request
     ( forceStatelessStreaming
-    , setResponseModel
+    , setRequestModel
     )
 import Agent.Responses.StreamAssembly
     ( StreamAssemblyConfig(..)
@@ -86,7 +86,7 @@ data ProviderClientConfig = ProviderClientConfig
 -- so remote storage and continuation identifiers must stay disabled.
 buildRequest :: GenericClientOptions -> ResponseCreateParams -> ResponseCreateParams
 buildRequest options request =
-    setResponseModel options.model (forceStatelessStreaming request)
+    setRequestModel options.model (forceStatelessStreaming request)
 
 createResponseWith
     :: GenericClientOptions

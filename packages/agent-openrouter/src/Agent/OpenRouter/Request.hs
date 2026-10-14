@@ -9,7 +9,7 @@ import Agent.Responses.Request
     ( forceStatelessStreaming
     , mapResponseTools
     , selectConfiguredModel
-    , setResponseModel
+    , setRequestModel
     )
 import Agent.Responses.Types
 import Agent.OpenRouter.Options (ClientOptions(..))
@@ -35,7 +35,7 @@ mapModel options model =
 buildRequest :: ClientOptions -> ResponseCreateParams -> ResponseCreateParams
 buildRequest options request =
     mapResponseTools openRouterTool $
-        setResponseModel
+        setRequestModel
             (selectConfiguredModel
                 options.modelOverrides
                 (Text.isInfixOf "/")

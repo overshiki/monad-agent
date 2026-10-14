@@ -25,6 +25,10 @@ makeSetters ''FunctionCallOutput
 makeSetters ''CustomToolCall
 makeSetters ''CustomToolCallOutput
 makeSetters ''WebSearchCall
+makeSetters ''LocalShellCall
+makeSetters ''ToolSearchCall
+makeSetters ''ToolSearchOutput
+makeSetters ''ImageGenerationCall
 makeSetters ''Response
 makeSetters ''ResponseUsage
 makeSetters ''ReasoningConfig

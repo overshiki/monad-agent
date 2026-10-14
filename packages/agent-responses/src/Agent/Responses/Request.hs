@@ -3,7 +3,7 @@ module Agent.Responses.Request
     ( forceStatelessStreaming
     , mapResponseTools
     , selectConfiguredModel
-    , setResponseModel
+    , setRequestModel
     , stripReplayedItemStatus
     , stripReplayedInputStatus
     ) where
@@ -36,11 +36,11 @@ mapResponseTools project ResponseCreateParams{..} =
         }
 
 -- | Set the request model without relying on ambiguous record updates.
-setResponseModel
+setRequestModel
     :: Text
     -> ResponseCreateParams
     -> ResponseCreateParams
-setResponseModel selected ResponseCreateParams{..} =
+setRequestModel selected ResponseCreateParams{..} =
     ResponseCreateParams
         { model = Just selected
         , ..

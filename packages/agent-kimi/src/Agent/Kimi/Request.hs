@@ -8,7 +8,7 @@ module Agent.Kimi.Request
 import Agent.Responses.Request
     ( forceStatelessStreaming
     , mapResponseTools
-    , setResponseModel
+    , setRequestModel
     )
 import Agent.Responses.Types
 import Agent.Kimi.Options (ClientOptions(..))
@@ -34,7 +34,7 @@ mapModel options model
 buildRequest :: ClientOptions -> ResponseCreateParams -> ResponseCreateParams
 buildRequest options request =
     mapResponseTools kimiTool $
-        setResponseModel (mapModel options (fromMaybe "" request.model)) $
+        setRequestModel (mapModel options (fromMaybe "" request.model)) $
             forceStatelessStreaming $
                 dropUnsupportedToolChoice request
 
