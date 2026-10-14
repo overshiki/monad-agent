@@ -1,5 +1,5 @@
 package	src_loc	test_loc	total
-agent-cli	85337	31660	116997
+agent-cli	85171	31660	116831
 agent-core	19097	10411	29508
 agent-openai	10434	8943	19377
 agent-store	9170	2353	11523

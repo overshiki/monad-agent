@@ -177,7 +177,10 @@ import Agent.ReasoningEffort ()
 import Agent.Responses.GenericBackend
     ( genericResponsesBackendWith )
 import Agent.Responses.GenericClient ()
-import Agent.Responses.Types ( ResponseCreateParams(model) )
+import Agent.Responses.Types
+    ( Response
+    , ResponseCreateParams(model)
+    )
 import Agent.Skills ()
 import Agent.Store.Postgres ()
 import Agent.Store.Types ()
@@ -263,6 +266,19 @@ import qualified Agent.KimiCode.Client as KimiCodeClient
     ( createResponseWith )
 import qualified Agent.KimiCode.Options as KimiCode
     ( clientOptionsFromEnv )
+
+-- | Per-provider hooks for the stateless HTTP provider branch (DeepSeek,
+-- Kimi, Kimi Code). Their branch bodies are identical scaffolding — context
+-- window, overflow guard, subagent runner, auto-compaction, compact runner —
+-- differing only in these four provider-specific closures. A new stateless
+-- HTTP provider is one hook record, not another hundred-line copy.
+data StatelessHttpHooks = StatelessHttpHooks
+    { shProvider :: Provider
+    , shContextWindow :: ResponseCreateParams -> Int
+    , shMakeBackend :: IO ResponseCreateParams -> Backend
+    , shCompactSend
+        :: ResponseCreateParams -> IO (Either ApiError Response)
+    }
 
 runAgentProviders
     :: ModelSwitchScope
@@ -1111,327 +1127,145 @@ runAgentProviders
                                 }
                     DeepSeekProvider -> do
                         deepSeekOptions <- DeepSeek.clientOptionsFromEnv
-                        deepSeekOccupancy <- newIORef Nothing
-                        let deepSeekContextWindow =
+                        runStatelessHttpBranch StatelessHttpHooks
+                            { shProvider = DeepSeekProvider
+                            , shContextWindow =
                                 contextWindowForParams id 1_048_576
-                            makeBackend getParams =
-                                deepSeekBackend
-                                    deepSeekOptions
-                                    tokenProvider
-                                    getParams
-                            protectDeepSeekOverflow occupancy getParams backend =
-                                boundCompletedToolContinuations
-                                    deepSeekContextWindow
-                                    getParams
-                                    occupancy
-                                    backend
-                        installHttpSubagentRunner
-                            subagentRuntime
-                            dialect
-                            DeepSeekProvider
-                            multiCtx
-                            (\childParams ->
-                                protectDeepSeekOverflow
-                                    deepSeekOccupancy
-                                    (pure childParams)
-                                    (makeBackend
-                                        (pure childParams)))
-                        let deepSeekCompactThreshold = do
-                                currentParams <- readIORef paramsRef
-                                let contextWindow =
-                                        deepSeekContextWindow currentParams
-                                pure $
-                                    max 1 $
-                                        min contextWindow $
-                                            fromMaybe
-                                                (contextWindow * 4 `div` 5)
-                                                options.optCompactThreshold
-                            btwBackend privateParams =
-                                makeBackend (pure privateParams)
-                            compactDeepSeekHistory history _inputs = do
-                                currentParams <- readIORef paramsRef
-                                runBackendCompactHistoryWithContextWindow
-                                    (deepSeekContextWindow currentParams)
-                                    btwBackend
-                                    recordCompactionUsage
-                                    currentParams
-                                    history
-                                    Nothing
-                            compactingBackend =
-                                autoCompactBackendWith
-                                    deepSeekCompactThreshold
-                                    compactDeepSeekHistory
-                                    (\outcome inputs ->
-                                        readIORef
-                                            automaticCompactionHookRef
-                                            >>= \hook ->
-                                                hook outcome inputs)
-                                    (readIORef paramsRef)
-                                    deepSeekOccupancy
-                                    (makeBackend
-                                        (readIORef paramsRef))
-                            backend =
-                                withPendingInputs pendingNotices $
-                                    withConnectionRecovery $
-                                        protectDeepSeekOverflow
-                                            deepSeekOccupancy
-                                            (readIORef paramsRef)
-                                            compactingBackend
-                            compactRunner focus = do
-                                contextWindow <-
-                                    currentModelContextWindow id
-                                historyRef <-
-                                    newIORef =<< readLiveTranscript conversationRef
-                                installLiveCompactOutcome conversationRef Nothing
-                                    (runResponsesCompactWithContextWindow
-                                        contextWindow
-                                        (\request ->
-                                            runWithTokenProvider tokenProvider
-                                                \credential ->
-                                                    DeepSeekClient.createResponseWith
-                                                        deepSeekOptions
-                                                        credential
-                                                        request)
-                                        recordCompactionUsage
-                                        paramsRef
-                                        historyRef)
-                                    focus
-                        activeBackend <-
-                            prepareTransitionBackend
-                                modelSwitchScope home projectRoot
-                                transition persist backend
-                        runSession
-                            (sessionRequest
-                                startupUnavailable
-                                (Just tokenProvider)
-                                loaded.loadedOpenAiPool
-                                (Just selectHttpAccount)
-                                (Just . deepSeekContextWindow
-                                    <$> readIORef paramsRef)
-                                compactRunner)
-                            SessionBackend
-                                { backend = activeBackend
-                                , btwBackend
-                                , interruptBackend = pure ()
-                                , resetBackendState = pure ()
-                                }
+                            , shMakeBackend =
+                                deepSeekBackend deepSeekOptions tokenProvider
+                            , shCompactSend = \request ->
+                                runWithTokenProvider tokenProvider
+                                    \credential ->
+                                        DeepSeekClient.createResponseWith
+                                            deepSeekOptions
+                                            credential
+                                            request
+                            }
                     KimiProvider -> do
                         kimiOptions <- Kimi.clientOptionsFromEnv
-                        kimiOccupancy <- newIORef Nothing
-                        let kimiContextWindow =
+                        runStatelessHttpBranch StatelessHttpHooks
+                            { shProvider = KimiProvider
+                            , shContextWindow =
                                 contextWindowForParams id 1_048_576
-                            makeBackend getParams =
-                                kimiBackend
-                                    kimiOptions
-                                    tokenProvider
-                                    getParams
-                            protectKimiOverflow occupancy getParams backend =
-                                boundCompletedToolContinuations
-                                    kimiContextWindow
-                                    getParams
-                                    occupancy
-                                    backend
-                        installHttpSubagentRunner
-                            subagentRuntime
-                            dialect
-                            KimiProvider
-                            multiCtx
-                            (\childParams ->
-                                protectKimiOverflow
-                                    kimiOccupancy
-                                    (pure childParams)
-                                    (makeBackend
-                                        (pure childParams)))
-                        let kimiCompactThreshold = do
-                                currentParams <- readIORef paramsRef
-                                let contextWindow =
-                                        kimiContextWindow currentParams
-                                pure $
-                                    max 1 $
-                                        min contextWindow $
-                                            fromMaybe
-                                                (contextWindow * 4 `div` 5)
-                                                options.optCompactThreshold
-                            btwBackend privateParams =
-                                makeBackend (pure privateParams)
-                            compactKimiHistory history _inputs = do
-                                currentParams <- readIORef paramsRef
-                                runBackendCompactHistoryWithContextWindow
-                                    (kimiContextWindow currentParams)
-                                    btwBackend
-                                    recordCompactionUsage
-                                    currentParams
-                                    history
-                                    Nothing
-                            compactingBackend =
-                                autoCompactBackendWith
-                                    kimiCompactThreshold
-                                    compactKimiHistory
-                                    (\outcome inputs ->
-                                        readIORef
-                                            automaticCompactionHookRef
-                                            >>= \hook ->
-                                                hook outcome inputs)
-                                    (readIORef paramsRef)
-                                    kimiOccupancy
-                                    (makeBackend
-                                        (readIORef paramsRef))
-                            backend =
-                                withPendingInputs pendingNotices $
-                                    withConnectionRecovery $
-                                        protectKimiOverflow
-                                            kimiOccupancy
-                                            (readIORef paramsRef)
-                                            compactingBackend
-                            compactRunner focus = do
-                                contextWindow <-
-                                    currentModelContextWindow id
-                                historyRef <-
-                                    newIORef =<< readLiveTranscript conversationRef
-                                installLiveCompactOutcome conversationRef Nothing
-                                    (runResponsesCompactWithContextWindow
-                                        contextWindow
-                                        (\request ->
-                                            runWithTokenProvider tokenProvider
-                                                \credential ->
-                                                    KimiClient.createResponseWith
-                                                        kimiOptions
-                                                        credential
-                                                        request)
-                                        recordCompactionUsage
-                                        paramsRef
-                                        historyRef)
-                                    focus
-                        activeBackend <-
-                            prepareTransitionBackend
-                                modelSwitchScope home projectRoot
-                                transition persist backend
-                        runSession
-                            (sessionRequest
-                                startupUnavailable
-                                (Just tokenProvider)
-                                loaded.loadedOpenAiPool
-                                (Just selectHttpAccount)
-                                (Just . kimiContextWindow
-                                    <$> readIORef paramsRef)
-                                compactRunner)
-                            SessionBackend
-                                { backend = activeBackend
-                                , btwBackend
-                                , interruptBackend = pure ()
-                                , resetBackendState = pure ()
-                                }
+                            , shMakeBackend =
+                                kimiBackend kimiOptions tokenProvider
+                            , shCompactSend = \request ->
+                                runWithTokenProvider tokenProvider
+                                    \credential ->
+                                        KimiClient.createResponseWith
+                                            kimiOptions
+                                            credential
+                                            request
+                            }
                     KimiCodeProvider -> do
                         kimiCodeOptions <- KimiCode.clientOptionsFromEnv
-                        kimiCodeOccupancy <- newIORef Nothing
-                        let kimiCodeContextWindow =
+                        runStatelessHttpBranch StatelessHttpHooks
+                            { shProvider = KimiCodeProvider
+                            , shContextWindow =
                                 contextWindowForParams id 1_048_576
-                            makeBackend getParams =
-                                kimiCodeBackend
-                                    kimiCodeOptions
-                                    tokenProvider
-                                    getParams
-                            protectKimiCodeOverflow occupancy getParams backend =
-                                boundCompletedToolContinuations
-                                    kimiCodeContextWindow
-                                    getParams
-                                    occupancy
-                                    backend
-                        installHttpSubagentRunner
-                            subagentRuntime
-                            dialect
-                            KimiCodeProvider
-                            multiCtx
-                            (\childParams ->
-                                protectKimiCodeOverflow
-                                    kimiCodeOccupancy
-                                    (pure childParams)
-                                    (makeBackend
-                                        (pure childParams)))
-                        let kimiCodeCompactThreshold = do
-                                currentParams <- readIORef paramsRef
-                                let contextWindow =
-                                        kimiCodeContextWindow currentParams
-                                pure $
-                                    max 1 $
-                                        min contextWindow $
-                                            fromMaybe
-                                                (contextWindow * 4 `div` 5)
-                                                options.optCompactThreshold
-                            btwBackend privateParams =
-                                makeBackend (pure privateParams)
-                            compactKimiCodeHistory history _inputs = do
-                                currentParams <- readIORef paramsRef
-                                runBackendCompactHistoryWithContextWindow
-                                    (kimiCodeContextWindow currentParams)
-                                    btwBackend
-                                    recordCompactionUsage
-                                    currentParams
-                                    history
-                                    Nothing
-                            compactingBackend =
-                                autoCompactBackendWith
-                                    kimiCodeCompactThreshold
-                                    compactKimiCodeHistory
-                                    (\outcome inputs ->
-                                        readIORef
-                                            automaticCompactionHookRef
-                                            >>= \hook ->
-                                                hook outcome inputs)
-                                    (readIORef paramsRef)
-                                    kimiCodeOccupancy
-                                    (makeBackend
-                                        (readIORef paramsRef))
-                            backend =
-                                withPendingInputs pendingNotices $
-                                    withConnectionRecovery $
-                                        protectKimiCodeOverflow
-                                            kimiCodeOccupancy
-                                            (readIORef paramsRef)
-                                            compactingBackend
-                            compactRunner focus = do
-                                contextWindow <-
-                                    currentModelContextWindow id
-                                historyRef <-
-                                    newIORef =<< readLiveTranscript conversationRef
-                                installLiveCompactOutcome conversationRef Nothing
-                                    (runResponsesCompactWithContextWindow
-                                        contextWindow
-                                        (\request ->
-                                            runWithTokenProvider tokenProvider
-                                                \credential ->
-                                                    KimiCodeClient.createResponseWith
-                                                        kimiCodeOptions
-                                                        credential
-                                                        request)
-                                        recordCompactionUsage
-                                        paramsRef
-                                        historyRef)
-                                    focus
-                        activeBackend <-
-                            prepareTransitionBackend
-                                modelSwitchScope home projectRoot
-                                transition persist backend
-                        runSession
-                            (sessionRequest
-                                startupUnavailable
-                                (Just tokenProvider)
-                                loaded.loadedOpenAiPool
-                                (Just selectHttpAccount)
-                                (Just . kimiCodeContextWindow
-                                    <$> readIORef paramsRef)
-                                compactRunner)
-                            SessionBackend
-                                { backend = activeBackend
-                                , btwBackend
-                                , interruptBackend = pure ()
-                                , resetBackendState = pure ()
-                                }
+                            , shMakeBackend =
+                                kimiCodeBackend kimiCodeOptions tokenProvider
+                            , shCompactSend = \request ->
+                                runWithTokenProvider tokenProvider
+                                    \credential ->
+                                        KimiCodeClient.createResponseWith
+                                            kimiCodeOptions
+                                            credential
+                                            request
+                            }
           where
             startupFailure err = do
                 now <- getCurrentTime
                 startupDie startup
                     (Text.unpack (formatApiErrorAt now err))
+            -- Shared body of the DeepSeek/Kimi/KimiCode branches; the
+            -- per-provider differences live entirely in the hooks.
+            runStatelessHttpBranch hooks = do
+                occupancy <- newIORef Nothing
+                let cw = hooks.shContextWindow
+                    makeBackend = hooks.shMakeBackend
+                    protectOverflow getParams backend =
+                        boundCompletedToolContinuations
+                            cw getParams occupancy backend
+                installHttpSubagentRunner
+                    subagentRuntime
+                    dialect
+                    (hooks.shProvider)
+                    multiCtx
+                    (\childParams ->
+                        protectOverflow
+                            (pure childParams)
+                            (makeBackend (pure childParams)))
+                let compactThreshold = do
+                        currentParams <- readIORef paramsRef
+                        let contextWindow = cw currentParams
+                        pure $
+                            max 1 $
+                                min contextWindow $
+                                    fromMaybe
+                                        (contextWindow * 4 `div` 5)
+                                        options.optCompactThreshold
+                    btwBackend privateParams =
+                        makeBackend (pure privateParams)
+                    compactHistory history _inputs = do
+                        currentParams <- readIORef paramsRef
+                        runBackendCompactHistoryWithContextWindow
+                            (cw currentParams)
+                            btwBackend
+                            recordCompactionUsage
+                            currentParams
+                            history
+                            Nothing
+                    compactingBackend =
+                        autoCompactBackendWith
+                            compactThreshold
+                            compactHistory
+                            (\outcome inputs ->
+                                readIORef
+                                    automaticCompactionHookRef
+                                    >>= \hook ->
+                                        hook outcome inputs)
+                            (readIORef paramsRef)
+                            occupancy
+                            (makeBackend
+                                (readIORef paramsRef))
+                    backend =
+                        withPendingInputs pendingNotices $
+                            withConnectionRecovery $
+                                protectOverflow
+                                    (readIORef paramsRef)
+                                    compactingBackend
+                    compactRunner focus = do
+                        contextWindow <-
+                            currentModelContextWindow id
+                        historyRef <-
+                            newIORef =<< readLiveTranscript conversationRef
+                        installLiveCompactOutcome conversationRef Nothing
+                            (runResponsesCompactWithContextWindow
+                                contextWindow
+                                (hooks.shCompactSend)
+                                recordCompactionUsage
+                                paramsRef
+                                historyRef)
+                            focus
+                activeBackend <-
+                    prepareTransitionBackend
+                        modelSwitchScope home projectRoot
+                        transition persist backend
+                runSession
+                    (sessionRequest
+                        startupUnavailable
+                        (Just tokenProvider)
+                        loaded.loadedOpenAiPool
+                        (Just selectHttpAccount)
+                        (Just . cw <$> readIORef paramsRef)
+                        compactRunner)
+                    SessionBackend
+                        { backend = activeBackend
+                        , btwBackend
+                        , interruptBackend = pure ()
+                        , resetBackendState = pure ()
+                        }
 
 -- | Install the HTTP-family child runner (OpenRouter, DeepSeek, Kimi) for
 -- this session's multi-agent context. Every HTTP provider branch registers
