@@ -11,6 +11,7 @@ module Agent.CLI.Request
 
 import Agent.OpenAI.ModelMetadata (isCodexResponsesLiteModel)
 import Agent.Responses.Types
+import Agent.Responses.Types.Setters
 import Agent.Responses.Types.Tools (responseToolDecoder)
 import Agent.Json (RawJson, rawJsonBytes, rawJsonFromEncoding)
 import Agent.Json.Decode qualified as Hermes
@@ -130,10 +131,10 @@ setRequestModel
     -> ResponseCreateParams
 setRequestModel provider modelName params
     | oldLite == newLite =
-        setModelField modelName
+        setResponseCreateParamsModel (Just modelName)
             (if params.model == Just modelName
                 then params
-                else clearServiceTier params)
+                else setResponseCreateParamsServiceTier Nothing params)
     | newLite =
         let instructionText = fromMaybe "" params.instructions
             toolSchemas = fromMaybe [] params.tools
@@ -410,22 +411,12 @@ responseInputItems = \case
         ]
     Nothing -> []
 
-setModelField :: Text -> ResponseCreateParams -> ResponseCreateParams
-setModelField modelName ResponseCreateParams{..} =
-    ResponseCreateParams { model = Just modelName, .. }
-
-clearServiceTier :: ResponseCreateParams -> ResponseCreateParams
-clearServiceTier ResponseCreateParams{..} =
-    ResponseCreateParams { serviceTier = Nothing, .. }
-
 setReasoningContext
     :: Maybe Text
     -> Maybe ReasoningConfig
     -> Maybe ReasoningConfig
-setReasoningContext nextContext = \case
-    Just ReasoningConfig{..} ->
-        Just ReasoningConfig { context = nextContext, .. }
-    Nothing -> Nothing
+setReasoningContext nextContext =
+    fmap (setReasoningConfigContext nextContext)
 
 liteTextConfig :: ResponseTextConfig
 liteTextConfig = ResponseTextConfig
@@ -438,8 +429,7 @@ toResponsesLiteTextConfig
     -> ResponseTextConfig
 toResponsesLiteTextConfig = \case
     Nothing -> liteTextConfig
-    Just ResponseTextConfig{..} ->
-        ResponseTextConfig { verbosity = Just "low", .. }
+    Just config -> setResponseTextConfigVerbosity (Just "low") config
 
 fromResponsesLiteTextConfig
     :: Maybe ResponseTextConfig
@@ -449,8 +439,7 @@ fromResponsesLiteTextConfig = \case
         { format = Nothing
         , verbosity = Just "low"
         } -> Nothing
-    Just ResponseTextConfig{..} ->
-        Just ResponseTextConfig { verbosity = Nothing, .. }
+    Just config -> Just (setResponseTextConfigVerbosity Nothing config)
     Nothing -> Nothing
 
 nonBlank :: Text -> Maybe Text

@@ -32,4 +32,5 @@ makeSetters ''ImageGenerationCall
 makeSetters ''Response
 makeSetters ''ResponseUsage
 makeSetters ''ReasoningConfig
+makeSetters ''ResponseTextConfig
 makeSetters ''ResponseCreateParams
