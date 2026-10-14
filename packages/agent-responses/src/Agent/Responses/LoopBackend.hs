@@ -51,6 +51,7 @@ import Agent.Provider
     )
 import Agent.Responses.Request (stripReplayedItemStatus)
 import Agent.Responses.Types
+import Agent.Responses.Types.Setters
 import Agent.ToolDispatch
     ( ToolCall(..)
     , ToolCallKind(..)
@@ -269,45 +270,17 @@ isBaseInstructions = \case
     _ -> False
 
 -- Responses Lite rejects image-detail hints. Match Codex by removing them
--- from user messages and from image content embedded in tool outputs while
--- preserving every other item field.
+-- from user messages while preserving every other item field.
 stripResponsesLiteImageDetails :: ResponseItem -> ResponseItem
 stripResponsesLiteImageDetails = \case
     MessageItem message ->
-        MessageItem ResponseMessage
-            { messageId = message.messageId
-            , content = case message.content of
-                MessageContentText text -> MessageContentText text
-                MessageContentParts parts ->
-                    MessageContentParts (map stripContentPart parts)
-            , role = message.role
-            , status = message.status
-            , phase = message.phase
-            , passthrough = message.passthrough
-
-            }
-    FunctionCallOutputItem callOutput ->
-        FunctionCallOutputItem FunctionCallOutput
-            { itemId = callOutput.itemId
-            , callId = callOutput.callId
-            , name = callOutput.name
-            , namespace = callOutput.namespace
-            , provider = callOutput.provider
-            , output = callOutput.output
-            , status = callOutput.status
-
-            }
-    CustomToolCallOutputItem callOutput ->
-        CustomToolCallOutputItem CustomToolCallOutput
-            { itemId = callOutput.itemId
-            , callId = callOutput.callId
-            , name = callOutput.name
-            , output = callOutput.output
-            , status = callOutput.status
-
-            }
+        MessageItem (setResponseMessageContent (stripMessageContent message.content) message)
     item -> item
   where
+    stripMessageContent = \case
+        MessageContentText text -> MessageContentText text
+        MessageContentParts parts ->
+            MessageContentParts (map stripContentPart parts)
     stripContentPart = \case
         InputImagePart{..} -> InputImagePart { detail = Nothing, .. }
         part -> part
@@ -320,27 +293,17 @@ normalizeRequestItem :: ResponseItem -> ResponseItem
 normalizeRequestItem = \case
     MessageItem message
         | message.role == RoleAssistant ->
-            MessageItem ResponseMessage
-                { messageId = message.messageId
-                , content = case message.content of
-                    MessageContentText text ->
-                        MessageContentParts
-                            [OutputTextPart text Nothing Nothing]
-                    MessageContentParts parts ->
-                        MessageContentParts (map normalizeAssistantPart parts)
-                , role = message.role
-                , status = message.status
-                , phase = message.phase
-                , passthrough = message.passthrough
-
-                }
+            MessageItem (setResponseMessageContent (normalizeMessageContent message.content) message)
     WebSearchCallItem call ->
-        WebSearchCallItem WebSearchCall
-            { itemId = call.itemId
-            , status = call.status
-            , action = normalizeSearchAction <$> call.action
-            }
+        WebSearchCallItem
+            (setWebSearchCallAction (normalizeSearchAction <$> call.action) call)
     item -> item
+  where
+    normalizeMessageContent = \case
+        MessageContentText text ->
+            MessageContentParts [OutputTextPart text Nothing Nothing]
+        MessageContentParts parts ->
+            MessageContentParts (map normalizeAssistantPart parts)
 
 -- DeepSeek's server-side decoder requires the plural @queries@ field on
 -- @search@ actions, while OpenAI emits the singular @query@. Mirror the
@@ -381,61 +344,17 @@ uniquifyRequestCallIds = go Map.empty
     go pending (item : rest) = case item of
         FunctionCallItem call ->
             let (pending', callId') = claimCallId pending call.callId
-            in rebuildFunctionCall call callId' : go pending' rest
+            in FunctionCallItem (setFunctionCallCallId callId' call) : go pending' rest
         FunctionCallOutputItem out ->
             let (pending', callId') = claimOutputCallId pending out.callId
-            in rebuildFunctionOutput out callId' : go pending' rest
+            in FunctionCallOutputItem (setFunctionCallOutputCallId callId' out) : go pending' rest
         CustomToolCallItem call ->
             let (pending', callId') = claimCallId pending call.callId
-            in rebuildCustomCall call callId' : go pending' rest
+            in CustomToolCallItem (setCustomToolCallCallId callId' call) : go pending' rest
         CustomToolCallOutputItem out ->
             let (pending', callId') = claimOutputCallId pending out.callId
-            in rebuildCustomOutput out callId' : go pending' rest
+            in CustomToolCallOutputItem (setCustomToolCallOutputCallId callId' out) : go pending' rest
         _ -> item : go pending rest
-
--- | 'callId' is a duplicate record field across the call and output types,
--- so rebuilds go through constructors instead of record update syntax.
-rebuildFunctionCall :: FunctionCall -> Text -> ResponseItem
-rebuildFunctionCall call callId' = FunctionCallItem FunctionCall
-    { itemId = call.itemId
-    , callId = callId'
-    , name = call.name
-    , namespace = call.namespace
-    , provider = call.provider
-    , arguments = call.arguments
-    , encryptedFunctionArgs = call.encryptedFunctionArgs
-    , status = call.status
-    }
-
-rebuildFunctionOutput :: FunctionCallOutput -> Text -> ResponseItem
-rebuildFunctionOutput out callId' = FunctionCallOutputItem FunctionCallOutput
-    { itemId = out.itemId
-    , callId = callId'
-    , name = out.name
-    , namespace = out.namespace
-    , provider = out.provider
-    , output = out.output
-    , status = out.status
-    }
-
-rebuildCustomCall :: CustomToolCall -> Text -> ResponseItem
-rebuildCustomCall call callId' = CustomToolCallItem CustomToolCall
-    { itemId = call.itemId
-    , callId = callId'
-    , name = call.name
-    , namespace = call.namespace
-    , input = call.input
-    , status = call.status
-    }
-
-rebuildCustomOutput :: CustomToolCallOutput -> Text -> ResponseItem
-rebuildCustomOutput out callId' = CustomToolCallOutputItem CustomToolCallOutput
-    { itemId = out.itemId
-    , callId = callId'
-    , name = out.name
-    , output = out.output
-    , status = out.status
-    }
 
 -- | First occurrence of a call id keeps it and opens an empty rename queue;
 -- later collisions are renamed deterministically (@cid#2@, @cid#3@, ...) and

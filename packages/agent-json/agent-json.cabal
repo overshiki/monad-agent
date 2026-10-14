@@ -36,6 +36,7 @@ library
     exposed-modules:
         Agent.Json
         Agent.Json.Decode
+        Agent.Json.TH
     other-modules:
         Agent.Json.Internal
     build-depends:
@@ -45,6 +46,7 @@ library
         , hermes-json >= 0.8 && < 0.9
         , safe-exceptions >= 0.1.7 && < 0.2
         , text >= 2.0 && < 2.2
+        , template-haskell >= 2.18 && < 2.22
         , vector >= 0.13 && < 0.14
         , vector
 
@@ -60,4 +62,5 @@ test-suite agent-json-test
         , base >= 4.17 && < 5
         , bytestring
         , hspec >= 2.11 && < 2.12
+        , template-haskell >= 2.18 && < 2.22
         , text

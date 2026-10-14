@@ -34,6 +34,7 @@ import Agent.Responses.ResponseMerge
     , responseItemKind
     )
 import Agent.Responses.Types
+import Agent.Responses.Types.Setters
 import Control.Applicative ((<|>))
 import qualified Data.IntMap.Strict as IntMap
 import Data.IntMap.Strict (IntMap)
@@ -172,7 +173,7 @@ applyStreamEvent state = \case
                 ]
                 (\progress -> progress
                     { itemValue = mapCustomCall streamItemId streamCallId
-                        (setCustomToolInput
+                        (setCustomToolCallInput
                             (fromMaybe
                                 (materializedCustomInput progress)
                                 inputText))
@@ -187,7 +188,7 @@ applyStreamEvent state = \case
                 [streamItemIdentity "reasoning" streamItemId]
                 (\progress -> progress
                     { itemValue = mapReasoning streamItemId index
-                        (setReasoningPartText (Just value))
+                        (setReasoningSummaryPartText (Just value))
                         progress.itemValue
                     , reasoningTextChunks =
                         IntMap.delete index progress.reasoningTextChunks
@@ -492,37 +493,12 @@ mergeReasoning previous next =
         , status = next.status <|> previous.status
         }
 
-setFunctionArguments :: Text -> FunctionCall -> FunctionCall
-setFunctionArguments value call =
-    let FunctionCall {..} = call
-    in FunctionCall {arguments = value, ..}
-
-setCustomToolInput :: Text -> CustomToolCall -> CustomToolCall
-setCustomToolInput value call =
-    let CustomToolCall {..} = call
-    in CustomToolCall {input = value, ..}
-
-setReasoningSummary :: [ReasoningSummaryPart] -> ReasoningItem -> ReasoningItem
-setReasoningSummary value reasoning =
-    let ReasoningItem {..} = reasoning
-    in ReasoningItem {summary = value, ..}
-
-setReasoningContent :: [ResponseContentPart] -> ReasoningItem -> ReasoningItem
-setReasoningContent value reasoning =
-    let ReasoningItem {..} = reasoning
-    in ReasoningItem {content = Just value, ..}
-
 mapReasoningContent :: Text -> ResponseItem -> ResponseItem
 mapReasoningContent value = \case
     ReasoningItemValue reasoning ->
         ReasoningItemValue
-            (setReasoningContent [ReasoningTextPart value] reasoning)
+            (setReasoningItemContent (Just [ReasoningTextPart value]) reasoning)
     item -> item
-
-setReasoningPartText :: Maybe Text -> ReasoningSummaryPart -> ReasoningSummaryPart
-setReasoningPartText value part =
-    let ReasoningSummaryPart {..} = part
-    in ReasoningSummaryPart {text = value, ..}
 
 -- A sparse output-item.done is authoritative for normal item fields, but it
 -- must not erase deltas buffered since output-item.added. Only fields with
@@ -534,18 +510,18 @@ preserveBufferedProgress progress = \case
         | Just _ <- progress.functionArgumentChunks
         , Text.null call.arguments ->
             FunctionCallItem
-                (setFunctionArguments
+                (setFunctionCallArguments
                     (materializedFunctionArguments progress)
                     call)
     CustomToolCallItem call
         | Just _ <- progress.customInputChunks
         , Text.null call.input ->
             CustomToolCallItem
-                (setCustomToolInput (materializedCustomInput progress) call)
+                (setCustomToolCallInput (materializedCustomInput progress) call)
     ReasoningItemValue reasoning
         | not (IntMap.null progress.reasoningTextChunks) ->
             ReasoningItemValue
-                (setReasoningSummary
+                (setReasoningItemSummary
                     (mergeReasoningSummary
                         (materializedReasoningSummary progress)
                         reasoning.summary)
@@ -554,8 +530,8 @@ preserveBufferedProgress progress = \case
         | Just chunks <- progress.reasoningContentChunks
         , hasNoReasoningContent reasoning.content ->
             ReasoningItemValue
-                (setReasoningContent
-                    [ReasoningTextPart (textBufferToText chunks)]
+                (setReasoningItemContent
+                    (Just [ReasoningTextPart (textBufferToText chunks)])
                     reasoning)
     item -> item
 
@@ -644,20 +620,20 @@ materializeItemProgress progress =
     materializeFunction = case progress.functionArgumentChunks of
         Nothing -> id
         Just chunks -> mapFunctionCall Nothing \call ->
-            setFunctionArguments
+            setFunctionCallArguments
                 (call.arguments <> textBufferToText chunks)
                 call
     materializeCustom = case progress.customInputChunks of
         Nothing -> id
         Just chunks -> mapCustomCall Nothing Nothing \call ->
-            setCustomToolInput
+            setCustomToolCallInput
                 (call.input <> textBufferToText chunks)
                 call
     materializeReasoning item =
         IntMap.foldlWithKey'
             (\current index chunks ->
                 mapReasoning Nothing index
-                    (\part -> setReasoningPartText
+                    (\part -> setReasoningSummaryPartText
                         (Just (fromMaybe "" part.text <> textBufferToText chunks))
                         part)
                     current)
@@ -822,7 +798,7 @@ mapReasoning
 mapReasoning itemId index update = \case
     ReasoningItemValue reasoning ->
         ReasoningItemValue
-            (setReasoningSummary
+            (setReasoningItemSummary
                 (updateAt index update reasoning.summary)
                 reasoning)
     item -> case itemId of
@@ -850,18 +826,7 @@ nonEmpty :: Maybe Text -> Maybe Text
 nonEmpty (Just value) | not (Text.null value) = Just value
 nonEmpty _ = Nothing
 
-setResponseStatus :: ResponseStatus -> Response -> Response
-setResponseStatus value response =
-    let Response {..} = response
-    in Response {status = value, ..}
-
-setResponseModel :: Text -> Response -> Response
-setResponseModel value response =
-    let Response {..} = response
-    in Response {model = value, ..}
-
-setResponseOutput :: [ResponseItem] -> Response -> Response
-setResponseOutput value response =
-    let Response {..} = response
-    in Response {output = value, ..}
+-- Field updates on Response use the generated setters from
+-- 'Agent.Responses.Types.Setters' (setResponseStatus/setResponseModel/
+-- setResponseOutput), which see heavy use below.
 

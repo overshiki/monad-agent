@@ -1,6 +1,8 @@
+{-# LANGUAGE TemplateHaskell #-}
 module Main (main) where
 
 import Agent.Json
+import Agent.Json.TH (makeSetters)
 import qualified Agent.Json.Decode as Json
 import Control.Concurrent.Async (concurrently)
 import qualified Data.Aeson.Encoding.Internal as Aeson
@@ -16,6 +18,8 @@ data Person = Person
     , personAge :: !Int
     }
     deriving (Eq, Show)
+
+makeSetters ''Person
 
 personDecoder :: Json.Decoder Person
 personDecoder =
@@ -33,6 +37,17 @@ optionalPersonDecoder =
 
 main :: IO ()
 main = hspec do
+    describe "makeSetters" do
+        it "sets one field and preserves the rest" do
+            let ada = Person "Ada" 37
+                older = setPersonPersonAge 38 ada
+            personAge older `shouldBe` 38
+            personName older `shouldBe` "Ada"
+
+        it "composes field updates" do
+            let renamed = setPersonPersonName "Grace" (Person "Ada" 37)
+            renamed `shouldBe` Person "Grace" 37
+
     describe "Hermes JSON boundary" do
         it "decodes objects" do
             Json.decodeEither personDecoder
