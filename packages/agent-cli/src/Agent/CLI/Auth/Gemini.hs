@@ -6,7 +6,7 @@ module Agent.CLI.Auth.Gemini
     , managedGeminiTokenProvider
     ) where
 
-import Agent.CLI.CredentialStore
+import Agent.CLI.Auth.CredentialStore
     ( ManagedAuthKind(ManagedGeminiAuthJson)
     , ManagedCredential(..)
     , ManagedSecret(..)

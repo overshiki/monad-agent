@@ -1,6 +1,6 @@
 module Agent.CLI.PromptSpec (spec) where
 
-import Agent.CLI.Prompt
+import Agent.CLI.Prompt.Prompt
 import Agent.Dialect
     ( claudeCodeDialect
     , codexDialect

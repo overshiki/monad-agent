@@ -47,13 +47,13 @@ import Agent.CLI.Runtime
     , run
     , withRestoredCurrentDirectory
     )
-import Agent.CLI.McpStatus
+import Agent.CLI.Mcp.McpStatus
     ( formatMcpModelNotice
     , formatMcpModelNoticeFor
     , formatMcpProgress
     )
 import Agent.CLI.Runtime.Types (DevResult(..))
-import Agent.CLI.Status
+import Agent.CLI.TUI.Status
     ( formatEstimatedTokensPerSecond
     , formatReplStatusLine
     , formatTokenUsage

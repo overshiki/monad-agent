@@ -1,11 +1,11 @@
 module Agent.CLI.ConnectivitySpec (spec) where
 
-import Agent.CLI.Connectivity
+import Agent.CLI.Provider.Connectivity
     ( reconnectDelayMicros
     , transientRetryDelayMicros
     , withConnectionRecoveryUsing
     )
-import Agent.CLI.PendingInputs
+import Agent.CLI.Turn.PendingInputs
     ( enqueuePendingInput
     , newPendingInputs
     , withPendingInputs

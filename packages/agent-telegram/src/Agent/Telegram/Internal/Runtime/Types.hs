@@ -3,7 +3,7 @@ module Agent.Telegram.Internal.Runtime.Types (TelegramRuntime(..)) where
 
 import Agent.CLI.AgentSessions (SessionProcessManager)
 import Agent.CLI.Options (ApprovalPolicy)
-import Agent.CLI.Models (ModelTarget)
+import Agent.CLI.Model.Models (ModelTarget)
 import Agent.Telegram.Types
 import Agent.Store.Postgres.Connection (StorePool)
 import Control.Concurrent.Chan (Chan)

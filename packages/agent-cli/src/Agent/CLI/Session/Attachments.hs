@@ -12,7 +12,7 @@ import Agent.CLI.Clipboard
     , pendingImageAttachmentCountLimit
     , readClipboardImagesImageFirst
     )
-import Agent.CLI.ImagePreview
+import Agent.CLI.TUI.GrokImagePreview
     ( detectImagePreviewProtocol
     , previewColumnsFor
     , previewRowsFor
@@ -22,7 +22,7 @@ import Agent.CLI.Session.History
     ( LiveConversation
     , modifyLiveAttachments
     )
-import Agent.CLI.Style (roleMuted)
+import Agent.CLI.Util.Style (roleMuted)
 import Agent.Loop (ImageAttachment(..))
 import Control.Monad (when)
 import qualified Data.ByteString as BS

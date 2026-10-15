@@ -1,12 +1,12 @@
 module Agent.CLI.Runtime.Orchestration.Session (runAgentSession) where
 
-import Agent.CLI.AccountPicker ()
-import Agent.CLI.AccountSelection ()
-import Agent.CLI.Afk ()
+import Agent.CLI.Auth.AccountPicker ()
+import Agent.CLI.Auth.AccountSelection ()
+import Agent.CLI.Session.Afk ()
 import Agent.CLI.AgentSessions ()
 import Agent.CLI.AgentViewport ()
 import Agent.CLI.Approval ()
-import Agent.CLI.Artifact ()
+import Agent.CLI.Turn.Artifact ()
 import Agent.CLI.Auth
     ( LoadedAuth(loadedTokenProvider) )
 import Agent.CLI.Clipboard ()
@@ -21,54 +21,54 @@ import Agent.CLI.Command ()
 import Agent.CLI.Compaction
     ( CompactionInstall(CompactionNotInstalled) )
 import Agent.CLI.Config ()
-import Agent.CLI.Connectivity ()
+import Agent.CLI.Provider.Connectivity ()
 import Agent.CLI.Database ()
 import Agent.CLI.Database.Store (DatabaseScopes)
 import Agent.CLI.Dialects (CodingTools(..))
-import Agent.CLI.Error ()
-import Agent.CLI.GatewayBridge ()
+import Agent.CLI.Util.Error ()
+import Agent.CLI.Provider.GatewayBridge ()
 import Agent.CLI.Input ()
-import Agent.CLI.Interrupt
+import Agent.CLI.Turn.Interrupt
     (InterruptState, catchUserInterrupt, withCtrlCHandler)
 import Agent.CLI.LearnedSkills ()
 import Agent.CLI.LearnedSkills.Store ()
 import Agent.CLI.Login ()
 import Agent.CLI.Lsp ()
-import Agent.CLI.ManagedTurn ( ManagedTurnRequest(..) )
-import Agent.CLI.McpManager ()
-import Agent.CLI.McpStatus ()
-import Agent.CLI.ModelConfig
+import Agent.CLI.Turn.ManagedTurn ( ManagedTurnRequest(..) )
+import Agent.CLI.Mcp.McpManager ()
+import Agent.CLI.Mcp.McpStatus ()
+import Agent.CLI.Model.ModelConfig
     (ModelCatalog, catalogContextWindowForTransport)
-import Agent.CLI.Models (ModelTarget(targetConnectionId))
+import Agent.CLI.Model.Models (ModelTarget(targetConnectionId))
 import Agent.CLI.Options
     ( ApprovalPolicy
     , isOneShot
     , CliOptions(optCodeMode)
     )
-import Agent.CLI.PendingInputs (PendingInputs)
-import Agent.CLI.Plan ()
+import Agent.CLI.Turn.PendingInputs (PendingInputs)
+import Agent.CLI.Turn.Plan ()
 import Agent.CLI.Project ( ModelSwitchScope(..) )
-import Agent.CLI.Prompt
+import Agent.CLI.Prompt.Prompt
     ( codexEnvironmentContext,
       subscriptionSubagentModelGuidance,
       appendMcpInstructions,
       systemPromptForCatalogModel,
       systemPromptForTools )
-import Agent.CLI.PromptHooks ()
+import Agent.CLI.Prompt.PromptHooks ()
 import Agent.CLI.Provider.OpenAI ()
 import Agent.CLI.Provider.Switch ()
-import Agent.CLI.ProviderAvailability ( probeLoadedAvailability )
-import Agent.CLI.ProviderFallback ( isProviderUnavailable )
-import Agent.CLI.ProviderTransition (PendingTurn, ProviderTransition)
-import Agent.CLI.Recap ()
+import Agent.CLI.Provider.ProviderAvailability ( probeLoadedAvailability )
+import Agent.CLI.Provider.ProviderFallback ( isProviderUnavailable )
+import Agent.CLI.Provider.ProviderTransition (PendingTurn, ProviderTransition)
+import Agent.CLI.Session.Recap ()
 import Agent.CLI.Render ( putTextLn )
-import Agent.CLI.ReplMode ()
-import Agent.CLI.Request
+import Agent.CLI.TUI.ReplMode ()
+import Agent.CLI.Provider.Request
     ( requestParams
     , setRequestInstructionsAndTools
     , setRequestPromptCacheKey
     )
-import Agent.CLI.Resume ( resumeNeedsGeneratedContext )
+import Agent.CLI.Session.Resume ( resumeNeedsGeneratedContext )
 import Agent.CLI.Runtime.HistorySource ()
 import Agent.CLI.Runtime.Orchestration.Background ()
 import Agent.CLI.Runtime.Orchestration.Concurrent ()
@@ -82,7 +82,7 @@ import Agent.CLI.Runtime.Persistence ()
 import Agent.CLI.Runtime.Recap ()
 import Agent.CLI.Runtime.Repl ()
 import Agent.CLI.Runtime.Types ( RunResult(RunQuit) )
-import Agent.CLI.Secret ()
+import Agent.CLI.Util.Secret ()
 import Agent.CLI.Session
     ( addSessionUsage,
       ensureSession,
@@ -131,16 +131,16 @@ import Agent.CLI.Session.Runtime.Types
       StartupRuntime(startupBackground, startupDatabaseStore,
                      startupSessionState) )
 import Agent.CLI.Session.Selection ( reservedSessionId )
-import Agent.CLI.SessionAdmin ()
-import Agent.CLI.SessionEnv ()
-import Agent.CLI.SessionLock ()
-import Agent.CLI.SessionState ( SessionState(sessionConversation) )
-import Agent.CLI.SessionTitle ()
-import Agent.CLI.Skills ()
+import Agent.CLI.Session.SessionAdmin ()
+import Agent.CLI.Session.SessionEnv ()
+import Agent.CLI.Session.SessionLock ()
+import Agent.CLI.Session.SessionState ( SessionState(sessionConversation) )
+import Agent.CLI.Session.SessionTitle ()
+import Agent.CLI.Prompt.Skills ()
 import Agent.CLI.Startup.Auth ( markStartupStage, startupDie )
-import Agent.CLI.StartupContext
+import Agent.CLI.Startup.Context
     ( AgentsContextNotice(..), loadAgentsContext )
-import Agent.CLI.Style ( cliWindowTitle, roleMuted )
+import Agent.CLI.Util.Style ( cliWindowTitle, roleMuted )
 import Agent.CLI.Subagents.Runtime
     ( SubagentRuntime(subagentOpenAiChild, subagentCatalog, SubagentRuntime,
                       subagentExperience, subagentModelCatalog, subagentOptions, subagentGhciEnabled, subagentBashEnabled,
@@ -157,13 +157,13 @@ import Agent.CLI.TUI.App
     ( FullscreenRuntime, withFullscreenSuspended )
 import Agent.CLI.TUI.History ()
 import Agent.CLI.TUI.SessionHistory ()
-import Agent.CLI.Terminal ( resolveColor )
+import Agent.CLI.Util.Terminal ( resolveColor )
 import Agent.CLI.Tools
     ( schemasFromAppTools, schemasFromAppToolsCodeMode )
-import Agent.CLI.Turn ()
-import Agent.CLI.Usage ()
-import Agent.CLI.WebFetch ()
-import Agent.CLI.Worktree ()
+import Agent.CLI.Turn.Turn ()
+import Agent.CLI.Provider.Usage ()
+import Agent.CLI.Provider.WebFetch ()
+import Agent.CLI.Git.Worktree ()
 import Agent.Cancel ()
 import Agent.Claude ()
 import Agent.Dialect (Dialect, dialectId)

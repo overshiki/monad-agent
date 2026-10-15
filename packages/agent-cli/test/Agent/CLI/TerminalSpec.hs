@@ -1,6 +1,6 @@
 module Agent.CLI.TerminalSpec (spec) where
 
-import Agent.CLI.Terminal
+import Agent.CLI.Util.Terminal
 import qualified Data.Text as Text
 import Test.Hspec
 

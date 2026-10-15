@@ -22,9 +22,9 @@ module Agent.CLI.AgentSessions
     ) where
 
 import Agent.CLI.Options (ApprovalPolicy(..))
-import Agent.CLI.ManagedTurn (ManagedTurnRequest)
+import Agent.CLI.Turn.ManagedTurn (ManagedTurnRequest)
 import Agent.CLI.AgentSessions.Render (renderAgentSession)
-import Agent.CLI.Error (formatException)
+import Agent.CLI.Util.Error (formatException)
 import Agent.Process
     ( terminateProcessGroupWith
     , terminateThenKillPolicy
@@ -42,11 +42,11 @@ import Agent.CLI.Session
     , sessionTitleFromPrompt
     )
 import Agent.Store.Postgres.Connection (StorePool)
-import Agent.CLI.SessionLock
+import Agent.CLI.Session.SessionLock
     ( sessionLockIsActive
     , sessionLockPath
     )
-import Agent.CLI.Models
+import Agent.CLI.Model.Models
     ( ModelOption(..)
     , ModelTarget(..)
     , resolveModelOptionDialect

@@ -1,6 +1,6 @@
 module Agent.CLI.GitDiffSpec (spec) where
 
-import Agent.CLI.GitDiff
+import Agent.CLI.Git.GitDiff
 import Agent.OsPath (fromText, unsafeToFilePath)
 import Control.Exception.Safe (bracket)
 import Control.Monad (unless)
@@ -21,7 +21,7 @@ import System.Process
 import Test.Hspec
 
 spec :: Spec
-spec = describe "Agent.CLI.GitDiff" do
+spec = describe "Agent.CLI.Git.GitDiff" do
     it "reports a directory outside Git without failing" $
         withTempDir "agent-diff-not-git-" \dir ->
             getGitDiff dir `shouldReturn` Right GitDiffNotRepository

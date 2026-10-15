@@ -1,6 +1,6 @@
 module Agent.CLI.PickerSpec (spec) where
 
-import Agent.CLI.Picker
+import Agent.CLI.TUI.Picker
 import Test.Hspec
 
 spec :: Spec

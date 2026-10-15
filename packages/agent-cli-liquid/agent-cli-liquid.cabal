@@ -23,7 +23,7 @@ library
     exposed-modules:    Agent.CLI.Input.Types
                       , Agent.CLI.Input.EditOps
                       , Agent.CLI.Input.Display
-                      , Agent.CLI.TextLayout
+                      , Agent.CLI.Util.TextLayout
                       , Agent.GrokBuild.Dialect.SubagentCatalog
                       , Agent.TUI.TextWidth
                       , Agent.Loop.Attachments

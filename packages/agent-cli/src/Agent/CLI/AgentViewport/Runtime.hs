@@ -24,7 +24,7 @@ import Agent.CLI.AgentViewport
     , responseItemStepPreviewsRelative
     , responseItemsToUiStateRelative
     )
-import Agent.CLI.NativeAgents
+import Agent.CLI.Desktop.NativeAgents
     ( applyNativeAgentEvent
     , emptyNativeAgentStore
     , nativeAgentEntries

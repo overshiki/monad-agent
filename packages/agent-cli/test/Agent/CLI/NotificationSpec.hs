@@ -1,6 +1,6 @@
 module Agent.CLI.NotificationSpec (spec) where
 
-import Agent.CLI.Notification
+import Agent.CLI.TUI.Notification
 import Test.Hspec
 
 spec :: Spec

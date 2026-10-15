@@ -2,7 +2,7 @@ module Agent.CLI.WebLspSpec (spec) where
 
 import Agent.CLI.Config
 import Agent.CLI.Lsp
-import Agent.CLI.WebFetch
+import Agent.CLI.Provider.WebFetch
 import Agent.Loop (defaultLoopDispatch)
 import Agent.OsPath (unsafeToFilePath)
 import Agent.ToolDispatch

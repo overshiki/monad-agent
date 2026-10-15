@@ -2,8 +2,8 @@
 
 module Agent.CLI.ModelsSpec (spec) where
 
-import Agent.CLI.Models
-import Agent.CLI.ModelConfig
+import Agent.CLI.Model.Models
+import Agent.CLI.Model.ModelConfig
     ( ModelCatalog
     , decodeModelConfig
     , packagedModelCatalogPath

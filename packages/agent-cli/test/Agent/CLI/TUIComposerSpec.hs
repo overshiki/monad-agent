@@ -1,6 +1,6 @@
 module Agent.CLI.TUIComposerSpec (spec) where
 
-import Agent.CLI.Dictation
+import Agent.CLI.TUI.Dictation
     ( DictationBackend(..)
     , dictationBackendForProvider
     , insertDictation

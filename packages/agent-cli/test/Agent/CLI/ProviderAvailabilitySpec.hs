@@ -1,7 +1,7 @@
 module Agent.CLI.ProviderAvailabilitySpec (spec) where
 
 import Agent.CLI.Auth (LoadedAuth(..), staticCredentialProvider)
-import Agent.CLI.ProviderAvailability
+import Agent.CLI.Provider.ProviderAvailability
     ( openAiUsageFailure
     , openRouterUsageFailure
     , probeLoadedAutomaticAvailabilityWith

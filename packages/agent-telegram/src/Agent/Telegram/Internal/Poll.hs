@@ -3,9 +3,9 @@ module Agent.Telegram.Internal.Poll
 
 
 import Agent.CLI.AgentSessions ()
-import Agent.CLI.ManagedTurn ()
-import Agent.CLI.ModelConfig ()
-import Agent.CLI.Models ()
+import Agent.CLI.Turn.ManagedTurn ()
+import Agent.CLI.Model.ModelConfig ()
+import Agent.CLI.Model.Models ()
 import Agent.CLI.Options ()
 import Agent.CLI.Session ()
 import Agent.Concurrent ()

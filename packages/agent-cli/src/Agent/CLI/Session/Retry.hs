@@ -4,10 +4,10 @@ module Agent.CLI.Session.Retry
     ) where
 
 import Agent.Cancel (resetCancel, waitCancel)
-import Agent.CLI.CancelWatch (withEscCancel)
-import Agent.CLI.Interrupt (withTurnCancel)
-import Agent.CLI.ProviderFallback (automaticRetryCountdownText)
-import Agent.CLI.ProviderTransition (PendingTurn(..))
+import Agent.CLI.Turn.CancelWatch (withEscCancel)
+import Agent.CLI.Turn.Interrupt (withTurnCancel)
+import Agent.CLI.Provider.ProviderFallback (automaticRetryCountdownText)
+import Agent.CLI.Provider.ProviderTransition (PendingTurn(..))
 import Agent.CLI.Render
     ( RenderConfig(..)
     , clearThinking
@@ -19,12 +19,12 @@ import Agent.CLI.Session
     ( clearPersistenceActivity
     , setPersistenceActivity
     )
-import Agent.CLI.SessionEnv (SessionEnv(..))
-import Agent.CLI.Style
+import Agent.CLI.Session.SessionEnv (SessionEnv(..))
+import Agent.CLI.Util.Style
     ( glyphOk
     , roleMuted
     )
-import Agent.CLI.Terminal (resolveColor)
+import Agent.CLI.Util.Terminal (resolveColor)
 import Agent.CLI.TUI.App (emitUiEvent)
 import Agent.Loop (LoopConfig(..), LoopEvent(..))
 import Agent.TUI.Model

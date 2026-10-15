@@ -60,7 +60,7 @@ import Agent.CLI.Input
     , appendReplHistory
     , submissionPromptText
     )
-import Agent.CLI.Interrupt (CtrlCDecision)
+import Agent.CLI.Turn.Interrupt (CtrlCDecision)
 import qualified Agent.CLI.TUI.Bridge as Bridge
 import Agent.CLI.TUI.Composer.Buffer
 import Agent.CLI.TUI.Composer.Edit

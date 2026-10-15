@@ -7,7 +7,7 @@ import Agent.CLI.AgentViewport
     , AgentTarget(..)
     )
 import Agent.CLI.Input (ReplLine(..), terminalTextWidth)
-import Agent.CLI.Interrupt (CtrlCDecision(..))
+import Agent.CLI.Turn.Interrupt (CtrlCDecision(..))
 import Agent.CLI.TUI.App
     ( applyStoredFullscreenWindowTitle
     , applyStoredMouseCapture
@@ -62,7 +62,7 @@ import Agent.CLI.TUI.App
     , turnCompletionRequiresRedraw
     , uiEventRestartsMotionSchedule
     )
-import Agent.CLI.WindowTitle (oscWindowTitleBytes)
+import Agent.CLI.TUI.WindowTitle (oscWindowTitleBytes)
 import Agent.CLI.TUI.Types
     ( AppEvent(..)
     , AppState(..)
@@ -93,7 +93,7 @@ import Agent.CLI.TUI.ImagePreview
     ( NativePreviewPlacement(..)
     , TuiImagePreview(..)
     )
-import Agent.CLI.Terminal
+import Agent.CLI.Util.Terminal
     ( TerminalCapabilities(..)
     , TerminalKind(..)
     , kittyKeyboardDisambiguatePush

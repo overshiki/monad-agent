@@ -3,9 +3,9 @@ module Agent.CLI.Runtime.Recap
     , runSessionTurnSummary
     ) where
 
-import Agent.CLI.CancelWatch (withEscCancel)
-import Agent.CLI.Interrupt (withTurnCancel)
-import Agent.CLI.Recap
+import Agent.CLI.Turn.CancelWatch (withEscCancel)
+import Agent.CLI.Turn.Interrupt (withTurnCancel)
+import Agent.CLI.Session.Recap
     ( RecapKind(..)
     , RecapOutcome(..)
     , autoRecapIdleThreshold
@@ -29,9 +29,9 @@ import Agent.CLI.Session
     , setSessionTurnSummary
     )
 import Agent.CLI.Session.History (readLiveTranscript)
-import Agent.CLI.SessionEnv (SessionEnv(..))
-import Agent.CLI.Style (roleMuted)
-import Agent.CLI.Terminal (resolveColor)
+import Agent.CLI.Session.SessionEnv (SessionEnv(..))
+import Agent.CLI.Util.Style (roleMuted)
+import Agent.CLI.Util.Terminal (resolveColor)
 import Agent.CLI.TUI.App (emitUiEvent)
 import Agent.TUI.Model (UiEvent(..))
 import Control.Monad (forM_, when)

@@ -60,7 +60,7 @@ import Agent.CLI.Login.Types
     , initialLoginState
     )
 import Agent.Error (ApiError)
-import Agent.CLI.CredentialStore
+import Agent.CLI.Auth.CredentialStore
     ( ManagedAuthKind(..)
     , ManagedCredential(..)
     , ManagedSecret(..)
@@ -70,12 +70,12 @@ import Agent.CLI.CredentialStore
     , setManagedCredentialEnabled
     , upsertManagedCredential
     )
-import Agent.CLI.Error
+import Agent.CLI.Util.Error
     ( formatApiErrorInlineAt
     , formatException
     )
-import Agent.CLI.Environment (lookupNonEmpty)
-import Agent.CLI.GatewayClient
+import Agent.CLI.Util.Environment (lookupNonEmpty)
+import Agent.CLI.Provider.GatewayClient
     ( GatewayAuthorization(..)
     , GatewayCredential(..)
     , GatewayDeviceAuthorization(..)
@@ -90,12 +90,12 @@ import Agent.CLI.GatewayClient
     , startGatewayAuthorization
     )
 import Agent.CLI.Input (readApprovalLine)
-import Agent.CLI.Picker
+import Agent.CLI.TUI.Picker
     ( PickerKey(..)
     , runOverlay
     , runOverlayWithUpdates
     )
-import Agent.CLI.Style
+import Agent.CLI.Util.Style
     ( glyphErr
     , glyphOk
     , roleError

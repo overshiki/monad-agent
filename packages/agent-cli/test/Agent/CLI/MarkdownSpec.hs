@@ -1,7 +1,7 @@
 module Agent.CLI.MarkdownSpec (spec) where
 
 import Agent.CLI.Input (terminalTextWidth)
-import Agent.CLI.Markdown
+import Agent.CLI.Util.Markdown
     ( MarkdownFragmentSplit(..)
     , renderMarkdown
     , renderMarkdownFragment

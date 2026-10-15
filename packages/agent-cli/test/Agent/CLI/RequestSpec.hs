@@ -1,6 +1,6 @@
 module Agent.CLI.RequestSpec (spec) where
 
-import Agent.CLI.Request
+import Agent.CLI.Provider.Request
     ( requestParams
     , requestPromptParts
     , requestToolIdentities

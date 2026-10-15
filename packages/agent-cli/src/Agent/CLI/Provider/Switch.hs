@@ -15,7 +15,7 @@ module Agent.CLI.Provider.Switch
     , requestStartupProviderFallback
     ) where
 
-import Agent.CLI.AccountSelection
+import Agent.CLI.Auth.AccountSelection
     ( SelectedAccount(..)
     , providerSupportsUsageAccountSelection
     , selectProviderAccount
@@ -32,17 +32,17 @@ import Agent.CLI.Auth
     , loadAuthForAccount
     , preferredOpenAiTokenProvider
     )
-import Agent.CLI.Error
+import Agent.CLI.Util.Error
     ( formatApiErrorAt
     , formatApiErrorInlineAt
     , formatApiErrorRetryCountdownParts
     )
-import Agent.CLI.ModelConfig
+import Agent.CLI.Model.ModelConfig
     ( ModelCatalog
     , builtinConnectionId
     , loadModelCatalogAt
     )
-import Agent.CLI.Models
+import Agent.CLI.Model.Models
     ( ModelOption(..)
     , ModelTarget(..)
     , defaultModelOptionFor
@@ -57,16 +57,16 @@ import Agent.CLI.Project
     , resolveProjectRoot
     , persistModelSwitch
     )
-import Agent.CLI.Request (setRequestModel)
-import Agent.CLI.ProviderAvailability
+import Agent.CLI.Provider.Request (setRequestModel)
+import Agent.CLI.Provider.ProviderAvailability
     ( probeLoadedAutomaticAvailability
     , probeLoadedAvailability
     )
-import Agent.CLI.ProviderFallback
+import Agent.CLI.Provider.ProviderFallback
     ( allowsAutomaticBillingFallback
     , fallbackCandidates
     )
-import Agent.CLI.ProviderTransition
+import Agent.CLI.Provider.ProviderTransition
     ( PendingTurn
     , ProviderTransition(..)
     , TransitionCause(..)
@@ -80,15 +80,15 @@ import Agent.CLI.Runtime.Types
     ( RunResult(..)
     )
 import Agent.CLI.Session
-import Agent.CLI.SessionEnv (SessionEnv(..))
-import Agent.CLI.Style
+import Agent.CLI.Session.SessionEnv (SessionEnv(..))
+import Agent.CLI.Util.Style
     ( glyphOk
     , glyphWarn
     , roleError
     , roleMuted
     , roleWarn
     )
-import Agent.CLI.Terminal (resolveColor)
+import Agent.CLI.Util.Terminal (resolveColor)
 import Agent.CLI.TUI.App
     ( FullscreenRuntime
     , emitUiEvent

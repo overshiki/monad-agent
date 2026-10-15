@@ -18,15 +18,15 @@ import Agent.CLI.Auth
     , probeLoadedAuth
     )
 import Agent.CLI.Login (connectProviderAccount)
-import Agent.CLI.Models (ModelTarget(..))
+import Agent.CLI.Model.Models (ModelTarget(..))
 import Agent.CLI.Provider.Switch (loadSelectedAccountAuth)
-import Agent.CLI.ProviderTransition (ProviderTransition(..))
+import Agent.CLI.Provider.ProviderTransition (ProviderTransition(..))
 import Agent.CLI.Runtime.Types
     ( StartupCancelled(..)
     , StartupFailure(..)
     , StartupRuntime(..)
     )
-import Agent.CLI.Terminal (resolveColor)
+import Agent.CLI.Util.Terminal (resolveColor)
 import Agent.CLI.TUI.App
     ( FullscreenRuntime
     , emitUiEvent

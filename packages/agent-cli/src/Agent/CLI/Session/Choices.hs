@@ -7,13 +7,13 @@ module Agent.CLI.Session.Choices
     , showAccountUsage
     ) where
 
-import Agent.CLI.Error (formatApiErrorInlineAt)
-import Agent.CLI.ModelConfig
+import Agent.CLI.Util.Error (formatApiErrorInlineAt)
+import Agent.CLI.Model.ModelConfig
     ( ModelCatalog
     , builtinConnectionId
     )
-import Agent.CLI.ModelPicker (pickModelWithOptions)
-import Agent.CLI.Models
+import Agent.CLI.Model.ModelPicker (pickModelWithOptions)
+import Agent.CLI.Model.Models
     ( ModelOption(..)
     , ModelTarget(..)
     , PickerState(..)
@@ -25,17 +25,17 @@ import Agent.ReasoningEffort
     ( ReasoningEffort
     , reasoningEffortText
     )
-import Agent.CLI.Style
+import Agent.CLI.Util.Style
     ( roleError
     , roleMuted
     )
-import Agent.CLI.Terminal (resolveColor)
+import Agent.CLI.Util.Terminal (resolveColor)
 import Agent.CLI.TUI.App
     ( FullscreenRuntime
     , requestFullscreenChoice
     , requestFullscreenFilterChoice
     )
-import Agent.CLI.Usage
+import Agent.CLI.Provider.Usage
     ( AccountUsageLine(..)
     , formatUsageReport
     )

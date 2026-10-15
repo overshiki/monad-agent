@@ -12,15 +12,15 @@ module Agent.CLI.Subagents.Runtime
     , usesOpenAiChildTransport, validatePersistedSubagentTarget
     ) where
 import Agent.CLI.Approval (childApprove)
-import Agent.CLI.Btw (trimDanglingToolSuffix)
+import Agent.CLI.Turn.Btw (trimDanglingToolSuffix)
 import Agent.CLI.Compaction
     ( autoCompactOpenAiBackendWithSender )
-import Agent.CLI.Connectivity (withConnectionRecovery)
+import Agent.CLI.Provider.Connectivity (withConnectionRecovery)
 import Agent.CLI.Options (CliOptions(..), defaultEffortFor)
-import Agent.CLI.Prompt (sessionTempGuidance, systemPrompt, systemPromptForTools)
-import Agent.CLI.Request (requestParams)
+import Agent.CLI.Prompt.Prompt (sessionTempGuidance, systemPrompt, systemPromptForTools)
+import Agent.CLI.Provider.Request (requestParams)
 import Agent.CLI.Session (LegacySubagentTarget(..))
-import Agent.CLI.SubagentStore
+import Agent.CLI.Subagents.SubagentStore
     ( SubagentDiskFields(..)
     , SubagentDiskMeta(..)
     , SubagentTarget(..)

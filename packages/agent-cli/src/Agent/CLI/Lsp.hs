@@ -12,7 +12,7 @@ import Agent.CLI.Config
     , LspServerConfig(..)
     )
 import Agent.CLI.Lsp.Capabilities (clientCapabilities)
-import Agent.CLI.FileUri
+import Agent.CLI.Util.FileUri
     ( fileUri
     )
 import Agent.CLI.Lsp.Formatting (formatLspResult)

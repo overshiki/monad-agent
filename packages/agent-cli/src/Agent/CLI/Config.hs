@@ -18,7 +18,7 @@ module Agent.CLI.Config
     ) where
 
 import Agent.FileRetry (retryOnFileBusy, writeLazyFileAtomically)
-import Agent.CLI.Json (decodeLazy)
+import Agent.CLI.Util.Json (decodeLazy)
 import Agent.MCP (McpProtocolPreference(..))
 import Agent.MCP.OAuth (validateClientIdMetadataUrl)
 import Agent.Json (RawJson, rawJsonDecoder)

@@ -6,22 +6,22 @@ module Agent.CLI.Session.Lifecycle
     , runPendingTurn
     ) where
 
-import Agent.CLI.Notification
+import Agent.CLI.TUI.Notification
     ( AttentionRequest(InputRequested)
     , notifyAttention
     )
-import Agent.CLI.Error (formatApiErrorAt)
+import Agent.CLI.Util.Error (formatApiErrorAt)
 import Agent.CLI.Project (saveProjectAccount)
-import Agent.CLI.Recap (RecapRequest(RecapTurnSummary))
+import Agent.CLI.Session.Recap (RecapRequest(RecapTurnSummary))
 import Agent.CLI.Provider.Switch
     ( reportProviderUnavailable
     , requestAutomaticProviderFallback
     )
-import Agent.CLI.ProviderFallback
+import Agent.CLI.Provider.ProviderFallback
     ( ProviderRecoveryPreference(..)
     , providerRecoveryPreference
     )
-import Agent.CLI.ProviderTransition
+import Agent.CLI.Provider.ProviderTransition
     ( PendingTurn(..)
     , TurnResult(..)
     , setPendingExitAfter
@@ -36,7 +36,7 @@ import Agent.CLI.Session.Interaction
     , syncFullscreenPrompt
     )
 import Agent.CLI.Session.Retry (waitAndRetryPendingTurn)
-import Agent.CLI.SessionEnv (SessionEnv(..))
+import Agent.CLI.Session.SessionEnv (SessionEnv(..))
 import Agent.CLI.Render
     ( RenderConfig(..)
     , putTextLn
@@ -46,7 +46,7 @@ import Agent.CLI.TUI.App
     ( emitUiEvent
     , hasQueuedFullscreenInput
     )
-import Agent.CLI.Turn (retryCheckpointedTurn, runOneTurn)
+import Agent.CLI.Turn.Turn (retryCheckpointedTurn, runOneTurn)
 import Agent.Tools.PlanMode (PlanModeEnv(..))
 import Agent.TUI.Model (UiEvent(..))
 import Control.Exception.Safe (throwIO)

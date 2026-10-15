@@ -38,9 +38,9 @@ import Agent.CLI.AgentViewport.Status
     ( agentStatusGlyph
     , formatAgentStatus
     )
-import Agent.CLI.Picker (PickerKey(..), runOverlay)
-import Agent.CLI.Style (roleMuted, rolePrompt, roleSuccess)
-import Agent.CLI.TextLayout
+import Agent.CLI.TUI.Picker (PickerKey(..), runOverlay)
+import Agent.CLI.Util.Style (roleMuted, rolePrompt, roleSuccess)
+import Agent.CLI.Util.TextLayout
     ( SplitPaneFrame(..)
     , clampSelectionIndex
     , renderSplitPaneFrame

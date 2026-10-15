@@ -40,7 +40,7 @@ import Agent.Store.Postgres.Skill
     )
 import Agent.ToolDSL (PropertySchema(..), PropertyType(..))
 import Agent.ToolDispatch (typedTool)
-import Agent.CLI.Json (integer)
+import Agent.CLI.Util.Json (integer)
 import Agent.Json.Decode (defaultKey, optionalKey)
 import Agent.Json.Decode qualified as Hermes
 import Agent.Tools.Types

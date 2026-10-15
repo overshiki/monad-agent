@@ -12,20 +12,20 @@ import Agent.CLI.Command
                  ReplRemoveAttachment) )
 import Agent.CLI.Input
     ( ReplLine(ReplClipboardPaste, ReplClipboardPasteOrText) )
-import Agent.CLI.ProviderTransition ( TurnResult )
+import Agent.CLI.Provider.ProviderTransition ( TurnResult )
 import Agent.CLI.Render ( resetRenderPrintedText )
 import Agent.CLI.Runtime.Types ( RunResult )
 import Agent.CLI.Session.Attachments
     ( putImagePreview, queueAttachedImages, queueClipboardImages )
-import Agent.CLI.SessionState (removeImageAttachmentAt)
+import Agent.CLI.Session.SessionState (removeImageAttachmentAt)
 import Agent.CLI.Session.History
     ( modifyLiveAttachments, readLiveAttachments )
-import Agent.CLI.SessionEnv ( SessionEnv(..) )
-import Agent.CLI.Style ( glyphOk, glyphSession, roleError, roleMuted )
+import Agent.CLI.Session.SessionEnv ( SessionEnv(..) )
+import Agent.CLI.Util.Style ( glyphOk, glyphSession, roleError, roleMuted )
 import Agent.CLI.TUI.App
     ( emitUiEvent, setFullscreenImagePreviews )
-import Agent.CLI.Terminal ( resolveColor )
-import Agent.CLI.Turn ( runOneTurn )
+import Agent.CLI.Util.Terminal ( resolveColor )
+import Agent.CLI.Turn.Turn ( runOneTurn )
 import Agent.Loop
     ( ImageAttachment(imageBytes, imageMime)
     , TurnAttachment(ImageAttachmentItem)

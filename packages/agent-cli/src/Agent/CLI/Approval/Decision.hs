@@ -14,8 +14,8 @@ module Agent.CLI.Approval.Decision
     ) where
 
 import Agent.CLI.Options (ApprovalPolicy(..))
-import Agent.CLI.Permission (PermissionChoice(..))
-import Agent.CLI.Style (glyphOk, glyphWarn)
+import Agent.CLI.Approval.Permission (PermissionChoice(..))
+import Agent.CLI.Util.Style (glyphOk, glyphWarn)
 import Agent.JsonText (jsonTextFieldDefault)
 import Agent.OsPath (fromText)
 import Agent.ToolDispatch

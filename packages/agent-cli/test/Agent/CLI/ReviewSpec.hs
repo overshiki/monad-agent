@@ -1,6 +1,6 @@
 module Agent.CLI.ReviewSpec (spec) where
 
-import Agent.CLI.Review
+import Agent.CLI.Turn.Review
 import Agent.OsPath (fromText, unsafeToFilePath)
 import Control.Exception.Safe (bracket)
 import Control.Monad (unless)
@@ -20,7 +20,7 @@ import System.Process
 import Test.Hspec
 
 spec :: Spec
-spec = describe "Agent.CLI.Review" do
+spec = describe "Agent.CLI.Turn.Review" do
     describe "reviewPrompt" do
         it "renders an uncommitted review with all worktree categories" do
             let prompt = reviewPrompt ReviewUncommitted

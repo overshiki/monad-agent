@@ -1,11 +1,11 @@
 module Agent.CLI.AgentSessionsSpec (spec) where
 
 import Agent.CLI.AgentSessions
-import Agent.CLI.Models (ModelTarget(..))
-import Agent.CLI.ManagedTurn (managedTurnRequestFromText)
+import Agent.CLI.Model.Models (ModelTarget(..))
+import Agent.CLI.Turn.ManagedTurn (managedTurnRequestFromText)
 import Agent.CLI.Options (ApprovalPolicy(..))
 import Agent.CLI.Session
-import Agent.CLI.SessionLock
+import Agent.CLI.Session.SessionLock
 import Agent.Dialect (DialectId(..))
 import Agent.Loop (defaultLoopDispatch)
 import System.OsPath (OsPath, decodeUtf, (</>))

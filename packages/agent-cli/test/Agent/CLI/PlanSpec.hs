@@ -1,7 +1,7 @@
 module Agent.CLI.PlanSpec (spec) where
 
-import Agent.CLI.Plan
-import Agent.CLI.Picker (PickerKey(..))
+import Agent.CLI.Turn.Plan
+import Agent.CLI.TUI.Picker (PickerKey(..))
 import Agent.Tools.PlanMode (PlanDecision(..))
 import qualified Data.Text as Text
 import Test.Hspec

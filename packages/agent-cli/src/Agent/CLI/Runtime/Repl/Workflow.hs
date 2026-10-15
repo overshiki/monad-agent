@@ -7,10 +7,10 @@ import Agent.CLI.Command
     ( ReplAction(ReplGoalStatus, ReplGoalPause, ReplGoalResume, ReplGoalClear,
                  ReplGoalSet, ReplWorkflowRuns, ReplWorkflowManage) )
 import Agent.CLI.Runtime.Types ( RunResult )
-import Agent.CLI.SessionEnv ( SessionEnv(..) )
-import Agent.CLI.Style ( roleError, roleMuted )
+import Agent.CLI.Session.SessionEnv ( SessionEnv(..) )
+import Agent.CLI.Util.Style ( roleError, roleMuted )
 import Agent.CLI.TUI.App ( emitUiEvent )
-import Agent.CLI.Terminal ( resolveColor )
+import Agent.CLI.Util.Terminal ( resolveColor )
 import Agent.GrokBuild.Dialect.Goal
     ( activateGoal, clearGoal, formatGoalSnapshot, pauseGoal, readGoal, resumeGoal )
 import Agent.GrokBuild.Dialect.Runtime ( GrokRuntimeControl(..) )

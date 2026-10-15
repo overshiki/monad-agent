@@ -8,7 +8,7 @@ module Agent.CLI.Subagents.Runtime.Types
     ) where
 
 import Agent.CLI.Compaction (OccupancySnapshot)
-import Agent.CLI.ModelConfig (ModelCatalog)
+import Agent.CLI.Model.ModelConfig (ModelCatalog)
 import Agent.CLI.Options (ApprovalPolicy, CliOptions)
 import Agent.CLI.Session (LegacySubagentTarget)
 import Agent.GrokBuild.Dialect.SubagentCatalog (SubagentCatalog)

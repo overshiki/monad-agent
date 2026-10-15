@@ -4,15 +4,15 @@ module Agent.CLI.Runtime.Repl.Commands
     , preparePromptSkillInputs
     ) where
 
-import Agent.CLI.AccountPicker ()
-import Agent.CLI.AccountSelection ()
-import Agent.CLI.Afk ()
+import Agent.CLI.Auth.AccountPicker ()
+import Agent.CLI.Auth.AccountSelection ()
+import Agent.CLI.Session.Afk ()
 import Agent.CLI.AgentSessions ()
 import Agent.CLI.AgentViewport
     ( AgentViewportEnv(viewportSelect, viewportEntries,
                        viewportSelected) )
 import Agent.CLI.Approval ( setApprovalPolicy, toggleAlwaysApprove )
-import Agent.CLI.Artifact ( fencedCodeBlock, lastDiffBlock )
+import Agent.CLI.Turn.Artifact ( fencedCodeBlock, lastDiffBlock )
 import Agent.CLI.Auth ()
 import Agent.CLI.Clipboard ( loadImagesFromPastedText )
 import Agent.CLI.Command
@@ -56,25 +56,25 @@ import Agent.CLI.Config
     , updateHarnessConfig
     )
 import Agent.CLI.Context ( formatContextReport )
-import Agent.CLI.Transcript
+import Agent.CLI.Session.Transcript
     ( assistantResponseBodies
     , foldTranscriptTurns
     )
-import qualified Agent.CLI.Transcript as Transcript
-import Agent.CLI.Connectivity ()
+import qualified Agent.CLI.Session.Transcript as Transcript
+import Agent.CLI.Provider.Connectivity ()
 import Agent.CLI.Database ()
 import Agent.CLI.Database.Store ()
-import Agent.CLI.Desktop ( openDesktopConversation )
+import Agent.CLI.Desktop.Desktop ( openDesktopConversation )
 import Agent.CLI.Dialects ()
-import Agent.CLI.Error ()
-import Agent.CLI.ExternalProgram
+import Agent.CLI.Util.Error ()
+import Agent.CLI.Util.ExternalProgram
     ( normalizeEditedText
     , resolveExternalProgram
     , runExternalProgramOnFile
     , withTemporaryTextFile
     )
-import Agent.CLI.GatewayBridge ()
-import Agent.CLI.GitDiff
+import Agent.CLI.Provider.GatewayBridge ()
+import Agent.CLI.Git.GitDiff
     ( GitDiffResult(..)
     , colorizeGitDiff
     , getGitDiff
@@ -92,7 +92,7 @@ import Agent.CLI.Input
                ReplClipboardPaste, ReplClipboardPasteOrText, ReplChooseModel,
                ReplChooseEffort, ReplChooseAccount, ReplRemovePendingImage,
                ReplPasted) )
-import Agent.CLI.Interrupt ()
+import Agent.CLI.Turn.Interrupt ()
 import Agent.CLI.LearnedSkills ()
 import Agent.CLI.LearnedSkills.Store ()
 import Agent.CLI.Login
@@ -101,34 +101,34 @@ import Agent.CLI.Login
     , runLoginManager
     )
 import Agent.CLI.Lsp ()
-import Agent.CLI.ManagedTurn ()
-import Agent.CLI.McpManager ( runMcpManager )
-import Agent.CLI.McpOAuth ( loginMcp )
-import Agent.CLI.McpStatus ()
-import Agent.CLI.ModelConfig ()
-import Agent.CLI.Models ()
+import Agent.CLI.Turn.ManagedTurn ()
+import Agent.CLI.Mcp.McpManager ( runMcpManager )
+import Agent.CLI.Mcp.McpOAuth ( loginMcp )
+import Agent.CLI.Mcp.McpStatus ()
+import Agent.CLI.Model.ModelConfig ()
+import Agent.CLI.Model.Models ()
 import Agent.CLI.Options ( ApprovalPolicy(..) )
-import Agent.CLI.PendingInputs ()
-import Agent.CLI.Permission ( approvalPolicyOptions )
-import Agent.CLI.Plan ()
-import Agent.CLI.Progress ()
+import Agent.CLI.Turn.PendingInputs ()
+import Agent.CLI.Approval.Permission ( approvalPolicyOptions )
+import Agent.CLI.Turn.Plan ()
+import Agent.CLI.Turn.Progress ()
 import Agent.CLI.Project ( saveMouseCapture )
-import Agent.CLI.Prompt ()
-import Agent.CLI.PromptHooks ()
+import Agent.CLI.Prompt.Prompt ()
+import Agent.CLI.Prompt.PromptHooks ()
 import Agent.CLI.Provider.OpenAI ()
 import Agent.CLI.Provider.Switch
     ( reloadAuth,
       reportProviderUnavailable,
       requestAutomaticProviderFallback )
-import Agent.CLI.ProviderAvailability ()
-import Agent.CLI.ProviderFallback ()
-import Agent.CLI.ProviderTransition
+import Agent.CLI.Provider.ProviderAvailability ()
+import Agent.CLI.Provider.ProviderFallback ()
+import Agent.CLI.Provider.ProviderTransition
     ( PendingTurn
     , ProviderTransition
     , TurnResult(TurnProviderUnavailable)
     , resumePendingTurnIfPresent
     )
-import Agent.CLI.Recap ( RecapKind(..), RecapRequest(..) )
+import Agent.CLI.Session.Recap ( RecapKind(..), RecapRequest(..) )
 import Agent.CLI.Render
     ( RenderConfig(..),
       clearThinking,
@@ -136,9 +136,9 @@ import Agent.CLI.Render
       renderEvent,
       renderPrintedText,
       resetRenderPrintedText )
-import Agent.CLI.ReplMode ( replModeLabel )
-import Agent.CLI.Request ()
-import Agent.CLI.Review
+import Agent.CLI.TUI.ReplMode ( replModeLabel )
+import Agent.CLI.Provider.Request ()
+import Agent.CLI.Turn.Review
     ( ReviewBranch(reviewBranchName)
     , ReviewCommit(reviewCommitHash, reviewCommitShortHash,
                    reviewCommitSubject)
@@ -168,7 +168,7 @@ import Agent.CLI.Runtime.Repl.Workflow ( handleWorkflowAction )
 import Agent.CLI.Runtime.Types
     ( RunResult(RunEnableCodeMode, RunRestart, RunUpdateAndRestart,
                 RunSwitchProvider, RunReload, RunQuit) )
-import Agent.CLI.Secret ( promptSecretLine )
+import Agent.CLI.Util.Secret ( promptSecretLine )
 import Agent.CLI.Session
     ( TranscriptEffect(TranscriptReplace),
       appendTurnWithMetaUpdateIndexed,
@@ -192,17 +192,17 @@ import Agent.CLI.Session.Lifecycle ()
 import Agent.CLI.Session.Runtime.Types ()
 import Agent.CLI.Session.Selection
     ( currentSessionId, pickAgentChoice )
-import Agent.CLI.SessionAdmin ()
-import Agent.CLI.SessionEnv ( SessionEnv(..) )
-import Agent.CLI.SessionLock ()
-import Agent.CLI.SessionState ()
-import Agent.CLI.SessionTitle ()
-import Agent.CLI.Skills ( formatSkillsListing )
+import Agent.CLI.Session.SessionAdmin ()
+import Agent.CLI.Session.SessionEnv ( SessionEnv(..) )
+import Agent.CLI.Session.SessionLock ()
+import Agent.CLI.Session.SessionState ()
+import Agent.CLI.Session.SessionTitle ()
+import Agent.CLI.Prompt.Skills ( formatSkillsListing )
 import Agent.CLI.Startup.Auth ()
 import Agent.CLI.Startup.Format ()
-import Agent.CLI.StartupContext ()
-import Agent.CLI.Status ( applyReplMode, cycleReplInteraction )
-import Agent.CLI.Style
+import Agent.CLI.Startup.Context ()
+import Agent.CLI.TUI.Status ( applyReplMode, cycleReplInteraction )
+import Agent.CLI.Util.Style
     ( glyphOk, glyphSession, roleError, roleMuted, roleSuccess )
 import Agent.CLI.Subagents.Runtime ()
 import Agent.CLI.TUI.App
@@ -223,23 +223,23 @@ import Agent.CLI.TUI.Types
                        runtimeSetMouseCapture)
     , HistoryCommit(..)
     )
-import Agent.CLI.Terminal
+import Agent.CLI.Util.Terminal
     ( copyTerminalClipboard
     , formatTerminalCapabilities
     , resolveColor
     )
-import Agent.CLI.TranscriptExport
+import Agent.CLI.Session.TranscriptExport
     ( defaultExportFileName
     , resolveExportPath
     , saveCopyText
     , saveTranscriptNoClobber
     )
-import qualified Agent.CLI.TranscriptExport as TranscriptExport
+import qualified Agent.CLI.Session.TranscriptExport as TranscriptExport
 import Agent.CLI.Tools ()
-import Agent.CLI.Turn ( runOneTurn )
-import Agent.CLI.Usage ()
-import Agent.CLI.WebFetch ()
-import Agent.CLI.Worktree ()
+import Agent.CLI.Turn.Turn ( runOneTurn )
+import Agent.CLI.Provider.Usage ()
+import Agent.CLI.Provider.WebFetch ()
+import Agent.CLI.Git.Worktree ()
 import Agent.Cancel ()
 import Agent.Claude ()
 import Agent.Dialect ()
@@ -313,7 +313,7 @@ import System.Posix.Files ( getSymbolicLinkStatus )
 import qualified Agent.Responses.GenericClient as GenericResponses
     ()
 import qualified Agent.MCP as MCP
-import qualified Agent.CLI.MetaConsole as Meta
+import qualified Agent.CLI.TUI.MetaConsole as Meta
     ( MetaAction(..)
     , MetaPlan(..)
     , formatMetaError

@@ -18,7 +18,7 @@ module Agent.CLI.Session.Codec
 
 import Agent.CLI.Session.StoreCodec (fromStoredResponseItem, toStoredResponseItem)
 import Agent.CLI.Session.Types
-import Agent.CLI.Json (decodeLazy)
+import Agent.CLI.Util.Json (decodeLazy)
 import qualified Agent.Json.Decode as Hermes
 import Agent.Dialect (dialectSlug, parseDialect, providerSupportsDialect)
 import Agent.FileRetry (retryOnFileBusy)

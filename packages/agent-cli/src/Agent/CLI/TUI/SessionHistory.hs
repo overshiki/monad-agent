@@ -13,7 +13,7 @@ import Agent.CLI.Session
     , SessionTurnPage(..)
     )
 import Agent.CLI.Session.Types (TranscriptEffect(..))
-import Agent.CLI.TurnState (isTurnAbortedNote)
+import Agent.CLI.Turn.TurnState (isTurnAbortedNote)
 import Agent.Json (RawJson, rawJsonBytes)
 import qualified Agent.Json.Decode as Hermes
 import Agent.CLI.TUI.History

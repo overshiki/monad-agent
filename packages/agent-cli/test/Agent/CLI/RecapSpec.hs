@@ -1,6 +1,6 @@
 module Agent.CLI.RecapSpec (spec) where
 
-import Agent.CLI.Recap
+import Agent.CLI.Session.Recap
 import Agent.Loop
     ( Backend(..)
     , BackendResult(..)
@@ -14,7 +14,7 @@ import qualified Data.Text as Text
 import Test.Hspec
 
 spec :: Spec
-spec = describe "Agent.CLI.Recap" do
+spec = describe "Agent.CLI.Session.Recap" do
     describe "cleanRecapText" do
         it "collapses whitespace and strips stray labels" do
             cleanRecapText "Recap:  We  fixed\nauth"

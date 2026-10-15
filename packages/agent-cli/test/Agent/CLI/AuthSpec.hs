@@ -1,8 +1,8 @@
 module Agent.CLI.AuthSpec (spec) where
 
 import Agent.CLI.Auth
-import Agent.CLI.CredentialStore
-import Agent.CLI.GatewayClient
+import Agent.CLI.Auth.CredentialStore
+import Agent.CLI.Provider.GatewayClient
     ( GatewayCredential(..)
     , gatewayCredentialPath
     , saveGatewayCredentialAt

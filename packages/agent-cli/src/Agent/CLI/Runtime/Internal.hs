@@ -29,16 +29,16 @@ module Agent.CLI.Runtime.Internal
 
 import Agent.CLI.AgentSessions
     ( closeSessionThreadManager, newSessionThreadManager )
-import Agent.CLI.GatewayClient (runGatewayCommand)
-import Agent.CLI.Interrupt ( catchUserInterrupt )
+import Agent.CLI.Provider.GatewayClient (runGatewayCommand)
+import Agent.CLI.Turn.Interrupt ( catchUserInterrupt )
 import Agent.CLI.Login ( runLoginManager )
-import Agent.CLI.McpOAuth
+import Agent.CLI.Mcp.McpOAuth
     ( LoginOptions(..)
     , defaultLoginOptions
     , loginMcpWith
     , logoutMcp
     )
-import Agent.CLI.McpStatus
+import Agent.CLI.Mcp.McpStatus
     ( formatMcpModelNotice
     , formatMcpModelNoticeFor
     , formatMcpProgress
@@ -58,7 +58,7 @@ import Agent.CLI.Runtime.Orchestration.Types
 import Agent.CLI.Runtime.Types ( DevResult(..) )
 import Agent.CLI.Session ( sessionsRoot )
 import Agent.CLI.Session.Interaction ( buildPromptState )
-import Agent.CLI.SessionAdmin
+import Agent.CLI.Session.SessionAdmin
     ( runImportSession
     , runListSessions
     , runShowSession
@@ -74,7 +74,7 @@ import Agent.CLI.Startup.Format
     , formatRepositoryPath
     , formatStartupTimings
     )
-import Agent.CLI.Status
+import Agent.CLI.TUI.Status
     ( applyReplMode
     , cycleReplInteraction
     , formatReplStatusLine
@@ -82,8 +82,8 @@ import Agent.CLI.Status
     , formatTokensPerSecond
     , formatUsageWithRate
     )
-import Agent.CLI.Terminal ( resolveColor )
-import Agent.CLI.Worktree ( isUnderWorktreeRoot, worktreeRoot )
+import Agent.CLI.Util.Terminal ( resolveColor )
+import Agent.CLI.Git.Worktree ( isUnderWorktreeRoot, worktreeRoot )
 import Control.Concurrent.Async ( withAsync )
 import Control.Concurrent.MVar ( newEmptyMVar, putMVar, takeMVar )
 import Control.Exception.Safe ( finally, mask_, onException )

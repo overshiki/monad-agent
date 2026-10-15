@@ -1,26 +1,26 @@
 module Agent.CLI.Runtime.Orchestration.Flow (runAgentWithRuntime, withRestoredCurrentDirectory) where
 
-import Agent.CLI.AccountPicker ()
-import Agent.CLI.AccountSelection ()
-import Agent.CLI.Afk ()
+import Agent.CLI.Auth.AccountPicker ()
+import Agent.CLI.Auth.AccountSelection ()
+import Agent.CLI.Session.Afk ()
 import Agent.CLI.AgentSessions ( signalManagedSessionReady )
 import Agent.CLI.AgentViewport ( AgentTarget(AgentRoot) )
 import Agent.CLI.Approval ()
-import Agent.CLI.Artifact ()
+import Agent.CLI.Turn.Artifact ()
 import Agent.CLI.Auth ()
 import Agent.CLI.Clipboard ()
 import Agent.CLI.CodeModeRuntime ()
 import Agent.CLI.Command ()
 import Agent.CLI.Compaction ()
 import Agent.CLI.Config ()
-import Agent.CLI.Connectivity ()
+import Agent.CLI.Provider.Connectivity ()
 import Agent.CLI.Database ()
 import Agent.CLI.Database.Store ()
 import Agent.CLI.Dialects ()
-import Agent.CLI.Error ( formatApiErrorAt )
-import Agent.CLI.GatewayBridge ()
+import Agent.CLI.Util.Error ( formatApiErrorAt )
+import Agent.CLI.Provider.GatewayBridge ()
 import Agent.CLI.Input ()
-import Agent.CLI.Interrupt
+import Agent.CLI.Turn.Interrupt
     ( newInterruptState,
       noteFullscreenCtrlC,
       CtrlCDecision(ForceExit) )
@@ -28,11 +28,11 @@ import Agent.CLI.LearnedSkills ()
 import Agent.CLI.LearnedSkills.Store ()
 import Agent.CLI.Login ( runLoginManager )
 import Agent.CLI.Lsp ()
-import Agent.CLI.ManagedTurn ()
-import Agent.CLI.McpManager ()
-import Agent.CLI.McpStatus ()
-import Agent.CLI.ModelConfig ( loadModelCatalogAt )
-import Agent.CLI.Models
+import Agent.CLI.Turn.ManagedTurn ()
+import Agent.CLI.Mcp.McpManager ()
+import Agent.CLI.Mcp.McpStatus ()
+import Agent.CLI.Model.ModelConfig ( loadModelCatalogAt )
+import Agent.CLI.Model.Models
     ( defaultModelOptionFor,
       resolveConfiguredModel,
       ModelOption(modelTarget),
@@ -44,20 +44,20 @@ import Agent.CLI.Options
                  optProvider, optModel, optWorktree, optEffort, optPrompt,
                  optPromptFile, optResume, optCwd, optCodeMode),
       ScreenMode(ScreenMinimal) )
-import Agent.CLI.PendingInputs ()
-import Agent.CLI.Plan ()
+import Agent.CLI.Turn.PendingInputs ()
+import Agent.CLI.Turn.Plan ()
 import Agent.CLI.Project
     ( loadUserSettings
     , ProjectSettings(settingsMouseCapture)
     )
-import Agent.CLI.Prompt ()
-import Agent.CLI.PromptHooks ()
+import Agent.CLI.Prompt.Prompt ()
+import Agent.CLI.Prompt.PromptHooks ()
 import Agent.CLI.Provider.OpenAI ()
 import Agent.CLI.Provider.Switch
     ( continueAutomaticFallback, reportProviderUnavailable )
-import Agent.CLI.ProviderAvailability ()
-import Agent.CLI.ProviderFallback ()
-import Agent.CLI.ProviderTransition
+import Agent.CLI.Provider.ProviderAvailability ()
+import Agent.CLI.Provider.ProviderFallback ()
+import Agent.CLI.Provider.ProviderTransition
     ( applyProviderTransition,
       ProviderTransition(ProviderTransition, transitionCause,
                          transitionUnavailableProviders, transitionPendingTurn,
@@ -65,11 +65,11 @@ import Agent.CLI.ProviderTransition
                          transitionAccountId, transitionAutomaticBilling,
                          transitionSessionId),
       TransitionCause(AutomaticFallback, ManualTransition) )
-import Agent.CLI.Recap ()
+import Agent.CLI.Session.Recap ()
 import Agent.CLI.Render ( putTextLn )
-import Agent.CLI.ReplMode ()
-import Agent.CLI.Request ()
-import Agent.CLI.Resume (latestSessionForCwd)
+import Agent.CLI.TUI.ReplMode ()
+import Agent.CLI.Provider.Request ()
+import Agent.CLI.Session.Resume (latestSessionForCwd)
 import Agent.CLI.Runtime.HistorySource
     ( loadFullscreenHistoryPage, sessionUiPageSize )
 import Agent.CLI.Runtime.Orchestration.Background ()
@@ -91,7 +91,7 @@ import Agent.CLI.Runtime.Recap ()
 import Agent.CLI.Runtime.Repl ()
 import Agent.CLI.Runtime.Types
     ( DevResult(..), PreparedAgent(..), RunResult(..) )
-import Agent.CLI.Secret ()
+import Agent.CLI.Util.Secret ()
 import Agent.CLI.Session
     ( deleteSession,
       listSessions,
@@ -116,17 +116,17 @@ import Agent.CLI.Session.Runtime.Types
                      startupRestartEffort, startupStartedAt, startupTimings,
                      startupSyntaxLoadDuration, startupFinished) )
 import Agent.CLI.Session.Selection ()
-import Agent.CLI.SessionAdmin ( managedPostgresConfigForHome )
-import Agent.CLI.SessionEnv ()
-import Agent.CLI.SessionLock
+import Agent.CLI.Session.SessionAdmin ( managedPostgresConfigForHome )
+import Agent.CLI.Session.SessionEnv ()
+import Agent.CLI.Session.SessionLock
     ( acquireSessionLock, releaseSessionLock, SessionLock )
-import Agent.CLI.SessionState ( SessionState(..), newSessionState )
-import Agent.CLI.SessionTitle ()
-import Agent.CLI.Skills ()
+import Agent.CLI.Session.SessionState ( SessionState(..), newSessionState )
+import Agent.CLI.Session.SessionTitle ()
+import Agent.CLI.Prompt.Skills ()
 import Agent.CLI.Startup.Auth
     ( recordStartupTiming, setStartupNotice )
-import Agent.CLI.StartupContext ()
-import Agent.CLI.Style
+import Agent.CLI.Startup.Context ()
+import Agent.CLI.Util.Style
     ( glyphOk, glyphSession, roleError, roleMuted, setCliWindowTitle )
 import Agent.CLI.Subagents.Runtime ()
 import Agent.CLI.TUI.App
@@ -143,17 +143,17 @@ import Agent.CLI.TUI.App
 import Agent.CLI.TUI.History
     ( HistoryDirection(HistoryNewer), HistoryGeneration(..) )
 import Agent.CLI.TUI.SessionHistory ( sessionHistoryPage )
-import Agent.CLI.Terminal
+import Agent.CLI.Util.Terminal
     ( copyTerminalClipboard,
       detectTerminalCapabilities,
       reportTerminalCwd,
       resolveColor,
       TerminalCapabilities(terminalNativeProgress) )
 import Agent.CLI.Tools ()
-import Agent.CLI.Turn ()
-import Agent.CLI.Usage ()
-import Agent.CLI.WebFetch ()
-import Agent.CLI.Worktree
+import Agent.CLI.Turn.Turn ()
+import Agent.CLI.Provider.Usage ()
+import Agent.CLI.Provider.WebFetch ()
+import Agent.CLI.Git.Worktree
     ( createManagedWorktreeWithProgress, worktreeProgressMessage )
 import Agent.Cancel ( requestCancel )
 import Agent.Claude ()

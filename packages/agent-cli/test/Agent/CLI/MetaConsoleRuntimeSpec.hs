@@ -8,7 +8,7 @@ import Agent.CLI.Config
     , McpServerConfig(..)
     , defaultHarnessConfig
     )
-import Agent.CLI.MetaConsole
+import Agent.CLI.TUI.MetaConsole
     ( MetaAction(..)
     , MetaLspServer(..)
     , MetaMcpServer(..)

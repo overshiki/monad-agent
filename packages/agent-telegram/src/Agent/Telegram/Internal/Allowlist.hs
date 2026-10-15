@@ -1,7 +1,7 @@
 module Agent.Telegram.Internal.Allowlist where
 
 
-import Agent.CLI.ManagedTurn (ManagedTurnRequest(..))
+import Agent.CLI.Turn.ManagedTurn (ManagedTurnRequest(..))
 import Agent.Telegram.Types
 import Agent.Telegram.Classify
     ( grantableTelegramUser
@@ -16,7 +16,7 @@ import Agent.Telegram.Bridge
 import Agent.Telegram.Log (logTelegramEvent)
 import qualified Agent.Json.Decode as Hermes
 import Agent.FileRetry (writeLazyFileAtomically)
-import Agent.OsPath (unsafeToFilePath)
+import Agent.OsPath (unsafeEncodeUtf, unsafeToFilePath)
 import Control.Concurrent.MVar
     ( modifyMVar, readMVar )
 import Control.Exception.Safe
@@ -34,7 +34,7 @@ import Data.Text (Text)
 import qualified Data.Text as Text
 import System.Directory.OsPath
     ( doesFileExist )
-import System.OsPath (unsafeEncodeUtf, (</>))
+import System.OsPath ((</>))
 import Agent.Telegram.Internal.Runtime.Types
 import Agent.Telegram.Internal.Support
 

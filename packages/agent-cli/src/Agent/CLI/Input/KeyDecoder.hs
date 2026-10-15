@@ -19,7 +19,7 @@ module Agent.CLI.Input.KeyDecoder
     ) where
 
 import Agent.CLI.Input.Types (EditorKey(..), KittyKey(..))
-import Agent.CLI.Terminal (shiftEnterCsiBodies)
+import Agent.CLI.Util.Terminal (shiftEnterCsiBodies)
 import Data.Bits ((.&.))
 import Data.Char (ord)
 import Data.Maybe (fromMaybe)

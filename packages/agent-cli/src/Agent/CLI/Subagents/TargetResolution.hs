@@ -21,8 +21,8 @@ module Agent.CLI.Subagents.TargetResolution
     , childTargetConnection
     ) where
 
-import Agent.CLI.ModelConfig (ModelCatalog)
-import Agent.CLI.Models (ModelOption(..), ModelTarget(..), resolveConfiguredModel)
+import Agent.CLI.Model.ModelConfig (ModelCatalog)
+import Agent.CLI.Model.Models (ModelOption(..), ModelTarget(..), resolveConfiguredModel)
 import Agent.Dialect (DialectId, dialectSlug)
 import Agent.Provider (Provider, providerSlug)
 import Data.Text (Text)

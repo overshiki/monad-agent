@@ -18,7 +18,7 @@ module Agent.CLI.Context.Assembler
     , assembleLineageFromTree
     ) where
 
-import Agent.CLI.QuestTree (QuestTree, defaultFocus, lineageToRoot)
+import Agent.CLI.Git.QuestTree (QuestTree, defaultFocus, lineageToRoot)
 import Agent.OpenAI.Compaction (estimateItemsTokens)
 import Agent.Responses.Types (ResponseItem)
 import Data.Map.Strict (Map)

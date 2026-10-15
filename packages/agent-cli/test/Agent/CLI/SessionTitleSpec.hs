@@ -1,6 +1,6 @@
 module Agent.CLI.SessionTitleSpec (spec) where
 
-import Agent.CLI.SessionTitle
+import Agent.CLI.Session.SessionTitle
 import Agent.Loop
     ( Backend(..)
     , BackendResult(..)
@@ -19,7 +19,7 @@ import qualified Data.Text as Text
 import Test.Hspec
 
 spec :: Spec
-spec = describe "Agent.CLI.SessionTitle" do
+spec = describe "Agent.CLI.Session.SessionTitle" do
     describe "cleanGeneratedTitle" do
         it "normalizes labels, quotes, whitespace, and extra lines" do
             cleanGeneratedTitle "Title: \"  Fix   auth races  \"\nExplanation"

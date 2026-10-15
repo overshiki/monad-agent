@@ -1,6 +1,6 @@
 module Agent.CLI.CredentialStoreSpec (spec) where
 
-import Agent.CLI.CredentialStore
+import Agent.CLI.Auth.CredentialStore
 import Agent.Json (RawJson, rawJsonDecoder)
 import qualified Agent.Json.Decode as Json
 import Agent.Provider (BillingMode(..), Provider(..))

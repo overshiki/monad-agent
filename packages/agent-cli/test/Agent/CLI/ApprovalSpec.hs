@@ -13,7 +13,7 @@ import Agent.CLI.Approval
     , resolveApprovalPrompt
     )
 import Agent.CLI.Options (ApprovalPolicy(..))
-import Agent.CLI.Permission (PermissionChoice(..))
+import Agent.CLI.Approval.Permission (PermissionChoice(..))
 import Agent.ToolDispatch
     ( ToolCall
     , functionToolCall

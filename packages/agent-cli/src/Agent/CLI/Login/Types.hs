@@ -10,8 +10,8 @@ module Agent.CLI.Login.Types
     , initialLoginState
     ) where
 
-import Agent.CLI.CredentialStore (ManagedAuthKind)
-import Agent.CLI.Picker (PickerKey(..))
+import Agent.CLI.Auth.CredentialStore (ManagedAuthKind)
+import Agent.CLI.TUI.Picker (PickerKey(..))
 import Agent.Provider (Provider)
 import Data.Text (Text)
 import Data.Time.Clock (UTCTime)

@@ -39,7 +39,7 @@ import Agent.CLI.Clipboard
     ( nonEmptyClipboardText
     , readClipboardText
     )
-import Agent.CLI.Dictation
+import Agent.CLI.TUI.Dictation
     ( dictate
     , dictateForProvider
     , insertDictation
@@ -60,13 +60,13 @@ import Agent.CLI.Input.KeyDecoder
 import Agent.CLI.Input.Paste
 import Agent.CLI.Input.Picker
 import Agent.CLI.Input.Types
-import Agent.CLI.Interrupt
+import Agent.CLI.Turn.Interrupt
     ( IdleCtrlCResult(..)
     , InterruptState
     , noteIdleCtrlC
     )
 import Agent.Provider (Provider)
-import Agent.CLI.Terminal
+import Agent.CLI.Util.Terminal
     ( TerminalCapabilities(..)
     , detectTerminalCapabilities
     , emitTerminalSequence

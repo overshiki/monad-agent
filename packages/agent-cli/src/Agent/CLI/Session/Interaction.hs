@@ -8,18 +8,18 @@ module Agent.CLI.Session.Interaction
     , syncFullscreenPrompt
     ) where
 
-import Agent.CLI.Btw
+import Agent.CLI.Turn.Btw
     ( formatBtwError
     , runBtwWithCancel
     )
-import Agent.CLI.CancelWatch (withEscCancel)
+import Agent.CLI.Turn.CancelWatch (withEscCancel)
 import Agent.CLI.Command
     ( currentEffort
     , currentModel
     , setReasoningEffort
     )
-import Agent.CLI.Interrupt (withTurnCancel)
-import Agent.CLI.ModelTest
+import Agent.CLI.Turn.Interrupt (withTurnCancel)
+import Agent.CLI.Model.ModelTest
     ( ProbeOutcome(..)
     , catalogTargets
     , classifyProbe
@@ -43,8 +43,8 @@ import Agent.CLI.Render
     , putTextLn
     , renderAssistantText
     )
-import Agent.CLI.Request (setRequestModel)
-import Agent.CLI.ReplMode
+import Agent.CLI.Provider.Request (setRequestModel)
+import Agent.CLI.TUI.ReplMode
     ( replModeFromState
     , replModeLabel
     )
@@ -56,13 +56,13 @@ import Agent.CLI.Session
     , SessionCreate(..)
     , writeSessionMeta
     )
-import Agent.CLI.SessionEnv (SessionEnv(..))
+import Agent.CLI.Session.SessionEnv (SessionEnv(..))
 import Agent.CLI.Session.History
     ( readLiveAttachments
     , readLiveTranscript
     )
-import Agent.CLI.Style (roleError)
-import Agent.CLI.Terminal (resolveColor)
+import Agent.CLI.Util.Style (roleError)
+import Agent.CLI.Util.Terminal (resolveColor)
 import Agent.CLI.TUI.App
     ( emitUiEvent
     )

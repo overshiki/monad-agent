@@ -1,8 +1,8 @@
 module Agent.CLI.ProviderTransitionSpec (spec) where
 
-import Agent.CLI.Models (ModelTarget(..))
+import Agent.CLI.Model.Models (ModelTarget(..))
 import Agent.CLI.Options (CliOptions(..), defaultCliOptions, isOneShot)
-import Agent.CLI.ProviderTransition
+import Agent.CLI.Provider.ProviderTransition
 import Agent.Dialect (DialectId(..))
 import Agent.Provider (BillingMode(..), Provider(..))
 import Agent.Tools.PlanMode (PlanModeState(..))

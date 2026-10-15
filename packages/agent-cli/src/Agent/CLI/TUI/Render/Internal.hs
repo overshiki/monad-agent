@@ -28,23 +28,23 @@ module Agent.CLI.TUI.Render.Internal
 import Agent.CLI.AgentViewport
     ( AgentEntry(agentSteps, agentPath), AgentStep(agentStepTitle, agentStepState),
       AgentStepState(AgentStepRunning), agentDisplayName )
-import Agent.CLI.Artifact ()
+import Agent.CLI.Turn.Artifact ()
 import Agent.CLI.Clipboard ( formatImageSize )
 import Agent.CLI.Command ()
-import Agent.CLI.Dictation ()
-import Agent.CLI.ImagePreview ()
+import Agent.CLI.TUI.Dictation ()
+import Agent.CLI.TUI.GrokImagePreview ()
 import Agent.CLI.Input ( truncateDisplayText )
-import Agent.CLI.Interrupt ()
-import Agent.CLI.Permission ()
-import Agent.CLI.Recap ()
+import Agent.CLI.Turn.Interrupt ()
+import Agent.CLI.Approval.Permission ()
+import Agent.CLI.Session.Recap ()
 import Agent.CLI.Render ( formatElapsed )
-import Agent.CLI.Resume ()
-import Agent.CLI.Secret ()
-import Agent.CLI.Status
+import Agent.CLI.Session.Resume ()
+import Agent.CLI.Util.Secret ()
+import Agent.CLI.TUI.Status
     ( formatEstimatedTokensPerSecond
     , formatTokenUsage
     )
-import Agent.CLI.Style ( motionGlyphSet )
+import Agent.CLI.Util.Style ( motionGlyphSet )
 import Agent.CLI.TUI.History ()
 import Agent.CLI.TUI.ImagePreview
     ( TuiImagePreview(previewBytes, previewMime, previewSourceWidth,
@@ -65,8 +65,8 @@ import Agent.CLI.TUI.Types
       FullscreenRuntime(runtimeNativeImagePreviews, runtimeWaveTrough,
                         runtimeColor, runtimeMotionMode),
       Name(ComposerImageRemove) )
-import Agent.CLI.Terminal ()
-import Agent.CLI.Timestamp ()
+import Agent.CLI.Util.Terminal ()
+import Agent.CLI.Util.Timestamp ()
 import Agent.Loop ()
 import Agent.Syntax ()
 import Agent.TUI.Accent ()

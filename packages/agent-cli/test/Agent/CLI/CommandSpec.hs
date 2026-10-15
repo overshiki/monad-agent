@@ -1,7 +1,7 @@
 module Agent.CLI.CommandSpec (spec) where
 
 import Agent.CLI.Command
-import Agent.CLI.Afk
+import Agent.CLI.Session.Afk
 import Agent.Dialect (DialectId(..))
 import Agent.ReasoningEffort (ReasoningEffort(..))
 import Agent.Responses.Types

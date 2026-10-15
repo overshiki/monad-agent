@@ -1,6 +1,6 @@
 module Agent.CLI.MetaConsoleSpec (spec) where
 
-import Agent.CLI.MetaConsole
+import Agent.CLI.TUI.MetaConsole
 import Agent.Loop
     ( Backend(..)
     , BackendResult(..)

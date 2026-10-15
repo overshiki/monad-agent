@@ -4,7 +4,7 @@ module Agent.CLI.Runtime.Orchestration.Restart
     ) where
 
 import Agent.CLI.Options ( CliOptions(optCodeMode) )
-import Agent.CLI.ProviderTransition
+import Agent.CLI.Provider.ProviderTransition
     ( ProviderTransition(..), TransitionCause(AutomaticFallback) )
 import Agent.CLI.Runtime.Types ( PreparedAgent(..), RunResult(..) )
 import Agent.CLI.Session.Runtime.Types ( StartupFailure(..) )

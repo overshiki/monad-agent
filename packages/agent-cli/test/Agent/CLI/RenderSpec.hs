@@ -1,7 +1,7 @@
 module Agent.CLI.RenderSpec (spec) where
 
 import Agent.CLI.Render
-import Agent.CLI.Style (motionGlyphSet)
+import Agent.CLI.Util.Style (motionGlyphSet)
 import Agent.Error (ApiError(..), ErrorType(..), credentialsExhausted)
 import Agent.Loop
     ( LoopError(..)

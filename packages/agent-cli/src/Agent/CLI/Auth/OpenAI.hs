@@ -16,15 +16,15 @@ import Agent.CLI.Auth.Types
     , openAIOAuthClientId
     , openaiAuthStateFromJson
     )
-import Agent.CLI.CredentialStore
+import Agent.CLI.Auth.CredentialStore
     ( ManagedAuthKind(..)
     , ManagedCredential(..)
     , ManagedSecret(..)
     , loadManagedCredentials
     , updateManagedCredentialSecret
     )
-import Agent.CLI.Environment (lookupNonEmpty)
-import Agent.CLI.PrivateFileLock (withPrivateFileLock)
+import Agent.CLI.Util.Environment (lookupNonEmpty)
+import Agent.CLI.Util.PrivateFileLock (withPrivateFileLock)
 import Agent.Error (ApiError(..))
 import Agent.FileRetry (retryOnFileBusy)
 import qualified Agent.OpenAI.Auth as OpenAI

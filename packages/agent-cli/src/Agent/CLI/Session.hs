@@ -87,13 +87,13 @@ module Agent.CLI.Session
     ) where
 
 import Agent.FileRetry (retryOnFileBusy, writeLazyFileAtomically)
-import Agent.CLI.SessionLock
+import Agent.CLI.Session.SessionLock
     ( acquireSessionLock
     , releaseSessionLock
     )
-import Agent.CLI.Git (detectGitBranch)
-import Agent.CLI.Json (decodeLazy)
-import Agent.CLI.Request
+import Agent.CLI.Git.Git (detectGitBranch)
+import Agent.CLI.Util.Json (decodeLazy)
+import Agent.CLI.Provider.Request
     ( requestPromptParts
     , requestToolIdentities
     )
@@ -127,9 +127,9 @@ import Agent.CLI.Session.Codec
     , toStoredTurn
     , validateSessionMeta
     )
-import Agent.CLI.Models (ModelTarget(..))
-import Agent.CLI.QuestTree (QuestNode(..), QuestTree, buildQuestTree, findByIndex)
-import Agent.CLI.SessionTitle (titleRefreshIndex)
+import Agent.CLI.Model.Models (ModelTarget(..))
+import Agent.CLI.Git.QuestTree (QuestNode(..), QuestTree, buildQuestTree, findByIndex)
+import Agent.CLI.Session.SessionTitle (titleRefreshIndex)
 import Agent.Dialect (DialectId)
 import Agent.Loop (TokenUsage(..))
 import Agent.OpenAI.Compaction (rewindSessionUserText)
@@ -1180,7 +1180,7 @@ loadActiveSession pool root sessionId = runExceptT do
 -- | Load a session's turn lineage (ids + parent pointers) as a quest tree,
 -- plus the session's current focus turn (if any). This is the CLI-level
 -- surface of the store's 'parent_turn_id' links; the context assembler walks
--- it (see Agent.CLI.QuestTree and docs/session-tree.md).
+-- it (see Agent.CLI.Git.QuestTree and docs/session-tree.md).
 loadQuestTree
     :: StorePool
     -> OsPath

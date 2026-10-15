@@ -4,19 +4,19 @@ module Agent.CLI.Runtime.Orchestration.Initialized
     , runAgentInitialized
     ) where
 
-import Agent.CLI.AccountPicker ()
-import Agent.CLI.AccountSelection
+import Agent.CLI.Auth.AccountPicker ()
+import Agent.CLI.Auth.AccountSelection
     ( PreparedProviderAccounts,
       SelectedAccount(..),
       loadedAuthSupportsUsageAccountSelection,
       prepareProviderAccounts,
       selectPreparedProviderAccount,
       selectProviderAccount )
-import Agent.CLI.Afk ()
+import Agent.CLI.Session.Afk ()
 import Agent.CLI.AgentSessions ()
 import Agent.CLI.AgentViewport ()
 import Agent.CLI.Approval ()
-import Agent.CLI.Artifact ()
+import Agent.CLI.Turn.Artifact ()
 import Agent.CLI.Auth
     ( LoadedAuth(loadedAccountLabel, LoadedAuth, loadedOpenAiPool,
                  loadedProvider, loadedTokenProvider, loadedSelectionId),
@@ -31,36 +31,36 @@ import Agent.CLI.CodeModeRuntime ()
 import Agent.CLI.Command ()
 import Agent.CLI.Compaction ()
 import Agent.CLI.Config ()
-import Agent.CLI.Connectivity ()
+import Agent.CLI.Provider.Connectivity ()
 import Agent.CLI.Database ()
 import Agent.CLI.Database.Store ( deriveDatabaseScopes )
 import Agent.CLI.Dialects ()
-import Agent.CLI.Error ()
-import Agent.CLI.GatewayBridge ()
+import Agent.CLI.Util.Error ()
+import Agent.CLI.Provider.GatewayBridge ()
 import Agent.CLI.Input ()
-import Agent.CLI.Interrupt ()
+import Agent.CLI.Turn.Interrupt ()
 import Agent.CLI.LearnedSkills ()
 import Agent.CLI.LearnedSkills.Store ()
 import Agent.CLI.Login ()
 import Agent.CLI.Lsp ()
-import Agent.CLI.ManagedTurn ()
-import Agent.CLI.McpManager ()
-import Agent.CLI.McpStatus ()
-import Agent.CLI.ModelConfig
+import Agent.CLI.Turn.ManagedTurn ()
+import Agent.CLI.Mcp.McpManager ()
+import Agent.CLI.Mcp.McpStatus ()
+import Agent.CLI.Model.ModelConfig
     ( builtinConnectionId,
       catalogConnection,
       loadModelCatalogAt,
       ConnectionKind(BuiltinConnection, CustomResponsesConnection),
       ModelConnection(connectionId, connectionKind),
       ResponsesConnection(responsesApiKeyEnv, responsesApiKeyOptional) )
-import Agent.CLI.Models
+import Agent.CLI.Model.Models
     ( resolveConfiguredModel,
       ModelOption(modelTarget),
       ModelTarget(targetWireModelId, ModelTarget, targetConnectionId,
                   targetProvider, targetModelId, targetDialect) )
 import Agent.CLI.Options ( CliOptions(optModel, optProvider) )
-import Agent.CLI.PendingInputs ()
-import Agent.CLI.Plan ()
+import Agent.CLI.Turn.PendingInputs ()
+import Agent.CLI.Turn.Plan ()
 import Agent.CLI.Project
     ( loadProjectSettings,
       loadUserSettings,
@@ -71,23 +71,23 @@ import Agent.CLI.Project
       ProjectAccount(projectAccountId, projectAccountSelectionId),
       ProjectModel(projectModelTarget),
       ProjectSettings(settingsLastModel) )
-import Agent.CLI.Prompt ()
-import Agent.CLI.PromptHooks ()
+import Agent.CLI.Prompt.Prompt ()
+import Agent.CLI.Prompt.PromptHooks ()
 import Agent.CLI.Provider.OpenAI ()
 import Agent.CLI.Provider.Switch ( loadSelectedAccountAuth )
-import Agent.CLI.ProviderAvailability ()
-import Agent.CLI.ProviderFallback
+import Agent.CLI.Provider.ProviderAvailability ()
+import Agent.CLI.Provider.ProviderFallback
     ( allowsAutomaticBillingFallback )
-import Agent.CLI.ProviderTransition
+import Agent.CLI.Provider.ProviderTransition
     ( ProviderTransition(transitionAutomaticBilling,
                          transitionUnavailableProviders, transitionPendingTurn,
                          transitionTarget, transitionAccountSelectionId,
                          transitionAccountId) )
-import Agent.CLI.Recap ()
+import Agent.CLI.Session.Recap ()
 import Agent.CLI.Render ()
-import Agent.CLI.ReplMode ()
-import Agent.CLI.Request ()
-import Agent.CLI.Resume ()
+import Agent.CLI.TUI.ReplMode ()
+import Agent.CLI.Provider.Request ()
+import Agent.CLI.Session.Resume ()
 import Agent.CLI.Runtime.HistorySource ()
 import Agent.CLI.Runtime.Orchestration.Background ()
 import Agent.CLI.Runtime.Orchestration.Concurrent ()
@@ -104,7 +104,7 @@ import Agent.CLI.Runtime.Persistence ()
 import Agent.CLI.Runtime.Recap ()
 import Agent.CLI.Runtime.Repl ()
 import Agent.CLI.Runtime.Types ( DevResult, RunResult )
-import Agent.CLI.Secret ()
+import Agent.CLI.Util.Secret ()
 import Agent.CLI.Session
     ( SessionMeta(metaProvider, metaConnection, metaModel,
                   metaTransportModel, metaDialect),
@@ -118,27 +118,27 @@ import Agent.CLI.Session.Runtime.Types
                      startupStdoutTty, startupStdinTty, startupFullscreen,
                      startupUiRuntimeRef, startupEscPaused, startupInterrupt) )
 import Agent.CLI.Session.Selection ()
-import Agent.CLI.SessionAdmin ()
-import Agent.CLI.SessionEnv ()
-import Agent.CLI.SessionLock ( releaseSessionLock, SessionLock )
-import Agent.CLI.SessionState ()
-import Agent.CLI.SessionTitle ()
-import Agent.CLI.Skills ()
+import Agent.CLI.Session.SessionAdmin ()
+import Agent.CLI.Session.SessionEnv ()
+import Agent.CLI.Session.SessionLock ( releaseSessionLock, SessionLock )
+import Agent.CLI.Session.SessionState ()
+import Agent.CLI.Session.SessionTitle ()
+import Agent.CLI.Prompt.Skills ()
 import Agent.CLI.Startup.Auth
     ( loadStartupAuth, loadStartupAuthFromResult, markStartupStage, startupDie )
-import Agent.CLI.StartupContext ()
-import Agent.CLI.Style ( setCliWindowTitle )
-import Agent.CLI.SubagentCatalogConfig ( loadSubagentCatalogAt )
+import Agent.CLI.Startup.Context ()
+import Agent.CLI.Util.Style ( setCliWindowTitle )
+import Agent.CLI.Subagents.SubagentCatalogConfig ( loadSubagentCatalogAt )
 import Agent.CLI.Subagents.Runtime ()
 import Agent.CLI.TUI.App ( setFullscreenWindowTitle )
 import Agent.CLI.TUI.History ()
 import Agent.CLI.TUI.SessionHistory ()
-import Agent.CLI.Terminal ()
+import Agent.CLI.Util.Terminal ()
 import Agent.CLI.Tools ()
-import Agent.CLI.Turn ()
-import Agent.CLI.Usage ()
-import Agent.CLI.WebFetch ()
-import Agent.CLI.Worktree ()
+import Agent.CLI.Turn.Turn ()
+import Agent.CLI.Provider.Usage ()
+import Agent.CLI.Provider.WebFetch ()
+import Agent.CLI.Git.Worktree ()
 import Agent.Cancel ()
 import Agent.Claude ()
 import Agent.Dialect ()

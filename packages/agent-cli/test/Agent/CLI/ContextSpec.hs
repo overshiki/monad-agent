@@ -2,7 +2,7 @@ module Agent.CLI.ContextSpec (spec) where
 
 import Agent.CLI.Compaction (estimatedOccupancy, reportedOccupancy)
 import Agent.CLI.Context (formatContextReport)
-import Agent.CLI.Request (requestParams)
+import Agent.CLI.Provider.Request (requestParams)
 import Agent.Provider (Provider(OpenAIProvider))
 import Agent.Responses.Types
 import Data.List (isInfixOf)

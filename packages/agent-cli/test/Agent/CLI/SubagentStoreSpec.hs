@@ -1,7 +1,7 @@
 module Agent.CLI.SubagentStoreSpec (spec) where
 
 import Agent.CLI.Compaction (estimatedOccupancy)
-import Agent.CLI.SubagentStore
+import Agent.CLI.Subagents.SubagentStore
 import Agent.CLI.Session (LegacySubagentTarget(..))
 import Agent.Dialect (DialectId(..))
 import Agent.Loop
@@ -25,7 +25,7 @@ import Agent.CLI.Subagents.Runtime
     , usesOpenAiChildTransport
     , validatePersistedSubagentTarget
     )
-import Agent.CLI.Request (requestParams)
+import Agent.CLI.Provider.Request (requestParams)
 import Agent.Responses.Types
 import System.OsPath (OsPath, decodeUtf)
 import Agent.OsPath (unsafeEncodeUtf)
@@ -63,7 +63,7 @@ fromFilePath = unsafeEncodeUtf
 toFilePath path = either (error . show) id (decodeUtf path)
 
 spec :: Spec
-spec = describe "Agent.CLI.SubagentStore" do
+spec = describe "Agent.CLI.Subagents.SubagentStore" do
     describe "nested subagent model inheritance" do
         it "uses the immediate parent's effective model when no override is set" do
             sessionsRef <- newIORef Map.empty

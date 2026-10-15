@@ -1,7 +1,7 @@
 module Agent.CLI.StyleSpec (spec) where
 
-import Agent.CLI.Style
-import Agent.CLI.WindowTitle
+import Agent.CLI.Util.Style
+import Agent.CLI.TUI.WindowTitle
     ( WindowTitleController(..)
     , busyWindowTitle
     , newWindowTitleController

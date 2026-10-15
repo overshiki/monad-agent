@@ -13,26 +13,26 @@ module Agent.CLI.TUI.Render.Transcript
 
 
 import Agent.CLI.AgentViewport ( AgentTarget(AgentRoot) )
-import Agent.CLI.Artifact ()
+import Agent.CLI.Turn.Artifact ()
 import Agent.CLI.Clipboard ()
 import Agent.CLI.Command
     ( SkillCommand(skillCommandName)
     , SlashCatalog(slashCatalogSkills, slashCatalogToolNames)
     )
-import Agent.CLI.Dictation ()
-import Agent.CLI.ImagePreview ()
+import Agent.CLI.TUI.Dictation ()
+import Agent.CLI.TUI.GrokImagePreview ()
 import Agent.CLI.Input
     ( displayEditorText, terminalTextWidth, truncateDisplayText )
-import Agent.CLI.Interrupt ()
-import Agent.CLI.Permission ()
-import Agent.CLI.Recap ()
+import Agent.CLI.Turn.Interrupt ()
+import Agent.CLI.Approval.Permission ()
+import Agent.CLI.Session.Recap ()
 import Agent.CLI.Render ()
-import Agent.CLI.Resume ()
-import Agent.CLI.Secret ()
-import Agent.CLI.Status ()
+import Agent.CLI.Session.Resume ()
+import Agent.CLI.Util.Secret ()
+import Agent.CLI.TUI.Status ()
 import Agent.CLI.Startup.Format
     ( agentBuildInfo, formatBuildInfoCompact )
-import Agent.CLI.Style ()
+import Agent.CLI.Util.Style ()
 import Agent.CLI.TUI.History
     ( HistoryWindow(historyWindowTurns, historyWindowTotalTurns,
                     historyWindowGenerationStart, historyWindowHasNewer,
@@ -54,8 +54,8 @@ import Agent.CLI.TUI.Types
       Name(QuickStartModel, CodeCopy, ConversationChunkCache,
            ConversationReserve, QuickStartWorktree, QuickStartResume,
            QuickStartCommands) )
-import Agent.CLI.Terminal ()
-import Agent.CLI.Timestamp ()
+import Agent.CLI.Util.Terminal ()
+import Agent.CLI.Util.Timestamp ()
 import Agent.Loop ()
 import Agent.Syntax ()
 import Agent.TUI.Markdown ()

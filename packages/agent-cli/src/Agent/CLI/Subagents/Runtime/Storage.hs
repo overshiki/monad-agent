@@ -6,8 +6,8 @@ module Agent.CLI.Subagents.Runtime.Storage
     , syncStoreRootFromPlan
     ) where
 
-import Agent.CLI.Btw (trimDanglingToolSuffix)
-import Agent.CLI.SubagentStore
+import Agent.CLI.Turn.Btw (trimDanglingToolSuffix)
+import Agent.CLI.Subagents.SubagentStore
     ( SubagentStateSnapshot(..)
     , SubagentTarget(..)
     , saveSubagentState

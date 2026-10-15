@@ -31,9 +31,9 @@ module Agent.CLI.TUI.Types
 import Agent.CLI.AgentViewport (AgentEntry, AgentTarget)
 import Agent.CLI.Command (SkillCommand, SlashCatalog)
 import Agent.CLI.Input.Types (ReplLine)
-import Agent.CLI.Interrupt (CtrlCDecision)
-import Agent.CLI.Permission (PermissionChoice)
-import Agent.CLI.Resume (ResumeBrowser, ResumeEntry)
+import Agent.CLI.Turn.Interrupt (CtrlCDecision)
+import Agent.CLI.Approval.Permission (PermissionChoice)
+import Agent.CLI.Session.Resume (ResumeBrowser, ResumeEntry)
 import Agent.CLI.TUI.ImagePreview
     ( NativePreviewPlacement
     , TuiImagePreview

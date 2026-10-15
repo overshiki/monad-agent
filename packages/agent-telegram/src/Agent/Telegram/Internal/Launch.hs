@@ -6,12 +6,12 @@ import Agent.CLI.AgentSessions
     , closeSessionProcessManager
     , newSessionProcessManagerWithLifetime
     )
-import Agent.CLI.ManagedTurn ()
+import Agent.CLI.Turn.ManagedTurn ()
 import Agent.CLI.Options
     ( ApprovalPolicy(..)
     , defaultEffortFor
     )
-import Agent.CLI.Models
+import Agent.CLI.Model.Models
     ( ModelOption(..)
     , ModelTarget(..)
     , defaultModelOptionFor
@@ -19,7 +19,7 @@ import Agent.CLI.Models
     , resolveConfiguredModel
     , resolveModelOptionDialect
     )
-import Agent.CLI.ModelConfig (loadModelCatalog)
+import Agent.CLI.Model.ModelConfig (loadModelCatalog)
 import Agent.CLI.Session (sessionsRoot)
 import Agent.Telegram.Types
 import Agent.Telegram.Classify ()
@@ -30,7 +30,7 @@ import Agent.Telegram.Markdown ()
 import Agent.Telegram.Voice ()
 import Agent.FileRetry ()
 import Agent.Concurrent ()
-import Agent.OsPath (unsafeToFilePath)
+import Agent.OsPath (unsafeEncodeUtf, unsafeToFilePath)
 import Agent.Provider ()
 import Agent.ReasoningEffort (reasoningEffortText)
 import Agent.Store.Postgres
@@ -71,7 +71,7 @@ import System.Environment ()
 import System.Exit (die)
 import System.FilePath ()
 import System.IO ()
-import System.OsPath (OsPath, unsafeEncodeUtf, (</>))
+import System.OsPath (OsPath, (</>))
 import System.Posix.Files (setFileMode)
 import System.Posix.Process ()
 import System.Posix.Signals ()

@@ -17,15 +17,15 @@ import Agent.CLI.Auth.Types
     , grokOAuthOptionsFromAuthJson
     , xaiOAuthClientId
     )
-import Agent.CLI.CredentialStore
+import Agent.CLI.Auth.CredentialStore
     ( ManagedCredential(..)
     , ManagedSecret(..)
     , loadManagedCredentials
     , upsertManagedCredentialAfterRefresh
     , withCredentialRefreshFileLock
     )
-import Agent.CLI.Environment (lookupNonEmpty)
-import Agent.CLI.PrivateFileLock (withPrivateFileLock)
+import Agent.CLI.Util.Environment (lookupNonEmpty)
+import Agent.CLI.Util.PrivateFileLock (withPrivateFileLock)
 import Agent.Error (ApiError(..))
 import Agent.FileRetry (retryOnFileBusy, writeLazyFileAtomically)
 import qualified Agent.OpenAI.Auth as OpenAI

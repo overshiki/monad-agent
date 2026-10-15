@@ -1,6 +1,6 @@
 module Agent.CLI.ErrorSpec (spec) where
 
-import Agent.CLI.Error
+import Agent.CLI.Util.Error
 import Agent.Error
     ( ApiError(..)
     , CredentialExhaustionReason(..)

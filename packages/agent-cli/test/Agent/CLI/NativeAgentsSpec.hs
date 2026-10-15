@@ -1,7 +1,7 @@
 module Agent.CLI.NativeAgentsSpec (spec) where
 
 import Agent.CLI.AgentViewport (AgentEntry(..), AgentTarget(..))
-import Agent.CLI.NativeAgents
+import Agent.CLI.Desktop.NativeAgents
 import Agent.Json (rawJsonFromEncoding)
 import Agent.Loop (LoopEvent(..), NativeAgentStatus(..))
 import Agent.Responses.Types

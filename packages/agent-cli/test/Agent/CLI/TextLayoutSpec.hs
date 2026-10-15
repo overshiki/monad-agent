@@ -1,7 +1,7 @@
 module Agent.CLI.TextLayoutSpec (spec) where
 
 import Agent.CLI.Input (terminalTextWidth)
-import Agent.CLI.TextLayout
+import Agent.CLI.Util.TextLayout
 import qualified Data.Text as Text
 import Test.Hspec
 import Test.Hspec.QuickCheck (modifyMaxSuccess, prop)

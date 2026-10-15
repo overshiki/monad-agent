@@ -56,7 +56,7 @@ import Agent.CLI.Command.Instructions
     , loopScheduleInstruction
     , workflowInstruction
     )
-import Agent.CLI.Style (roleMuted, rolePrompt)
+import Agent.CLI.Util.Style (roleMuted, rolePrompt)
 import Agent.Dialect (DialectId(..))
 import Agent.ReasoningEffort
     ( ReasoningEffort(..)

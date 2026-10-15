@@ -1,6 +1,6 @@
 module Agent.CLI.BtwSpec (spec) where
 
-import Agent.CLI.Btw
+import Agent.CLI.Turn.Btw
 import Agent.Error (ApiError(..))
 import Agent.Json (rawJsonFromEncoding)
 import Agent.Loop

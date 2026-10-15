@@ -5,12 +5,12 @@ module Agent.CLI.Session.Runner.Types
     ) where
 
 import Agent.CLI.AgentViewport.Runtime (AgentStepCache(..))
-import Agent.CLI.ProviderTransition (TurnResult)
-import Agent.CLI.Recap (RecapKind)
+import Agent.CLI.Provider.ProviderTransition (TurnResult)
+import Agent.CLI.Session.Recap (RecapKind)
 import Agent.CLI.Runtime.Types (PendingTurnPresentation, RunResult)
-import Agent.CLI.SessionEnv (SessionEnv)
+import Agent.CLI.Session.SessionEnv (SessionEnv)
 import Agent.CLI.Session.Runtime.Types (StartupRuntime)
-import Agent.CLI.ProviderTransition (PendingTurn)
+import Agent.CLI.Provider.ProviderTransition (PendingTurn)
 import Agent.Loop (TurnInput)
 import Data.Text (Text)
 

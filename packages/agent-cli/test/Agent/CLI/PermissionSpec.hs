@@ -1,7 +1,7 @@
 module Agent.CLI.PermissionSpec (spec) where
 
-import Agent.CLI.Permission
-import Agent.CLI.Picker (PickerKey(..))
+import Agent.CLI.Approval.Permission
+import Agent.CLI.TUI.Picker (PickerKey(..))
 import Agent.CLI.Options (ApprovalPolicy(..))
 import qualified Data.Text as Text
 import Test.Hspec

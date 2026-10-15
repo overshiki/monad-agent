@@ -2,7 +2,7 @@ module Agent.CLI.SkillsSpec (spec) where
 
 import Agent.CLI.Command (SkillCommand(..))
 import Agent.CLI.Options (CliOptions(..), defaultCliOptions)
-import Agent.CLI.Skills
+import Agent.CLI.Prompt.Skills
 import System.OsPath (takeDirectory)
 import Agent.OsPath (unsafeEncodeUtf)
 import Agent.Skills
@@ -16,7 +16,7 @@ import Test.Hspec
 fromFilePath = unsafeEncodeUtf
 
 spec :: Spec
-spec = describe "Agent.CLI.Skills" do
+spec = describe "Agent.CLI.Prompt.Skills" do
     it "disables discovery with --no-skills" do
         catalog <- loadSkillsCatalog
             defaultCliOptions { optSkills = False }

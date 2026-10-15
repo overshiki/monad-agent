@@ -1,7 +1,7 @@
 module Main (main) where
 
 import Agent.Concurrent (mapConcurrentlyBounded)
-import Agent.CLI.PendingInputs
+import Agent.CLI.Turn.PendingInputs
     ( PendingInputs
     , enqueuePendingInput
     , newPendingInputs

@@ -13,14 +13,14 @@ import Agent.CLI.AgentViewport
     , AgentTarget
     , pickAgentViewport
     )
-import Agent.CLI.ManagedTurn
+import Agent.CLI.Turn.ManagedTurn
     ( ManagedTurnRequest
     , loadTextPrompt
     , loadManagedTurnRequest
     , managedTurnRequestFromText
     )
 import Agent.CLI.Options (CliOptions(..))
-import Agent.CLI.Resume
+import Agent.CLI.Session.Resume
     ( ResumeEntry(..)
     , applyResumeSearchResults
     , initialResumeBrowser
@@ -41,12 +41,12 @@ import Agent.CLI.Session
     , loadSessionMeta
     , sessionsRoot
     )
-import Agent.CLI.Style
+import Agent.CLI.Util.Style
     ( glyphSession
     , roleError
     , roleMuted
     )
-import Agent.CLI.Terminal (resolveColor)
+import Agent.CLI.Util.Terminal (resolveColor)
 import Agent.CLI.TUI.App
     ( FullscreenRuntime
     , emitUiEvent

@@ -1,8 +1,8 @@
 module Agent.CLI.GatewayBridgeSpec (spec) where
 
-import Agent.CLI.GatewayBridge
-import Agent.CLI.ManagedTurn
-import Agent.CLI.Permission (PermissionChoice(..))
+import Agent.CLI.Provider.GatewayBridge
+import Agent.CLI.Turn.ManagedTurn
+import Agent.CLI.Approval.Permission (PermissionChoice(..))
 import Agent.Loop (LoopEvent(..), defaultLoopDispatch)
 import Agent.Json.Decode qualified as Hermes
 import Agent.OsPath (unsafeToFilePath)
@@ -31,7 +31,7 @@ import System.Posix.Temp (mkdtemp)
 import Test.Hspec
 
 spec :: Spec
-spec = describe "Agent.CLI.GatewayBridge" do
+spec = describe "Agent.CLI.Provider.GatewayBridge" do
     it "round-trips a channel tool request through private files" $
         withBridgeRequest \request -> do
             let call = functionToolCall

@@ -1,10 +1,10 @@
 module Agent.CLI.PendingInputsSpec (spec) where
 
-import Agent.CLI.InputBudget
+import Agent.CLI.Turn.InputBudget
     ( logicalTextBytes
     , logicalTurnInputBytes
     )
-import Agent.CLI.PendingInputs
+import Agent.CLI.Turn.PendingInputs
     ( PendingNoticeKind(..)
     , clearPendingInputs
     , enqueuePendingInput
@@ -14,7 +14,7 @@ import Agent.CLI.PendingInputs
     , pendingInputCountLimit
     , withPendingInputs
     )
-import Agent.CLI.SteeringInputs
+import Agent.CLI.Turn.SteeringInputs
     ( commitSteeringInputs
     , enqueueSteeringInputs
     , newSteeringInputs

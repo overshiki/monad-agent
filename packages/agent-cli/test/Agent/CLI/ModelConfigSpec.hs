@@ -1,6 +1,6 @@
 module Agent.CLI.ModelConfigSpec (spec) where
 
-import Agent.CLI.ModelConfig
+import Agent.CLI.Model.ModelConfig
 import Agent.Dialect (DialectId(..))
 import Agent.OsPath (fromText, unsafeToFilePath)
 import Agent.Provider (Provider(..))
@@ -20,7 +20,7 @@ import System.OsPath (OsPath, (</>))
 import Test.Hspec
 
 spec :: Spec
-spec = describe "Agent.CLI.ModelConfig" do
+spec = describe "Agent.CLI.Model.ModelConfig" do
     it "decodes the shipped catalog and derives every builtin default" do
         bytes <- readPackagedDefaults
         let decoded = decodeModelConfig "models.default.json" bytes

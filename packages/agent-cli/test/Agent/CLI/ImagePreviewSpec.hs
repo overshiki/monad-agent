@@ -1,6 +1,6 @@
 module Agent.CLI.ImagePreviewSpec (spec) where
 
-import Agent.CLI.ImagePreview
+import Agent.CLI.TUI.GrokImagePreview
 import Agent.Loop (ImageAttachment(..))
 import Codec.Picture
     ( PixelYCbCr8(..)

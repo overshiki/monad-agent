@@ -6,7 +6,7 @@ import Agent.CLI.AgentViewport
     , AgentStepState(..)
     , AgentTarget(..)
     )
-import Agent.CLI.Interrupt (CtrlCDecision(..))
+import Agent.CLI.Turn.Interrupt (CtrlCDecision(..))
 import Agent.CLI.TUI.App
     ( appEventLogicalBytes
     , emitUiEvent

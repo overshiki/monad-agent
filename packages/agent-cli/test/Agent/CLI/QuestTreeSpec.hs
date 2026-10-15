@@ -1,6 +1,6 @@
 module Agent.CLI.QuestTreeSpec (spec) where
 
-import Agent.CLI.QuestTree
+import Agent.CLI.Git.QuestTree
     ( QuestNode(..)
     , buildQuestTree
     , defaultFocus
@@ -14,7 +14,7 @@ import qualified Data.Text as Text
 import Test.Hspec
 
 spec :: Spec
-spec = describe "Agent.CLI.QuestTree" do
+spec = describe "Agent.CLI.Git.QuestTree" do
     it "walks a linear lineage from focus to root" do
         let tree = buildTree [node "a" Nothing 0, node "b" (Just "a") 1, node "c" (Just "b") 2]
         lineageToRoot tree "c" `shouldBe` Right ["a", "b", "c"]

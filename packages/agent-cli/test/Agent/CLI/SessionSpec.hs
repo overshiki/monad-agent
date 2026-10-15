@@ -1,14 +1,14 @@
 module Agent.CLI.SessionSpec (spec) where
 
 import Agent.CLI.Session
-import Agent.CLI.SessionLock (acquireSessionLock, releaseSessionLock)
-import Agent.CLI.Request (requestParams)
-import Agent.CLI.Resume (latestSessionForCwd)
+import Agent.CLI.Session.SessionLock (acquireSessionLock, releaseSessionLock)
+import Agent.CLI.Provider.Request (requestParams)
+import Agent.CLI.Session.Resume (latestSessionForCwd)
 import Agent.CLI.Session.StoreCodec
     ( fromStoredResponseItem
     , toStoredResponseItem
     )
-import Agent.CLI.Models (ModelTarget(..))
+import Agent.CLI.Model.Models (ModelTarget(..))
 import Agent.Dialect (DialectId(..))
 import Agent.Json (RawJson, rawJsonFromEncoding)
 import Agent.Json.Decode qualified as Hermes

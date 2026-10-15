@@ -21,7 +21,7 @@ module Agent.CLI.CodeModeRuntime
     , imageGenerationCodeModeProjection
     ) where
 
-import Agent.CLI.Models (modelsCacheFilePath)
+import Agent.CLI.Model.Models (modelsCacheFilePath)
 import Agent.Dialect
     ( Dialect
     , PromptStyle(..)

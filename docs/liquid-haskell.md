@@ -216,7 +216,7 @@ drops overlay precedence (defaults winning) fails the build.
 - The trusted boundary here is just `textEquals` (SMT equality on `Text`);
   everything else is proved.
 
-### `Agent.CLI.TextLayout`
+### `Agent.CLI.Util.TextLayout`
 
 The selection-safety trio for fixed-size overlays (built on Display's
 verified budget contracts):

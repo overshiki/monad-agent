@@ -37,7 +37,7 @@ import Data.Aeson
     )
 import qualified Data.Map.Strict as Map
 import Data.Map.Strict (Map)
-import Data.List (sort, sortOn)
+import Data.List (foldl', sort, sortOn)
 import Data.Maybe (fromMaybe)
 import Data.Set (Set)
 import qualified Data.Set as Set

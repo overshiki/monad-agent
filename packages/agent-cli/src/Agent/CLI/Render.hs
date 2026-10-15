@@ -51,7 +51,7 @@ module Agent.CLI.Render
     , wrapThinkingLines
     ) where
 
-import Agent.CLI.Markdown
+import Agent.CLI.Util.Markdown
     ( renderMarkdown
     )
 import Agent.CLI.Render.MarkdownStream
@@ -68,18 +68,18 @@ import Agent.CLI.Render.Status
     , thinkingMaxWidth
     , wrapThinkingLines
     )
-import Agent.CLI.Progress
+import Agent.CLI.Turn.Progress
     ( osc9ProgressIndeterminate
     , osc9ProgressRemove
     , wrapOscForTmux
     )
-import Agent.CLI.Terminal (fileUri)
-import Agent.CLI.Error
+import Agent.CLI.Util.Terminal (fileUri)
+import Agent.CLI.Util.Error
     ( formatApiError
     , formatApiErrorAt
     , formatApiErrorPersistedAt
     )
-import Agent.CLI.Style
+import Agent.CLI.Util.Style
     ( agentBackground
     , glyphCancel
     , glyphErr

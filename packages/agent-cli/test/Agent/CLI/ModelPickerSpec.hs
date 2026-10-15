@@ -1,8 +1,8 @@
 module Agent.CLI.ModelPickerSpec (spec) where
 
-import Agent.CLI.ModelPicker
-import Agent.CLI.Models
-import Agent.CLI.ModelConfig
+import Agent.CLI.Model.ModelPicker
+import Agent.CLI.Model.Models
+import Agent.CLI.Model.ModelConfig
     ( ModelCatalog
     , decodeModelConfig
     , packagedModelCatalogPath

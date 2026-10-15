@@ -2,10 +2,10 @@ module Agent.Telegram.Internal.App where
 
 
 import Agent.CLI.AgentSessions ()
-import Agent.CLI.ManagedTurn ()
+import Agent.CLI.Turn.ManagedTurn ()
 import Agent.CLI.Options ()
-import Agent.CLI.Models ()
-import Agent.CLI.ModelConfig ()
+import Agent.CLI.Model.Models ()
+import Agent.CLI.Model.ModelConfig ()
 import Agent.CLI.Session ()
 import Agent.Telegram.Types
 import Agent.Telegram.Classify
@@ -19,7 +19,7 @@ import Agent.Json (rawJsonDecoder)
 import qualified Agent.Json.Decode as Hermes
 import Agent.FileRetry (writeLazyFileAtomically)
 import Agent.Concurrent ()
-import Agent.OsPath (unsafeToFilePath)
+import Agent.OsPath (unsafeEncodeUtf, unsafeToFilePath)
 import Agent.Provider (Provider, parseProvider)
 import Agent.ReasoningEffort ()
 import Agent.Store.Postgres ()
@@ -75,7 +75,7 @@ import System.IO
     , stderr
     , stdin
     )
-import System.OsPath (OsPath, unsafeEncodeUtf, (</>))
+import System.OsPath (OsPath, (</>))
 import System.Posix.Files (setFileMode)
 import System.Posix.Process (getProcessID)
 import System.Posix.Signals (nullSignal, sigTERM, signalProcess)

@@ -2,7 +2,7 @@ module Agent.CLI.AgentViewportSpec (spec) where
 
 import Agent.CLI.AgentViewport
 import Agent.Json (rawJsonFromEncoding)
-import Agent.CLI.Picker (PickerKey(..))
+import Agent.CLI.TUI.Picker (PickerKey(..))
 import Agent.Responses.Types
 import Agent.Subagents (SubagentId(..), SubagentStatus(..))
 import Agent.TUI.Model

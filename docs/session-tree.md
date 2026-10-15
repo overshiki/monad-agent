@@ -23,7 +23,7 @@ no schema or code changes are implied by this file.
   CLI is unchanged. Fork snapshots chain their copied turns the same way.
 - **P2 partial**: `Agent.CLI.Context.Assembler` defines the segment/budget
   model and deterministic segment-1 (nearest-history) selection; `StoredTurn`
-  now exposes `storedTurnId`, and `Agent.CLI.QuestTree` + `loadQuestTree`
+  now exposes `storedTurnId`, and `Agent.CLI.Git.QuestTree` + `loadQuestTree`
   reconstruct the turn lineage and walk it (`lineageToRoot`, `questRoots`,
   `defaultFocus`, `findByIndex`). `assembleLineageFromTree` joins the two: it
   resolves a focus, walks its lineage, and assembles segment-1 under the

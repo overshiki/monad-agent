@@ -23,7 +23,7 @@ module Agent.CLI.Session.Types
     , inferTranscriptEffect
     ) where
 
-import Agent.CLI.Models (ModelTarget)
+import Agent.CLI.Model.Models (ModelTarget)
 import Agent.Dialect
     ( DialectId
     , dialectSlug

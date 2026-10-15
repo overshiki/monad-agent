@@ -1,6 +1,6 @@
 module Agent.CLI.InterruptSpec (spec) where
 
-import Agent.CLI.Interrupt
+import Agent.CLI.Turn.Interrupt
 import qualified Control.Exception as Base
 import Control.Exception (AsyncException(ThreadKilled, UserInterrupt))
 import Control.Exception.Safe (finally, throwIO, toSyncException)

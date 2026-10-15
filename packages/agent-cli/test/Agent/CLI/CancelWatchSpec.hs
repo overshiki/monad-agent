@@ -1,6 +1,6 @@
 module Agent.CLI.CancelWatchSpec (spec) where
 
-import Agent.CLI.CancelWatch
+import Agent.CLI.Turn.CancelWatch
     ( EscapeContinuation(..)
     , escapeContinuationCancels
     , isBareEscape

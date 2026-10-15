@@ -29,7 +29,7 @@ module Agent.CLI.Compaction
     , reportedOccupancy
     ) where
 
-import Agent.CLI.Error (formatApiError)
+import Agent.CLI.Util.Error (formatApiError)
 import Agent.CLI.Compaction.Continuation
     ( boundCompletedToolContinuations
     )

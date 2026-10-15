@@ -1,7 +1,7 @@
 module Agent.CLI.ResumeSpec (spec) where
 
-import Agent.CLI.Picker (PickerKey(..))
-import Agent.CLI.Resume
+import Agent.CLI.TUI.Picker (PickerKey(..))
+import Agent.CLI.Session.Resume
 import Agent.CLI.Session
     ( LegacySubagentTarget(..)
     , SessionMeta(..)

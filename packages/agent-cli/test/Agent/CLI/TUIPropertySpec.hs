@@ -5,7 +5,7 @@ import Agent.CLI.AgentViewport
     , AgentTarget(..)
     )
 import Agent.CLI.Input (terminalTextWidth)
-import Agent.CLI.Interrupt (CtrlCDecision(..))
+import Agent.CLI.Turn.Interrupt (CtrlCDecision(..))
 import Agent.CLI.TUI.App
     ( drawApp
     , initialFullscreenAppState

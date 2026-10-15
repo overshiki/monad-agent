@@ -1,13 +1,13 @@
 module Agent.CLI.ExternalProgramSpec (spec) where
 
-import Agent.CLI.ExternalProgram
+import Agent.CLI.Util.ExternalProgram
 import Data.IORef (newIORef, readIORef, writeIORef)
 import qualified Data.Text.IO as Text
 import System.Directory (doesFileExist)
 import Test.Hspec
 
 spec :: Spec
-spec = describe "Agent.CLI.ExternalProgram" do
+spec = describe "Agent.CLI.Util.ExternalProgram" do
     describe "parseProgramWords" do
         it "handles quotes, escapes, and empty arguments" do
             parseProgramWords

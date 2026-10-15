@@ -8,15 +8,15 @@ module Agent.CLI.Runtime.Repl.SubagentsConfig
     ( handleSubagentsConfig
     ) where
 
-import Agent.CLI.ModelConfig
+import Agent.CLI.Model.ModelConfig
     ( CatalogModel(..)
     , ModelCatalog(..)
     , connectionBuiltinProvider
     )
-import Agent.CLI.Picker (PickerKey(..), runOverlay)
+import Agent.CLI.TUI.Picker (PickerKey(..), runOverlay)
 import Agent.CLI.Runtime.Types (RunResult)
-import Agent.CLI.SessionEnv (SessionEnv(..))
-import Agent.CLI.Style
+import Agent.CLI.Session.SessionEnv (SessionEnv(..))
+import Agent.CLI.Util.Style
     ( glyphOk
     , roleError
     , roleMuted
@@ -24,13 +24,13 @@ import Agent.CLI.Style
     , roleSuccess
     , roleWarn
     )
-import Agent.CLI.SubagentCatalogConfig
+import Agent.CLI.Subagents.SubagentCatalogConfig
     ( decodeSubagentCatalog
     , setSubagentTypeModel
     , subagentCatalogUserPath
     , writeSubagentCatalog
     )
-import Agent.CLI.Terminal (resolveColor)
+import Agent.CLI.Util.Terminal (resolveColor)
 import Agent.CLI.TUI.App (FullscreenRuntime, requestFullscreenFilterChoice)
 import Agent.FileRetry (retryOnFileBusy)
 import Agent.GrokBuild.Dialect.SubagentCatalog

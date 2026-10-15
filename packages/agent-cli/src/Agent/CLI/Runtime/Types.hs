@@ -9,7 +9,7 @@ module Agent.CLI.Runtime.Types
     , StartupRuntime(..)
     ) where
 
-import Agent.CLI.ProviderTransition (ProviderTransition)
+import Agent.CLI.Provider.ProviderTransition (ProviderTransition)
 import Agent.CLI.Session.Runtime.Types
     ( StartupCancelled(..)
     , StartupFailure(..)

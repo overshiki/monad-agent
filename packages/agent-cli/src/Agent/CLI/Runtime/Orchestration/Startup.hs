@@ -7,7 +7,7 @@ module Agent.CLI.Runtime.Orchestration.Startup
     , setStartupRepository
     ) where
 
-import Agent.CLI.Progress
+import Agent.CLI.Turn.Progress
     ( osc9ProgressIndeterminate, osc9ProgressRemove, wrapOscForTmux )
 import Agent.CLI.Startup.Auth ( recordStartupTiming )
 import Agent.CLI.Startup.Format

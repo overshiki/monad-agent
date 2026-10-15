@@ -8,7 +8,7 @@ module Agent.Telegram.Internal.Support
     ) where
 
 
-import Agent.CLI.ManagedTurn
+import Agent.CLI.Turn.ManagedTurn
     ( ManagedTurnMedia(..)
     , ManagedTurnRequest(..)
     )
@@ -28,7 +28,7 @@ import Agent.Telegram.Types
 import qualified Agent.Telegram.Client as TelegramClient
 import qualified Agent.Json.Decode as Hermes
 import Agent.FileRetry (writeLazyFileAtomically)
-import Agent.OsPath (unsafeToFilePath)
+import Agent.OsPath (unsafeEncodeUtf, unsafeToFilePath)
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (withAsync)
 import Control.Concurrent.MVar
@@ -47,7 +47,7 @@ import Data.Text (Text)
 import qualified Data.Text as Text
 import qualified System.Directory as Directory
 import System.Directory.OsPath (doesFileExist, removeFile)
-import System.OsPath (OsPath, unsafeEncodeUtf)
+import System.OsPath (OsPath)
 import Agent.Telegram.Internal.Runtime.Types
 import Agent.Telegram.Internal.Text (splitTelegramText)
 cleanupManagedTurnMedia :: ManagedTurnRequest -> IO ()

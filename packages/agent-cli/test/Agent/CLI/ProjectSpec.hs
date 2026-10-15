@@ -1,7 +1,7 @@
 module Agent.CLI.ProjectSpec (spec) where
 
 import Agent.CLI.Project
-import Agent.CLI.Models (ModelTarget(..))
+import Agent.CLI.Model.Models (ModelTarget(..))
 import Agent.Dialect (DialectId(..))
 import Agent.Provider (Provider(..))
 import System.OsPath (OsPath, decodeUtf)

@@ -1,6 +1,6 @@
 module Agent.CLI.UsageSpec (spec) where
 
-import Agent.CLI.Usage
+import Agent.CLI.Provider.Usage
 import Agent.Error (ApiError(..), ErrorType(..))
 import Agent.OpenAI.Usage
 import qualified Agent.OpenRouter.Usage as OpenRouter

@@ -5,7 +5,7 @@ module Agent.CLI.Clipboard.MacOS
     , readMacClipboardText
     ) where
 
-import Agent.CLI.Error (formatException)
+import Agent.CLI.Util.Error (formatException)
 import Agent.Loop (ImageAttachment(..))
 import Control.Exception.Safe (finally, tryAny)
 import Control.Monad (void)

@@ -1,7 +1,7 @@
 module Agent.CLI.WorktreeSpec (spec) where
 
 import Agent.CLI.Config
-import Agent.CLI.Worktree hiding (git)
+import Agent.CLI.Git.Worktree hiding (git)
 import Control.Concurrent.Async (mapConcurrently)
 import Control.Exception.Safe (bracket)
 import Data.IORef (modifyIORef', newIORef, readIORef)
@@ -35,7 +35,7 @@ fromFilePath = unsafeEncodeUtf
 toFilePath path = either (error . show) id (decodeUtf path)
 
 spec :: Spec
-spec = describe "Agent.CLI.Worktree" do
+spec = describe "Agent.CLI.Git.Worktree" do
     describe "worktreePath" do
         it "builds root/repo/YYYY-MM-DD-hex" do
             worktreePath

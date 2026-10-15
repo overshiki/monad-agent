@@ -8,7 +8,7 @@ import Agent.CLI.Session
     , TranscriptEffect(..)
     )
 import Agent.Dialect (DialectId(CodexDialect))
-import Agent.CLI.Transcript
+import Agent.CLI.Session.Transcript
     ( assistantResponseBodies
     , foldTranscriptTurns
     , markdownFence
@@ -29,7 +29,7 @@ import Agent.OsPath (unsafeEncodeUtf)
 import Test.Hspec
 
 spec :: Spec
-spec = describe "Agent.CLI.Transcript" do
+spec = describe "Agent.CLI.Session.Transcript" do
     it "folds append, replace, and reset effects" do
         let turns =
                 [ (0, turn TranscriptAppend "first")

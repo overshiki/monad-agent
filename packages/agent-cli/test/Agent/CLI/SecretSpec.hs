@@ -1,6 +1,6 @@
 module Agent.CLI.SecretSpec (spec) where
 
-import Agent.CLI.Secret
+import Agent.CLI.Util.Secret
     ( sanitizeSecretPromptText
     , secretPromptMessage
     )

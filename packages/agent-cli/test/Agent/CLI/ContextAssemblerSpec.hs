@@ -6,7 +6,7 @@ import Agent.CLI.Context.Assembler
     , assembleLineageFromTree
     , unboundedBudget
     )
-import Agent.CLI.QuestTree (QuestNode(..), buildQuestTree)
+import Agent.CLI.Git.QuestTree (QuestNode(..), buildQuestTree)
 import Agent.OpenAI.Compaction (estimateItemsTokens, userTextItem)
 import Agent.Responses.Types (ResponseItem)
 import Control.Monad (when)

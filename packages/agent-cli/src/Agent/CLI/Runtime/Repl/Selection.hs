@@ -5,18 +5,18 @@ module Agent.CLI.Runtime.Repl.Selection
     , selectRequestedAccount
     ) where
 
-import Agent.CLI.AccountPicker
+import Agent.CLI.Auth.AccountPicker
     ( AccountPickerOption(..),
       accountPickerMatches,
       accountPickerMatchesRequest,
       accountPickerRow,
       loadAllAccountPickerOptions )
-import Agent.CLI.AccountSelection ()
-import Agent.CLI.Afk ()
+import Agent.CLI.Auth.AccountSelection ()
+import Agent.CLI.Session.Afk ()
 import Agent.CLI.AgentSessions ()
 import Agent.CLI.AgentViewport ()
 import Agent.CLI.Approval ()
-import Agent.CLI.Artifact ()
+import Agent.CLI.Turn.Artifact ()
 import Agent.CLI.Auth ( geminiAuthErrorNeedsReconnect )
 import Agent.CLI.Clipboard ()
 import Agent.CLI.Command
@@ -26,24 +26,24 @@ import Agent.CLI.Command
                  ReplShowModel) )
 import Agent.CLI.Compaction ()
 import Agent.CLI.Config ()
-import Agent.CLI.Connectivity ()
+import Agent.CLI.Provider.Connectivity ()
 import Agent.CLI.Database ()
 import Agent.CLI.Database.Store ()
 import Agent.CLI.Dialects ()
-import Agent.CLI.Error ( formatApiErrorInlineAt )
-import Agent.CLI.GatewayBridge ()
+import Agent.CLI.Util.Error ( formatApiErrorInlineAt )
+import Agent.CLI.Provider.GatewayBridge ()
 import Agent.CLI.Input
     ( ReplLine(ReplChooseAccount, ReplChooseModel, ReplChooseEffort) )
-import Agent.CLI.Interrupt ()
+import Agent.CLI.Turn.Interrupt ()
 import Agent.CLI.LearnedSkills ()
 import Agent.CLI.LearnedSkills.Store ()
 import Agent.CLI.Login ( connectProviderAccount )
 import Agent.CLI.Lsp ()
-import Agent.CLI.ManagedTurn ()
-import Agent.CLI.McpManager ()
-import Agent.CLI.McpStatus ()
-import Agent.CLI.ModelConfig ()
-import Agent.CLI.Models
+import Agent.CLI.Turn.ManagedTurn ()
+import Agent.CLI.Mcp.McpManager ()
+import Agent.CLI.Mcp.McpStatus ()
+import Agent.CLI.Model.ModelConfig ()
+import Agent.CLI.Model.Models
     ( modelTargetRequiresRebuild,
       rawModelOption,
       resolveConfiguredModel,
@@ -55,33 +55,33 @@ import Agent.CLI.Options
     ( normalizeReasoningEffortForDialect
     , reasoningEffortsForDialect
     )
-import Agent.CLI.PendingInputs ()
-import Agent.CLI.Plan ()
-import Agent.CLI.Progress ()
+import Agent.CLI.Turn.PendingInputs ()
+import Agent.CLI.Turn.Plan ()
+import Agent.CLI.Turn.Progress ()
 import Agent.CLI.Project ()
-import Agent.CLI.Prompt ()
-import Agent.CLI.PromptHooks ()
+import Agent.CLI.Prompt.Prompt ()
+import Agent.CLI.Prompt.PromptHooks ()
 import Agent.CLI.Provider.OpenAI ()
 import Agent.CLI.Provider.Switch
     ( applyModelChange,
       requestAccountProviderSwitch,
       requestModelTargetSwitch )
-import Agent.CLI.ProviderAvailability ()
-import Agent.CLI.ProviderFallback ()
-import Agent.CLI.ProviderTransition
+import Agent.CLI.Provider.ProviderAvailability ()
+import Agent.CLI.Provider.ProviderFallback ()
+import Agent.CLI.Provider.ProviderTransition
     ( PendingTurn
     , ProviderTransition(..)
     , resumePendingTurnIfPresent
     )
-import Agent.CLI.Recap ()
+import Agent.CLI.Session.Recap ()
 import Agent.CLI.Render ( clearThinking, renderEvent )
-import Agent.CLI.ReplMode ()
-import Agent.CLI.Request ()
+import Agent.CLI.TUI.ReplMode ()
+import Agent.CLI.Provider.Request ()
 import Agent.CLI.Runtime.HistorySource ()
 import Agent.CLI.Runtime.Persistence ()
 import Agent.CLI.Runtime.Recap ()
 import Agent.CLI.Runtime.Types ( RunResult(..) )
-import Agent.CLI.Secret ()
+import Agent.CLI.Util.Secret ()
 import Agent.CLI.Session ()
 import Agent.CLI.Session.Attachments ()
 import Agent.CLI.Session.Choices
@@ -91,17 +91,17 @@ import Agent.CLI.Session.Interaction ( setSessionEffort )
 import Agent.CLI.Session.Lifecycle ()
 import Agent.CLI.Session.Runtime.Types ()
 import Agent.CLI.Session.Selection ()
-import Agent.CLI.SessionAdmin ()
-import Agent.CLI.SessionEnv ( SessionEnv(..) )
-import Agent.CLI.SessionLock ()
-import Agent.CLI.SessionState ()
-import Agent.CLI.SessionTitle ()
-import Agent.CLI.Skills ()
+import Agent.CLI.Session.SessionAdmin ()
+import Agent.CLI.Session.SessionEnv ( SessionEnv(..) )
+import Agent.CLI.Session.SessionLock ()
+import Agent.CLI.Session.SessionState ()
+import Agent.CLI.Session.SessionTitle ()
+import Agent.CLI.Prompt.Skills ()
 import Agent.CLI.Startup.Auth ()
 import Agent.CLI.Startup.Format ()
-import Agent.CLI.StartupContext ()
-import Agent.CLI.Status ()
-import Agent.CLI.Style
+import Agent.CLI.Startup.Context ()
+import Agent.CLI.TUI.Status ()
+import Agent.CLI.Util.Style
     ( glyphOk, glyphSession, roleError, roleMuted )
 import Agent.CLI.Subagents.Runtime ()
 import Agent.CLI.TUI.App
@@ -110,12 +110,12 @@ import Agent.CLI.TUI.App
       withFullscreenSuspended )
 import Agent.CLI.TUI.SessionHistory ()
 import Agent.CLI.TUI.Types ()
-import Agent.CLI.Terminal ( resolveColor )
+import Agent.CLI.Util.Terminal ( resolveColor )
 import Agent.CLI.Tools ()
-import Agent.CLI.Turn ()
-import Agent.CLI.Usage ()
-import Agent.CLI.WebFetch ()
-import Agent.CLI.Worktree ()
+import Agent.CLI.Turn.Turn ()
+import Agent.CLI.Provider.Usage ()
+import Agent.CLI.Provider.WebFetch ()
+import Agent.CLI.Git.Worktree ()
 import Agent.Cancel ()
 import Agent.Claude ()
 import Agent.Dialect ( dialectId )

@@ -1,6 +1,6 @@
 module Agent.CLI.ArtifactSpec (spec) where
 
-import Agent.CLI.Artifact
+import Agent.CLI.Turn.Artifact
 import Test.Hspec
 
 spec :: Spec

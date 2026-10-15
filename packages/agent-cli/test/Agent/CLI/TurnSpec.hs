@@ -1,13 +1,13 @@
 module Agent.CLI.TurnSpec (spec) where
 
-import Agent.CLI.Turn
+import Agent.CLI.Turn.Turn
     ( grokFirstTurnPrefix
     , grokFrameLastUserInput
     , grokUserQuery
     , restorePlanStateAfterIncomplete
     , takeGrokFirstTurnContext
     )
-import Agent.CLI.TurnState
+import Agent.CLI.Turn.TurnState
 import Agent.CLI.Compaction (AutomaticCompactionBoundary(..))
 import Agent.Error (ApiError(..))
 import Agent.Loop

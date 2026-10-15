@@ -8,8 +8,8 @@ module Agent.CLI.Render.Status
     , wrapThinkingLines
     ) where
 
-import Agent.CLI.Status (formatTokensPerSecond)
-import Agent.CLI.Style
+import Agent.CLI.TUI.Status (formatTokensPerSecond)
+import Agent.CLI.Util.Style
     ( glyphCancel
     , glyphErr
     , glyphOk

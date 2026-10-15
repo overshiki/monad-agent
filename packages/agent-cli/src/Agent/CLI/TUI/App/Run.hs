@@ -3,13 +3,13 @@
 module Agent.CLI.TUI.App.Run where
 
 import Agent.CLI.Clipboard ( formatImageSize )
-import Agent.CLI.Dictation ( DictationControl(..)
+import Agent.CLI.TUI.Dictation ( DictationControl(..)
     , DictationResult(..)
     , dictateWith
     , insertDictation
     )
-import Agent.CLI.Secret (sanitizeSecretPromptText)
-import Agent.CLI.Artifact (fencedCodeBlock)
+import Agent.CLI.Util.Secret (sanitizeSecretPromptText)
+import Agent.CLI.Turn.Artifact (fencedCodeBlock)
 import Agent.CLI.Input ( ReplLine(..)
     , readReplHistory
     , terminalTextWidth
@@ -24,8 +24,8 @@ import Agent.CLI.AgentViewport ( AgentEntry(..)
     , agentStatusGlyph
     , lookupAgentEntry
     )
-import Agent.CLI.Interrupt (CtrlCDecision(..))
-import Agent.CLI.ImagePreview ( ImagePreviewProtocol(..)
+import Agent.CLI.Turn.Interrupt (CtrlCDecision(..))
+import Agent.CLI.TUI.GrokImagePreview ( ImagePreviewProtocol(..)
     , detectImagePreviewProtocol
     , kittyDeleteImageSequence
     , kittyPlacedImageSequence
@@ -35,8 +35,8 @@ import Agent.CLI.Command ( SkillCommand , SlashCatalog(..)
     , defaultSlashCatalog
     , slashCatalogWithSkills
     )
-import Agent.CLI.Permission (PermissionChoice(..))
-import Agent.CLI.Resume ( ResumeBrowser(..)
+import Agent.CLI.Approval.Permission (PermissionChoice(..))
+import Agent.CLI.Session.Resume ( ResumeBrowser(..)
     , ResumeEntry(..)
     , applyResumeSearchResults
     , beginResumeSearch
@@ -56,11 +56,11 @@ import Agent.CLI.Resume ( ResumeBrowser(..)
     , visibleResumeBrowser
     )
 import Agent.CLI.Render (formatElapsed)
-import Agent.CLI.Style (motionGlyphSet)
-import Agent.CLI.WindowTitle (oscWindowTitleBytes)
-import Agent.CLI.Status (formatTokenUsage)
-import Agent.CLI.Timestamp (currentShortMessageTimestamp)
-import Agent.CLI.Terminal ( TerminalCapabilities(..)
+import Agent.CLI.Util.Style (motionGlyphSet)
+import Agent.CLI.TUI.WindowTitle (oscWindowTitleBytes)
+import Agent.CLI.TUI.Status (formatTokenUsage)
+import Agent.CLI.Util.Timestamp (currentShortMessageTimestamp)
+import Agent.CLI.Util.Terminal ( TerminalCapabilities(..)
     , detectTerminalCapabilities
     , kittyAltCsiBodies
     , kittyCtrlCsiBodies
@@ -141,7 +141,7 @@ import Control.Concurrent.Async (wait, waitCatch, withAsync)
 import Control.Concurrent (threadDelay)
 import Control.Monad (forever, unless, void, when, (>=>))
 import Control.Concurrent.STM ( STM , atomically , check , flushTQueue , newEmptyTMVarIO , newTQueueIO , newTVarIO , orElse , putTMVar , readTVar , readTMVar , readTQueue , registerDelay , retry , takeTMVar , writeTQueue , writeTVar )
-import Agent.CLI.Recap ( autoRecapAwayThreshold , autoRecapIdleThreshold , autoRecapRetryInterval )
+import Agent.CLI.Session.Recap ( autoRecapAwayThreshold , autoRecapIdleThreshold , autoRecapRetryInterval )
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State.Strict (modify')
 import Control.Exception.Safe (finally, mask, onException, throwIO, tryAny)

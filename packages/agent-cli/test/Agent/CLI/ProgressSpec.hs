@@ -1,6 +1,6 @@
 module Agent.CLI.ProgressSpec (spec) where
 
-import Agent.CLI.Progress
+import Agent.CLI.Turn.Progress
 import qualified Data.Text as Text
 import Test.Hspec
 

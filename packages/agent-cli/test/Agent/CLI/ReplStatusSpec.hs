@@ -26,16 +26,16 @@ import Agent.CLI
     )
 import Agent.CLI.Command (setModel, setReasoningEffort)
 import Agent.CLI.Input (terminalTextWidth)
-import Agent.CLI.Models (ModelOption(..), ModelTarget(..))
-import Agent.CLI.Status (formatTokenUsageOrZero)
-import Agent.CLI.ModelConfig
+import Agent.CLI.Model.Models (ModelOption(..), ModelTarget(..))
+import Agent.CLI.TUI.Status (formatTokenUsageOrZero)
+import Agent.CLI.Model.ModelConfig
     ( ModelCatalog
     , decodeModelConfig
     , packagedModelCatalogPath
     )
 import Agent.CLI.Options (ApprovalPolicy(..))
 import Agent.CLI.Project (ProjectSettings(..), loadProjectSettings)
-import Agent.CLI.ReplMode
+import Agent.CLI.TUI.ReplMode
     ( ReplMode(..)
     , cycleReplMode
     , replModeFromState

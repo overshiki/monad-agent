@@ -25,7 +25,7 @@ module Agent.CLI.Session.History
     , writeLiveTranscript
     ) where
 
-import Agent.CLI.Git (detectGitBranch)
+import Agent.CLI.Git.Git (detectGitBranch)
 import Agent.CLI.Session
     ( SessionTurn(..)
     , TranscriptEffect(..)

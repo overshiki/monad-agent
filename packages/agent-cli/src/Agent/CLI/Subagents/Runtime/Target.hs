@@ -6,7 +6,7 @@ module Agent.CLI.Subagents.Runtime.Target
     ) where
 
 import Agent.CLI.Session (LegacySubagentTarget(..))
-import Agent.CLI.SubagentStore
+import Agent.CLI.Subagents.SubagentStore
     ( LegacySubagentTargetFields(..)
     , SubagentDiskMeta(..)
     , SubagentTarget(..)

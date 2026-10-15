@@ -1,8 +1,8 @@
 module Agent.CLI.McpManagerSpec (spec) where
 
 import Agent.CLI.Config
-import Agent.CLI.McpManager
-import Agent.CLI.Picker (PickerKey(..))
+import Agent.CLI.Mcp.McpManager
+import Agent.CLI.TUI.Picker (PickerKey(..))
 import Agent.MCP (McpProtocolPreference(..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -10,7 +10,7 @@ import qualified Data.Text as Text
 import Test.Hspec
 
 spec :: Spec
-spec = describe "Agent.CLI.McpManager" do
+spec = describe "Agent.CLI.Mcp.McpManager" do
     describe "command parsing" do
         it "splits quoted stdio commands without invoking a shell" do
             parseMcpCommand

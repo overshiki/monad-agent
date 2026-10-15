@@ -1,6 +1,6 @@
 module Agent.CLI.DesktopSpec (spec) where
 
-import Agent.CLI.Desktop
+import Agent.CLI.Desktop.Desktop
 import Test.Hspec
 
 spec :: Spec

@@ -27,17 +27,17 @@ import Agent.CLI.Approval.Decision
     , resolveApprovalPrompt
     )
 import Agent.CLI.Options (ApprovalPolicy(..))
-import Agent.CLI.Permission
+import Agent.CLI.Approval.Permission
     ( PermissionChoice
     , promptPermission
     )
 import Agent.CLI.Project (saveProjectAutoApprove)
 import Agent.CLI.Render (putTextLn)
-import Agent.CLI.Style
+import Agent.CLI.Util.Style
     ( roleSuccess
     , roleWarn
     )
-import Agent.CLI.Terminal (resolveColor)
+import Agent.CLI.Util.Terminal (resolveColor)
 import Agent.OsPath (toText)
 import Agent.ToolDispatch
     ( ToolCall(..)

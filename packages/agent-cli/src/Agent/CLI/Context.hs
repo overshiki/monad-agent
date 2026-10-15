@@ -10,7 +10,7 @@ import Agent.CLI.Compaction
     ( OccupancyKind(..)
     , OccupancySnapshot(..)
     )
-import Agent.CLI.Request
+import Agent.CLI.Provider.Request
     ( setRequestInstructions
     , setRequestInstructionsAndTools
     )

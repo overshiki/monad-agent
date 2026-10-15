@@ -3,7 +3,7 @@ module Agent.CLI.Runtime.Persistence
     , shouldPersist
     ) where
 
-import Agent.CLI.Models (ModelTarget(..))
+import Agent.CLI.Model.Models (ModelTarget(..))
 import Agent.CLI.Options (CliOptions(..), isOneShot)
 import Agent.CLI.Render (putTextLn)
 import Agent.CLI.Session
@@ -20,8 +20,8 @@ import Agent.CLI.Session
     , writeSessionMeta
     )
 import Agent.CLI.Session.Runtime.Types (StartupRuntime(..))
-import Agent.CLI.Style (glyphSession, roleMuted)
-import Agent.CLI.Terminal (resolveColor)
+import Agent.CLI.Util.Style (glyphSession, roleMuted)
+import Agent.CLI.Util.Terminal (resolveColor)
 import Agent.CLI.TUI.App
     ( emitUiEvent
     )

@@ -15,7 +15,7 @@ module Agent.CLI.TUI.ImagePreview
     , renderTuiImagePreview
     ) where
 
-import Agent.CLI.ImagePreview (kittyCompatibleAttachment)
+import Agent.CLI.TUI.GrokImagePreview (kittyCompatibleAttachment)
 import Agent.Loop (ImageAttachment(..))
 import Brick (Widget, raw)
 import Codec.Picture

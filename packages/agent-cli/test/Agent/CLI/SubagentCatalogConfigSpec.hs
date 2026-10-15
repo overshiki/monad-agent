@@ -1,6 +1,6 @@
 module Agent.CLI.SubagentCatalogConfigSpec (spec) where
 
-import Agent.CLI.SubagentCatalogConfig
+import Agent.CLI.Subagents.SubagentCatalogConfig
     ( decodeSubagentCatalog
     , setSubagentTypeModel
     , subagentCatalogUserPath
@@ -24,7 +24,7 @@ import System.Posix.Temp (mkdtemp)
 import Test.Hspec
 
 spec :: Spec
-spec = describe "Agent.CLI.SubagentCatalogConfig" do
+spec = describe "Agent.CLI.Subagents.SubagentCatalogConfig" do
     describe "setSubagentTypeModel" do
         it "updates the model on an existing entry" do
             let catalog = SubagentCatalog [entry "explore" (Just "kimi-k3")]

@@ -1,6 +1,6 @@
 module Agent.CLI.FileUriSpec (spec) where
 
-import Agent.CLI.FileUri
+import Agent.CLI.Util.FileUri
 import Test.Hspec
 
 spec :: Spec

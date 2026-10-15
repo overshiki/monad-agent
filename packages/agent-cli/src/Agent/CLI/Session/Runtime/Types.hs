@@ -13,7 +13,7 @@ import Agent.CLI.AgentViewport
     )
 import Agent.CLI.Claude (ClaudeSessionRuntimeSlot)
 import Agent.CLI.Session.History (LiveConversation)
-import Agent.CLI.Btw (BtwBackendFactory)
+import Agent.CLI.Turn.Btw (BtwBackendFactory)
 import Agent.CLI.CodeModeRuntime
     ( CodeModeNestedSlot
     , CodexCatalogSession
@@ -25,27 +25,27 @@ import Agent.CLI.Compaction
     , OccupancySnapshot
     )
 import Agent.CLI.Database.Store (DatabaseScopes)
-import Agent.CLI.Interrupt (InterruptState)
-import Agent.CLI.ManagedTurn (ManagedTurnRequest)
-import Agent.CLI.ModelConfig (ModelCatalog)
+import Agent.CLI.Turn.Interrupt (InterruptState)
+import Agent.CLI.Turn.ManagedTurn (ManagedTurnRequest)
+import Agent.CLI.Model.ModelConfig (ModelCatalog)
 import Agent.OpenAI.Models.Types (ModelInfo)
 import Agent.CLI.Options
     ( ApprovalPolicy
     , CliOptions
     )
-import Agent.CLI.ProviderTransition (PendingTurn)
-import Agent.CLI.PendingInputs (PendingInputs)
+import Agent.CLI.Provider.ProviderTransition (PendingTurn)
+import Agent.CLI.Turn.PendingInputs (PendingInputs)
 import Agent.CLI.Session
     ( LegacySubagentTarget
     , Persistence
     , SessionHandle
     )
-import Agent.CLI.SessionState (SessionState)
+import Agent.CLI.Session.SessionState (SessionState)
 import Agent.CLI.Subagents.Runtime
     ( SubagentSession
     , SubagentStoreRoot
     )
-import Agent.CLI.Terminal (TerminalCapabilities)
+import Agent.CLI.Util.Terminal (TerminalCapabilities)
 import Agent.CLI.TUI.App (FullscreenRuntime)
 import Agent.Dialect (Dialect)
 import Agent.Error (ApiError)

@@ -1,6 +1,6 @@
 module Agent.CLI.ManagedTurnSpec (spec) where
 
-import Agent.CLI.ManagedTurn
+import Agent.CLI.Turn.ManagedTurn
     ( ManagedTurnMedia(..)
     , ManagedTurnRequest(..)
     , managedTurnInputs
@@ -30,7 +30,7 @@ import Data.Unique (newUnique, hashUnique)
 import Test.Hspec
 
 spec :: Spec
-spec = describe "Agent.CLI.ManagedTurn" do
+spec = describe "Agent.CLI.Turn.ManagedTurn" do
     it "loads --prompt-file as plain text" $
         withManagedTempDir \dir -> do
             let pathFile = dir </> "prompt.txt"

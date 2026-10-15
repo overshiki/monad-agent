@@ -1,8 +1,8 @@
 module Agent.CLI.LoginSpec (spec) where
 
 import Agent.CLI.Login
-import Agent.CLI.CredentialStore (ManagedAuthKind(..))
-import Agent.CLI.Picker (PickerKey(..))
+import Agent.CLI.Auth.CredentialStore (ManagedAuthKind(..))
+import Agent.CLI.TUI.Picker (PickerKey(..))
 import Agent.Provider (Provider(..))
 import Data.Either (isLeft)
 import qualified Data.Text as Text

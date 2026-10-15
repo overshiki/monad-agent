@@ -1,6 +1,6 @@
 module Agent.CLI.TimestampSpec (spec) where
 
-import Agent.CLI.Timestamp
+import Agent.CLI.Util.Timestamp
 import Data.Time.Calendar (fromGregorian)
 import Data.Time.Clock (UTCTime(..), secondsToDiffTime)
 import Data.Time.LocalTime (TimeZone(..), minutesToTimeZone)

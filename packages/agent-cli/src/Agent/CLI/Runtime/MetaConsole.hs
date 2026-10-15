@@ -14,7 +14,7 @@ module Agent.CLI.Runtime.MetaConsole
     ) where
 
 import Agent.Cancel (CancelFlag)
-import Agent.CLI.CancelWatch (withEscCancel)
+import Agent.CLI.Turn.CancelWatch (withEscCancel)
 import Agent.CLI.Command
     ( ShellMode(..)
     , currentEffort
@@ -28,8 +28,8 @@ import Agent.CLI.Config
     , McpServerConfig(..)
     , WebFetchConfig(..)
     )
-import Agent.CLI.Interrupt (withTurnCancel)
-import Agent.CLI.MetaConsole
+import Agent.CLI.Turn.Interrupt (withTurnCancel)
+import Agent.CLI.TUI.MetaConsole
     ( MetaAction(..)
     , MetaError
     , MetaLspServer(..)
@@ -39,12 +39,12 @@ import Agent.CLI.MetaConsole
     , redactMetaContext
     , runMetaConsoleWithCancel
     )
-import Agent.CLI.ModelConfig
+import Agent.CLI.Model.ModelConfig
     ( CatalogModel(..)
     , ModelCatalog(..)
     )
 import Agent.CLI.Options (ApprovalPolicy(..))
-import Agent.CLI.SessionEnv (SessionEnv(..))
+import Agent.CLI.Session.SessionEnv (SessionEnv(..))
 import Agent.Provider (providerSlug)
 import Agent.ReasoningEffort (reasoningEffortText)
 import Agent.Responses.Types (ResponseCreateParams(..))

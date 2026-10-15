@@ -1,7 +1,7 @@
 module Agent.CLI.AccountSelectionSpec (spec) where
 
-import Agent.CLI.AccountSelection
-import Agent.CLI.AccountPicker
+import Agent.CLI.Auth.AccountSelection
+import Agent.CLI.Auth.AccountPicker
     ( AccountPickerOption(..)
     , accountPickerMatchesRequest
     )
@@ -10,7 +10,7 @@ import Agent.CLI.Auth
     , gatewayAuthSelectionId
     , staticCredentialProvider
     )
-import Agent.CLI.CredentialStore (ManagedAuthKind(..))
+import Agent.CLI.Auth.CredentialStore (ManagedAuthKind(..))
 import Agent.CLI.Login
     ( AccountBilling(..)
     , AccountUsage(..)

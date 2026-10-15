@@ -1,6 +1,6 @@
 module Agent.CLI.GatewayClientSpec (spec) where
 
-import Agent.CLI.GatewayClient
+import Agent.CLI.Provider.GatewayClient
 import Agent.Json.Decode qualified as Hermes
 import Control.Exception.Safe (bracket)
 import Data.Bits ((.&.))

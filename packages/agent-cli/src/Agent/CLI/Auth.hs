@@ -84,14 +84,14 @@ import Agent.CLI.Auth.Types
     , openaiAuthStateFromJson
     , xaiOAuthClientId
     )
-import Agent.CLI.CredentialStore
+import Agent.CLI.Auth.CredentialStore
     ( ManagedAuthKind(..)
     , ManagedCredential(..)
     , ManagedSecret(..)
     , loadManagedCredentials
     )
-import Agent.CLI.Environment (lookupNonEmpty)
-import Agent.CLI.GatewayClient
+import Agent.CLI.Util.Environment (lookupNonEmpty)
+import Agent.CLI.Provider.GatewayClient
     ( GatewayCredential (..)
     , loadGatewayCredential
     )

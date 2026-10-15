@@ -6,7 +6,7 @@ module Agent.CLI.Render.MarkdownStream
     , streamMarkdownText
     ) where
 
-import Agent.CLI.Markdown
+import Agent.CLI.Util.Markdown
     ( MarkdownFragmentSplit(..)
     , renderMarkdown
     , renderMarkdownFragment

@@ -2,7 +2,7 @@ module Agent.Telegram.Internal.Turn where
 
 
 import Agent.CLI.AgentSessions (launchManagedTurnBounded)
-import Agent.CLI.ManagedTurn
+import Agent.CLI.Turn.ManagedTurn
     ( ManagedTurnMedia(..)
     , ManagedTurnContext(..)
     , ManagedTurnRequest(..)
@@ -24,7 +24,7 @@ import Agent.Telegram.Bridge (withTelegramBridge)
 import qualified Agent.Telegram.Client as TelegramClient
 import Agent.Telegram.Voice (transcribeWithXAI)
 import Agent.Concurrent (mapConcurrentlyBounded)
-import Agent.OsPath (unsafeToFilePath)
+import Agent.OsPath (unsafeEncodeUtf, unsafeToFilePath)
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.MVar
     ( modifyMVar
@@ -56,7 +56,7 @@ import System.Directory.OsPath
     , removeFile
     )
 import System.FilePath (takeExtension)
-import System.OsPath (OsPath, unsafeEncodeUtf, (</>))
+import System.OsPath (OsPath, (</>))
 import System.Posix.Files (setFileMode)
 import Agent.Telegram.Internal.Runtime.Types
 import Agent.Telegram.Internal.Allowlist
