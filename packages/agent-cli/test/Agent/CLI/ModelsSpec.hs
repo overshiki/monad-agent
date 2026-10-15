@@ -108,6 +108,7 @@ spec = do
                     , GeminiProvider
                     , DeepSeekProvider
                     , KimiProvider
+                    , KimiCodeProvider
                     , ClaudeCodeProvider
                     ]
 
@@ -319,6 +320,7 @@ spec = do
                     , GeminiProvider
                     , DeepSeekProvider
                     , KimiProvider
+                    , KimiCodeProvider
                     , ClaudeCodeProvider
                     ]
 
