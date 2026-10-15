@@ -1,0 +1,645 @@
+cabal-version:      3.0
+name:               agent-provider
+version:            0.1.0.0
+synopsis:           Provider clients for the agent harness (sublibraries per provider)
+description:        One package carrying the agent harness's LLM provider
+                    clients as internal sublibraries: OpenAI (incl. the
+                    vendored ChatGPT Codex transport), xAI, OpenRouter,
+                    Gemini, DeepSeek, Kimi, Kimi Code, and Claude.
+                    Module names are unchanged from the former standalone
+                    packages (Agent.OpenAI.*, Agent.DeepSeek.*, ...).
+license:            MIT
+license-file:       LICENSE
+author:             digitally induced GmbH
+maintainer:         marc@digitallyinduced.com
+copyright:          (c) 2026 digitally induced GmbH
+category:           Web
+build-type:         Simple
+-- cabal-version 3.0 (not 2.2 like the former packages): the sublibrary
+-- dependency syntax `agent-provider:{name}` used by the test suites, the
+-- executable, the benchmark, and external packages requires >= 3.0.
+extra-source-files: README.md
+                  , CHANGELOG.md
+                  , UPSTREAM.md
+                  , data/models.json
+                  , data/prompt.md
+
+common common-opts
+    default-language: Haskell2010
+    -- Union of the common-opts blocks of the 8 merged packages: agent-openai
+    -- additionally enabled DeriveGeneric, DerivingStrategies,
+    -- GeneralizedNewtypeDeriving, DataKinds, FlexibleContexts and
+    -- TupleSections; every other package was a subset of that list.
+    default-extensions: OverloadedStrings
+                      , OverloadedRecordDot
+                      , DuplicateRecordFields
+                      , NoFieldSelectors
+                      , LambdaCase
+                      , BlockArguments
+                      , DeriveGeneric
+                      , RecordWildCards
+                      , NamedFieldPuns
+                      , NumericUnderscores
+                      , TypeApplications
+                      , ScopedTypeVariables
+                      , DerivingStrategies
+                      , GeneralizedNewtypeDeriving
+                      , DataKinds
+                      , FlexibleContexts
+                      , TupleSections
+                      , PackageImports
+    ghc-options:      -Wall
+                      -Werror=incomplete-patterns
+                      -Werror=incomplete-uni-patterns
+                      -Werror=missing-fields
+                      -Wno-unused-do-bind
+                      -Wno-name-shadowing
+                      -Wno-missing-signatures
+
+library openai
+    import:           common-opts
+    visibility:       public
+    exposed-modules:  Agent.OpenAI.Error
+                    , Agent.OpenAI.Http
+                    , Agent.OpenAI.Auth
+                    , Agent.OpenAI.Auth.JWT
+                    , Agent.OpenAI.Auth.Refresh
+                    , Agent.OpenAI.Auth.Types
+                    , Agent.OpenAI.Credential
+                    , Agent.OpenAI.Login
+                    , Agent.OpenAI.Usage
+                    , Agent.OpenAI.Client
+                    , Agent.OpenAI.Request
+                    , Agent.OpenAI.ReasoningEffort
+                    , Agent.OpenAI.Features
+                    , Agent.OpenAI.ModelMetadata
+                    , Agent.OpenAI.Models
+                    , Agent.OpenAI.Models.Bundled
+                    , Agent.OpenAI.Models.Cache
+                    , Agent.OpenAI.Models.Client
+                    , Agent.OpenAI.Models.Manager
+                    , Agent.OpenAI.Models.Profile
+                    , Agent.OpenAI.Models.Types
+                    , Agent.OpenAI.WebSocketClient
+                    , Agent.OpenAI.Transcription
+                    , Agent.OpenAI.LoopBackend
+                    , Agent.OpenAI.CompactClient
+                    , Agent.OpenAI.Compaction
+                    , Agent.OpenAI.ToolDSL
+                    , Agent.OpenAI.ImageGeneration
+    other-modules:    Agent.OpenAI.Compaction.Commands
+                    , Agent.OpenAI.Compaction.Request
+                    , Agent.OpenAI.Models.Types.Enums
+                    , Paths_agent_provider
+                    , Paths_agent_openai
+    autogen-modules:  Paths_agent_provider
+    hs-source-dirs:   src
+                    , shim
+    build-depends:    base                  >= 4.14 && < 5
+                    , agent-core            >= 0.1 && < 0.2
+                    , agent-json            >= 0.1 && < 0.2
+                    , agent-responses       >= 0.1 && < 0.2
+                    , agent-responses-types >= 0.1 && < 0.2
+                    , text
+                    , bytestring
+                    , base64-bytestring
+                    , async
+                    , aeson                 >= 2.0
+                    , http-client
+                    , http-conduit
+                    , http-streams
+                    , HsOpenSSL
+                    , io-streams
+                    , network-uri
+                    , websockets
+                    , wuss
+                    , retry >= 0.9.3.1 && < 0.10
+                    , exceptions
+                    , safe-exceptions
+                    , containers
+                    , vector
+                    , scientific
+                    , time
+                    , directory
+                    , filepath
+                    , template-haskell
+                    , transformers
+                    , unix
+
+library xai
+    import:           common-opts
+    visibility:       public
+    exposed-modules:  Agent.XAI
+                    , Agent.XAI.Auth
+                    , Agent.XAI.Client
+                    , Agent.XAI.Error
+                    , Agent.XAI.LoopBackend
+                    , Agent.XAI.Options
+                    , Agent.XAI.ReasoningEffort
+                    , Agent.XAI.Request
+                    , Agent.XAI.Stream
+                    , Agent.XAI.Transcription
+                    , Agent.XAI.Usage
+    hs-source-dirs:   src
+    build-depends:    base                  >= 4.14 && < 5
+                    , agent-core            >= 0.1 && < 0.2
+                    , agent-json            >= 0.1 && < 0.2
+                    , agent-responses       >= 0.1 && < 0.2
+                    , agent-responses-types >= 0.1 && < 0.2
+                    , text
+                    , bytestring
+                    , aeson                 >= 2.0
+                    , containers
+                    , async
+                    , http-client
+                    , http-client-tls
+                    , http-conduit
+                    , retry >= 0.9.3.1 && < 0.10
+                    , safe-exceptions
+                    , process
+                    , time
+                    , websockets
+                    , wuss
+
+library openrouter
+    import:           common-opts
+    visibility:       public
+    exposed-modules:  Agent.OpenRouter
+                    , Agent.OpenRouter.Client
+                    , Agent.OpenRouter.Credential
+                    , Agent.OpenRouter.Error
+                    , Agent.OpenRouter.LoopBackend
+                    , Agent.OpenRouter.Models
+                    , Agent.OpenRouter.Options
+                    , Agent.OpenRouter.Request
+                    , Agent.OpenRouter.Stream
+                    , Agent.OpenRouter.Usage
+    hs-source-dirs:   src
+    build-depends:    base                  >= 4.14 && < 5
+                    , agent-core            >= 0.1 && < 0.2
+                    , agent-json            >= 0.1 && < 0.2
+                    , agent-responses       >= 0.1 && < 0.2
+                    , agent-responses-types >= 0.1 && < 0.2
+                    , text
+                    , bytestring
+                    , containers
+                    , http-client
+                    , http-client-tls
+                    , http-conduit
+                    , http-types
+                    , retry >= 0.9.3.1 && < 0.10
+                    , safe-exceptions
+                    , scientific
+                    , time
+
+library gemini
+    import:           common-opts
+    visibility:       public
+    exposed-modules:  Agent.Gemini
+                    , Agent.Gemini.Auth
+                    , Agent.Gemini.Client
+                    , Agent.Gemini.Credential
+                    , Agent.Gemini.Error
+                    , Agent.Gemini.LoopBackend
+                    , Agent.Gemini.Options
+                    , Agent.Gemini.Request
+                    , Agent.Gemini.Response
+                    , Agent.Gemini.Stream
+                    , Agent.Gemini.Types
+    hs-source-dirs:   src
+    build-depends:    base                  >= 4.14 && < 5
+                    , agent-core            >= 0.1 && < 0.2
+                    , agent-json            >= 0.1 && < 0.2
+                    , agent-responses       >= 0.1 && < 0.2
+                    , agent-responses-types >= 0.1 && < 0.2
+                    , aeson                 >= 2.0
+                    , base64-bytestring
+                    , bytestring
+                    , containers
+                    , crypton
+                    , entropy
+                    , http-client
+                    , http-client-tls
+                    , http-conduit
+                    , http-types
+                    , memory
+                    , network
+                    , retry >= 0.9.3.1 && < 0.10
+                    , safe-exceptions
+                    , scientific
+                    , text
+                    , time
+
+library deepseek
+    import:           common-opts
+    visibility:       public
+    exposed-modules:  Agent.DeepSeek
+                    , Agent.DeepSeek.Client
+                    , Agent.DeepSeek.Credential
+                    , Agent.DeepSeek.Error
+                    , Agent.DeepSeek.LoopBackend
+                    , Agent.DeepSeek.Options
+                    , Agent.DeepSeek.Request
+                    , Agent.DeepSeek.Stream
+                    , Agent.DeepSeek.Usage
+    hs-source-dirs:   src
+    build-depends:    base                  >= 4.14 && < 5
+                    , agent-core            >= 0.1 && < 0.2
+                    , agent-json            >= 0.1 && < 0.2
+                    , agent-responses       >= 0.1 && < 0.2
+                    , agent-responses-types >= 0.1 && < 0.2
+                    , text
+                    , bytestring
+                    , http-client
+                    , http-client-tls
+                    , http-conduit
+                    , http-types
+                    , retry >= 0.9.3.1 && < 0.10
+                    , safe-exceptions
+                    , time
+
+library kimi
+    import:           common-opts
+    visibility:       public
+    exposed-modules:  Agent.Kimi
+                    , Agent.Kimi.Client
+                    , Agent.Kimi.Credential
+                    , Agent.Kimi.Error
+                    , Agent.Kimi.LoopBackend
+                    , Agent.Kimi.Options
+                    , Agent.Kimi.Request
+                    , Agent.Kimi.Stream
+                    , Agent.Kimi.Usage
+    hs-source-dirs:   src
+    build-depends:    base                  >= 4.14 && < 5
+                    , agent-core            >= 0.1 && < 0.2
+                    , agent-json            >= 0.1 && < 0.2
+                    , agent-responses       >= 0.1 && < 0.2
+                    , agent-responses-types >= 0.1 && < 0.2
+                    , text
+                    , bytestring
+                    , http-client
+                    , http-client-tls
+                    , http-conduit
+                    , http-types
+                    , retry >= 0.9.3.1 && < 0.10
+                    , safe-exceptions
+                    , time
+
+library kimi-code
+    import:           common-opts
+    visibility:       public
+    exposed-modules:  Agent.KimiCode
+                    , Agent.KimiCode.Client
+                    , Agent.KimiCode.Credential
+                    , Agent.KimiCode.Error
+                    , Agent.KimiCode.LoopBackend
+                    , Agent.KimiCode.Options
+                    , Agent.KimiCode.Request
+                    , Agent.KimiCode.Stream
+                    , Agent.KimiCode.Usage
+    hs-source-dirs:   src
+    build-depends:    base                  >= 4.14 && < 5
+                    , agent-core            >= 0.1 && < 0.2
+                    , agent-json            >= 0.1 && < 0.2
+                    , agent-responses       >= 0.1 && < 0.2
+                    , agent-responses-types >= 0.1 && < 0.2
+                    , aeson
+                    , containers
+                    , text
+                    , bytestring
+                    , http-client
+                    , http-client-tls
+                    , http-conduit
+                    , http-types
+                    , retry >= 0.9.3.1 && < 0.10
+                    , safe-exceptions
+                    , time
+
+library claude
+    import:           common-opts
+    visibility:       public
+    hs-source-dirs:   src
+    exposed-modules:  Agent.Claude
+                    , Agent.Claude.Auth
+                    , Agent.Claude.Control
+                    , Agent.Claude.LoopBackend
+                    , Agent.Claude.Options
+                    , Agent.Claude.ReasoningEffort
+                    , Agent.Claude.Transport
+    other-modules:    Agent.Claude.Internal.Environment
+                    , Agent.Claude.Internal.Messages
+    build-depends:    base                  >= 4.14 && < 5
+                    , agent-core            >= 0.1 && < 0.2
+                    , agent-process         >= 0.1 && < 0.2
+                    , agent-json            >= 0.1 && < 0.2
+                    , agent-responses       >= 0.1 && < 0.2
+                    , agent-responses-types >= 0.1 && < 0.2
+                    , claude-agent-sdk-haskell >= 0.1 && < 0.2
+                    , aeson                 >= 2.0
+                    , bytestring
+                    , containers
+                    , directory
+                    , filepath
+                    , hermes-json
+                    , process               >= 1.6.26
+                    , safe-exceptions
+                    , text
+                    , uuid-types
+
+executable openai-login
+    import:           common-opts
+    -- filepath >= 1.4.3 dropped System.OsPath.unsafeEncodeUtf; the shim
+    -- source dir recovers it for app/Login.hs (see shim-ospath/System/OsPath.hs).
+    mixins:           filepath (System.OsPath as RawOsPath)
+    hs-source-dirs:   app
+                    , shim-ospath
+    main-is:          Login.hs
+    other-modules:    System.OsPath
+    build-depends:    base >= 4.14 && < 5
+                    , agent-core
+                    , agent-provider:{openai}
+                    , directory
+                    , filepath
+                    , text
+
+test-suite openai-test
+    import:           common-opts
+    type:             exitcode-stdio-1.0
+    -- filepath >= 1.4.3 dropped System.OsPath.unsafeEncodeUtf; the shim
+    -- source dir recovers it for Agent.OpenAI.LoginSpec.
+    mixins:           filepath (System.OsPath as RawOsPath, System.FilePath)
+    hs-source-dirs:   test
+                    , test-mains/openai
+                    , shim-ospath
+    main-is:          Spec.hs
+    other-modules:    Agent.OpenAI.AuthSpec
+                    , Agent.OpenAI.ClientSpec
+                    , Agent.OpenAI.CredentialSpec
+                    , Agent.OpenAI.ErrorSpec
+                    , Agent.OpenAI.FunctionalSpec
+                    , Agent.OpenAI.ImageGenerationSpec
+                    , Agent.OpenAI.LoginSpec
+                    , Agent.OpenAI.LoopBackendSpec
+                    , Agent.OpenAI.ModelsClientSpec
+                    , Agent.OpenAI.ModelsManagerSpec
+                    , Agent.OpenAI.ModelsTypesSpec
+                    , Agent.OpenAI.CompactionSpec
+                    , Agent.OpenAI.ToolDSLSpec
+                    , Agent.OpenAI.TranscriptionSpec
+                    , Agent.OpenAI.UsageSpec
+                    , Agent.OpenAI.WebSocketClientSpec
+                    , System.OsPath
+    ghc-options:      -threaded
+    build-depends:    base >= 4.14 && < 5
+                    , agent-core
+                    , agent-json
+                    , agent-provider:{openai}
+                    , agent-responses
+                    , agent-responses-types
+                    , async
+                    , hspec
+                    , aeson
+                    , retry >= 0.9.3.1 && < 0.10
+                    , text
+                    , bytestring
+                    , base64-bytestring
+                    , time
+                    , vector
+                    , websockets
+                    , directory
+                    , filepath
+                    , temporary
+                    , unix
+                    , case-insensitive
+                    , http-types
+                    , network
+                    , safe-exceptions
+                    , wai
+                    , warp
+
+test-suite xai-test
+    import:           common-opts
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+                    , test-mains/xai
+    main-is:          Spec.hs
+    other-modules:    Agent.XAI.AuthSpec
+                    , Agent.XAI.ClientSpec
+                    , Agent.XAI.FunctionalSpec
+                    , Agent.XAI.ResponsesSpec
+                    , Agent.XAI.TranscriptionSpec
+                    , Agent.XAI.UsageSpec
+    ghc-options:      -threaded
+    build-depends:    base >= 4.14 && < 5
+                    , agent-core
+                    , agent-json
+                    , agent-responses
+                    , agent-responses-types
+                    , agent-provider:{xai}
+                    , containers
+                    , async
+                    , hspec
+                    , aeson
+                    , text
+                    , bytestring
+                    , base64-bytestring
+                    , case-insensitive
+                    , http-types
+                    , retry >= 0.9.3.1 && < 0.10
+                    , safe-exceptions
+                    , wai
+                    , warp
+
+test-suite openrouter-test
+    import:           common-opts
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+                    , test-mains/openrouter
+    main-is:          Spec.hs
+    other-modules:    Agent.OpenRouter.ClientSpec
+                    , Agent.OpenRouter.CredentialSpec
+                    , Agent.OpenRouter.ErrorSpec
+                    , Agent.OpenRouter.FunctionalSpec
+                    , Agent.OpenRouter.ModelsSpec
+                    , Agent.OpenRouter.RequestSpec
+                    , Agent.OpenRouter.UsageSpec
+    ghc-options:      -threaded
+    build-depends:    base >= 4.14 && < 5
+                    , agent-core
+                    , agent-json
+                    , agent-responses
+                    , agent-responses-types
+                    , agent-provider:{openrouter}
+                    , containers
+                    , hspec
+                    , aeson
+                    , text
+                    , bytestring
+                    , time
+                    , case-insensitive
+                    , http-types
+                    , retry >= 0.9.3.1 && < 0.10
+                    , wai
+                    , warp
+
+test-suite gemini-test
+    import:           common-opts
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+                    , test-mains/gemini
+    main-is:          Spec.hs
+    other-modules:    Agent.Gemini.AuthSpec
+                    , Agent.Gemini.ClientSpec
+                    , Agent.Gemini.CredentialSpec
+                    , Agent.Gemini.ErrorSpec
+                    , Agent.Gemini.RequestSpec
+                    , Agent.Gemini.ResponseSpec
+                    , Agent.Gemini.StreamSpec
+    ghc-options:      -threaded
+    build-depends:    base >= 4.14 && < 5
+                    , agent-core
+                    , agent-provider:{gemini}
+                    , agent-json
+                    , agent-responses
+                    , agent-responses-types
+                    , aeson
+                    , async
+                    , bytestring
+                    , containers
+                    , hspec
+                    , http-conduit
+                    , http-types
+                    , network
+                    , retry
+                    , safe-exceptions
+                    , text
+                    , wai
+                    , warp
+
+test-suite deepseek-test
+    import:           common-opts
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+                    , test-mains/deepseek
+    main-is:          Spec.hs
+    other-modules:    Agent.DeepSeek.ClientSpec
+                    , Agent.DeepSeek.CredentialSpec
+                    , Agent.DeepSeek.ErrorSpec
+                    , Agent.DeepSeek.RequestSpec
+                    , Agent.DeepSeek.ThinkingModeContractSpec
+                    , Agent.DeepSeek.UsageSpec
+    ghc-options:      -threaded
+    build-depends:    base >= 4.14 && < 5
+                    , agent-core
+                    , agent-json
+                    , agent-responses
+                    , agent-responses-types
+                    , agent-provider:{deepseek}
+                    , hspec
+                    , aeson
+                    , text
+                    , bytestring
+                    , time
+                    , case-insensitive
+                    , http-types
+                    , retry >= 0.9.3.1 && < 0.10
+                    , wai
+                    , warp
+
+test-suite kimi-test
+    import:           common-opts
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+                    , test-mains/kimi
+    main-is:          Spec.hs
+    other-modules:    Agent.Kimi.ClientSpec
+                    , Agent.Kimi.CredentialSpec
+                    , Agent.Kimi.ErrorSpec
+                    , Agent.Kimi.RequestSpec
+                    , Agent.Kimi.UsageSpec
+    ghc-options:      -threaded
+    build-depends:    base >= 4.14 && < 5
+                    , agent-core
+                    , agent-json
+                    , agent-responses
+                    , agent-responses-types
+                    , agent-provider:{kimi}
+                    , hspec
+                    , aeson
+                    , text
+                    , bytestring
+                    , time
+                    , case-insensitive
+                    , http-types
+                    , retry >= 0.9.3.1 && < 0.10
+                    , wai
+                    , warp
+
+test-suite kimi-code-test
+    import:           common-opts
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+                    , test-mains/kimi-code
+    main-is:          Spec.hs
+    other-modules:    Agent.KimiCode.CredentialSpec
+                    , Agent.KimiCode.ErrorSpec
+                    , Agent.KimiCode.RequestSpec
+                    , Agent.KimiCode.StreamSpec
+    ghc-options:      -threaded
+    build-depends:    base >= 4.14 && < 5
+                    , agent-core
+                    , agent-json
+                    , agent-responses
+                    , agent-responses-types
+                    , agent-provider:{kimi-code}
+                    , hspec
+                    , aeson
+                    , text
+                    , bytestring
+                    , time
+                    , case-insensitive
+                    , http-types
+                    , retry >= 0.9.3.1 && < 0.10
+                    , wai
+                    , warp
+
+test-suite claude-test
+    import:           common-opts
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+                    , test-mains/claude
+    main-is:          Spec.hs
+    other-modules:    Agent.Claude.AuthSpec
+                    , Agent.Claude.LoopBackendSpec
+                    , Agent.Claude.OptionsSpec
+    ghc-options:      -threaded
+    build-depends:    base >= 4.14 && < 5
+                    , agent-provider:{claude}
+                    , agent-core
+                    , agent-json
+                    , agent-responses
+                    , agent-responses-types
+                    , claude-agent-sdk-haskell
+                    , aeson
+                    , bytestring
+                    , directory
+                    , filepath
+                    , hspec
+                    , safe-exceptions
+                    , text
+                    , unix
+
+benchmark codex-http-streaming-bench
+    import:           common-opts
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   benchmark
+    main-is:          CodexHttpStreaming.hs
+    ghc-options:      -O2 -threaded -rtsopts
+    build-depends:    base >= 4.14 && < 5
+                    , agent-core
+                    , agent-provider:{openai}
+                    , agent-responses
+                    , agent-responses-types
+                    , bytestring
+                    , text

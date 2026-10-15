@@ -64,12 +64,12 @@ cabal repl \
   agent-grok-build-dialect:lib:agent-grok-build-dialect \
   agent-tui:lib:agent-tui \
   agent-responses:lib:agent-responses \
-  agent-openai:lib:agent-openai \
-  agent-xai:lib:agent-xai \
-  agent-openrouter:lib:agent-openrouter \
-  agent-gemini:lib:agent-gemini \
+  agent-provider:lib:openai \
+  agent-provider:lib:xai \
+  agent-provider:lib:openrouter \
+  agent-provider:lib:gemini \
   claude-agent-sdk-haskell:lib:claude-agent-sdk-haskell \
-  agent-claude:lib:agent-claude
+  agent-provider:lib:claude
 ```
 
 In GHCi:

@@ -276,16 +276,9 @@ library
                     , agent-store >= 0.1 && < 0.2
                     , agent-syntax >= 0.1 && < 0.2
                     , agent-tui >= 0.1 && < 0.2
-                    , agent-openai >= 0.1 && < 0.2
-                    , agent-openrouter >= 0.1 && < 0.2
-                    , agent-deepseek >= 0.1 && < 0.2
-                    , agent-kimi >= 0.1 && < 0.2
-                    , agent-kimi-code >= 0.1 && < 0.2
-                    , agent-gemini >= 0.1 && < 0.2
-                    , agent-claude >= 0.1 && < 0.2
+                    , agent-provider:{openai, xai, openrouter, gemini, deepseek, kimi, kimi-code, claude} >= 0.1 && < 0.2
                     , agent-responses >= 0.1 && < 0.2
                     , agent-responses-types >= 0.1 && < 0.2
-                    , agent-xai >= 0.1 && < 0.2
                     , aeson >= 2.0
                     , ansi-terminal >= 1.0
                     , async
@@ -539,14 +532,9 @@ test-suite agent-cli-test
                     , agent-grok-build-dialect
                     , agent-store
                     , agent-tui
-                    , agent-openai
-                    , agent-openrouter
-                    , agent-gemini
-                    , agent-kimi-code
-                    , agent-claude
+                    , agent-provider:{openai, xai, openrouter, gemini, kimi-code, claude}
                     , agent-responses
                     , agent-responses-types
-                    , agent-xai
                     , aeson
                     , ansi-terminal
                     , async

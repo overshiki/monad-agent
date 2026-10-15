@@ -11,9 +11,9 @@
 .liquid/
 *.o
 # Fetched from openai/codex by scripts/setup-cabal-build.sh; not vendored.
-packages/agent-openai/data/models.json
-packages/agent-openai/data/prompt.md
-packages/agent-openai/data
+packages/agent-provider/data/models.json
+packages/agent-provider/data/prompt.md
+packages/agent-provider/data
 cabal.project.local
 .cabal-build-aux
 *.log

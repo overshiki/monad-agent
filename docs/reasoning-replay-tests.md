@@ -50,20 +50,20 @@ After **any** change to the reasoning capture, replay, or request-projection
 path:
 
 ```console
-cabal test agent-deepseek  --offline --test-options='--match thinking'
+cabal test agent-provider:test:deepseek-test  --offline --test-options='--match thinking'
 cabal test agent-responses --offline --test-options='--match pairing'
 ```
 
 The full suites are the broader gates:
 
 ```console
-cabal test agent-deepseek --offline    # 54 examples
+cabal test agent-provider:test:deepseek-test --offline    # 54 examples
 cabal test agent-responses --offline   # 97 examples, 4 known env failures
 ```
 
 ## What the thinking-mode spec asserts
 
-`packages/agent-deepseek/test/Agent/DeepSeek/ThinkingModeContractSpec.hs`
+`packages/agent-provider/test/Agent/DeepSeek/ThinkingModeContractSpec.hs`
 projects a realistic follow-up request through the real pipeline — synthetic
 DeepSeek SSE → `StreamAssembly.buildResponse` → `DeepSeek.Request.buildRequest`
 → wire JSON — and checks one invariant (`assertValidThinkingReplay`):

@@ -130,9 +130,9 @@ fi
 export AGENT_SYNTAX_DIR="$SKYLIGHTING_XML_DIR"
 
 # ---------------------------------------------------------------------------
-# 5. Fetch Codex bundled data for agent-openai
+# 5. Fetch Codex bundled data for agent-provider
 # ---------------------------------------------------------------------------
-DATA_DIR="$ROOT/packages/agent-openai/data"
+DATA_DIR="$ROOT/packages/agent-provider/data"
 mkdir -p "$DATA_DIR"
 
 fetch_codex_data() {
@@ -142,7 +142,7 @@ fetch_codex_data() {
     local dest="$DATA_DIR/$file"
 
     if [ -s "$dest" ]; then
-        log "agent-openai/data/$file already present"
+        log "agent-provider/data/$file already present"
         return 0
     fi
 

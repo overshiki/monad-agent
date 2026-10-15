@@ -9,9 +9,9 @@ Provider-neutral infrastructure shared by the harness transports:
   Codex and Grok Build implementations live in `agent-codex-dialect` and
   `agent-grok-build-dialect`.
 - `Agent.Loop` runs the provider-neutral tool-calling agent loop. Transport
-  adapters live in `agent-openai` (`Agent.OpenAI.LoopBackend`), `agent-xai`
-  (`Agent.XAI.LoopBackend`), `agent-openrouter`
-  (`Agent.OpenRouter.LoopBackend`), and `agent-gemini`
+  adapters live in `agent-provider`'s sublibraries: `openai`
+  (`Agent.OpenAI.LoopBackend`), `xai` (`Agent.XAI.LoopBackend`), `openrouter`
+  (`Agent.OpenRouter.LoopBackend`), and `gemini`
   (`Agent.Gemini.LoopBackend`).
 - `Agent.ToolArgs` parses model-supplied JSON tool arguments.
 - `Agent.ToolDSL` owns JSON Schema fragments for function-tool parameters.

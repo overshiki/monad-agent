@@ -404,17 +404,23 @@ are discussed in [`IDEAS.md`](IDEAS.md).
                                |
        +---------------+---------------+---------------+---------------+---------------+
        |               |               |               |               |
- agent-openai      agent-xai    agent-openrouter  agent-gemini    agent-claude
+ agent-provider sublibraries:
+ openai            xai          openrouter        gemini          claude
        |               |               |               |               |
 OpenAI / ChatGPT       xAI          OpenRouter      Gemini         Claude Code
 ```
+
+The provider boxes are sublibraries of one `agent-provider` package
+(`agent-provider:lib:openai`, `:lib:xai`, `:lib:openrouter`, `:lib:gemini`,
+`:lib:claude`, plus `:lib:deepseek`, `:lib:kimi`, `:lib:kimi-code`), each
+keeping its original `Agent.<Name>` module tree.
 
 The provider-neutral loop sees typed turns, tool calls, tool results, usage,
 and streamed events. Provider packages own wire formats, authentication,
 transport, and provider-specific continuation. Presentation consumes the same
 events through renderer-independent state.
 
-`agent-claude` delegates its generic process transport, protocol decoding, and
+`agent-provider`'s `claude` sublibrary delegates its generic process transport, protocol decoding, and
 session client to
 [`claude-agent-sdk-haskell`](packages/claude-agent-sdk-haskell/README.md),
 leaving subscription policy and `Agent.Loop` translation in the provider
@@ -444,7 +450,7 @@ contract tests — they guard the "reasoning_text must be passed back" rule that
 has regressed repeatedly:
 
 ```console
-cabal test agent-deepseek --offline --test-options='--match thinking'
+cabal test agent-provider:test:deepseek-test --offline --test-options='--match thinking'
 ```
 
 See [`docs/reasoning-replay-tests.md`](docs/reasoning-replay-tests.md) for what

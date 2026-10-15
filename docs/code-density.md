@@ -11,7 +11,7 @@ update that file on every density PR.
 - **Totality stays compiler-enforced**: keep `-Werror=incomplete-patterns`
   and friends; no partial matches/`head`/`fromJust` introduced for brevity.
 - **Wire formats are frozen by tests**: after any change,
-  `cabal test agent-deepseek --offline --test-options='--match thinking'` and
+  `cabal test agent-provider:test:deepseek-test --offline --test-options='--match thinking'` and
   `cabal test agent-responses --offline --test-options='--match pairing'` stay
   green.
 - **Perf-sensitive loops need the benchmark first** (AGENTS.md): `StreamAssembly`,
@@ -63,7 +63,7 @@ Mechanical, behavior-preserving transformations, highest yield first:
 
 ```console
 cabal test agent-responses --offline --test-options='--match pairing'
-cabal test agent-deepseek  --offline --test-options='--match thinking'
+cabal test agent-provider:test:deepseek-test  --offline --test-options='--match thinking'
 cabal test <touched package> --offline
 ```
 
